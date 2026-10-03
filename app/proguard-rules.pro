@@ -2,6 +2,9 @@
 #  小霸王 TV —— Release 混淆规则
 # ══════════════════════════════════════════════════════════════
 
+# JNI：xbw_core.c 按 Java_包_类_方法 静态符号查找，native 方法名不能被混淆
+-keepclasseswithmembernames class com.xbw.tv.core.RetroCore { native <methods>; }
+
 # Room 实体/DAO
 -keep @androidx.room.Entity class *
 -keepclassmembers class * extends androidx.room.RoomDatabase

@@ -414,7 +414,7 @@ static double g_video_ms, g_run_ms, g_audio_ms;
  * 整个循环被显示管线的 ~50Hz 拖死，音频喂不饱 → 游戏慢 17%、音调偏低。
  */
 #define VIDEO_SLOTS 3
-typedef struct { uint8_t *px; size_t cap; unsigned w, h; } vslot;
+typedef struct { uint8_t *px; size_t cap; unsigned w, h, bpp; } vslot;
 static vslot g_vpool[VIDEO_SLOTS];
 static volatile int g_vhead, g_vtail, g_vdropped;
 static pthread_t g_render_thread;
@@ -435,7 +435,11 @@ static void cb_video_refresh(const void *data, unsigned width, unsigned height, 
         return;
     }
     vslot *s = &g_vpool[g_vhead];
-    size_t need = (size_t)width * height * 4;
+    /* 核心帧是原始格式（fbneo=RGB565 16bpp，fceumm 同样多为 565），
+     * 每行只能拷 width*bpp 字节 —— 固定按 4bpp 拷会读越帧缓冲末尾，
+     * x86_64 上直接踩保护页 SIGSEGV（真机 arm 布局宽松才侥幸没炸）。 */
+    const unsigned bpp = (g_buf_format == RETRO_PIXEL_FORMAT_XRGB8888) ? 4u : 2u;
+    size_t need = (size_t)width * height * bpp;
     if (s->cap < need) {
         uint8_t *np = realloc(s->px, need);
         if (!np) return;
@@ -443,10 +447,12 @@ static void cb_video_refresh(const void *data, unsigned width, unsigned height, 
         s->cap = need;
     }
     const uint8_t *src = (const uint8_t *)data;
+    const size_t rowb = (size_t)width * bpp;
     for (unsigned y = 0; y < height; y++)
-        memcpy(s->px + (size_t)y * width * 4, src + (size_t)y * pitch, (size_t)width * 4);
+        memcpy(s->px + (size_t)y * rowb, src + (size_t)y * pitch, rowb);
     s->w = width;
     s->h = height;
+    s->bpp = bpp;
     g_vhead = next;
     g_video_ms += (double)(now_ns() - t0) / 1e6;
 }
@@ -474,7 +480,8 @@ static void *render_thread(void *arg) {
         g_vtail = (pick + 1) % VIDEO_SLOTS;     /* pick 这帧也算消费掉了 */
         vslot *s = &g_vpool[pick];
         pthread_mutex_lock(&g_surf_lock);
-        if (g_window && s->px) { blit_frame(s->px, s->w, s->h, (size_t)s->w * 4, g_window); blits++; }
+        if (g_window && s->px && s->bpp)
+            { blit_frame(s->px, s->w, s->h, (size_t)s->w * s->bpp, g_window); blits++; }
         else nowin++;
         pthread_mutex_unlock(&g_surf_lock);
 

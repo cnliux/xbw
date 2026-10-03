@@ -1,0 +1,60 @@
+name: Build APK
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install NDK / CMake
+        run: sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1" > /dev/null
+
+      - name: Restore release signing from secrets
+        env:
+          KEYSTORE_B64: ${{ secrets.XBW_KEYSTORE_BASE64 }}
+          STORE_PASS: ${{ secrets.XBW_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.XBW_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.XBW_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            mkdir -p keystore
+            printf '%s' "$KEYSTORE_B64" | base64 -d > keystore/xbw-release.jks
+            cat >> local.properties <<EOF
+          xbw.storeFile=keystore/xbw-release.jks
+          xbw.storePassword=$STORE_PASS
+          xbw.keyAlias=$KEY_ALIAS
+          xbw.keyPassword=$KEY_PASS
+          EOF
+            echo "release signing restored from secrets"
+          else
+            echo "no signing secrets, release falls back to debug signature"
+          fi
+
+      - name: Build debug + release APK
+        run: |
+          sed -i 's/\r$//' gradlew
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: xbw-apks
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
+          if-no-files-found: error

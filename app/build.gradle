@@ -8,6 +8,28 @@ android {
     namespace 'com.xbw.tv'
     compileSdk 34
 
+    // 正式签名参数放 local.properties（已 gitignore，密钥不入库）：
+    //   xbw.storeFile=keystore/xbw-release.jks
+    //   xbw.storePassword=...
+    //   xbw.keyAlias=xbw
+    //   xbw.keyPassword=...
+    def xbwProps = new Properties()
+    def xbwPropsFile = rootProject.file('local.properties')
+    if (xbwPropsFile.exists()) xbwPropsFile.withInputStream { xbwProps.load(it) }
+    def hasXbwSigning = xbwProps['xbw.storeFile'] && xbwProps['xbw.storePassword'] \
+        && xbwProps['xbw.keyAlias'] && xbwProps['xbw.keyPassword']
+
+    signingConfigs {
+        if (hasXbwSigning) {
+            release {
+                storeFile rootProject.file(xbwProps['xbw.storeFile'])
+                storePassword xbwProps['xbw.storePassword']
+                keyAlias xbwProps['xbw.keyAlias']
+                keyPassword xbwProps['xbw.keyPassword']
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "com.xbw.tv"
         minSdk 21
@@ -23,7 +45,7 @@ android {
 
         // 原生宿主 libxbwcore.so：dlopen 各 libretro 核心（libfceumm.so …）
         ndk {
-            abiFilters 'arm64-v8a'
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
         }
         externalNativeBuild {
             cmake {
@@ -50,8 +72,8 @@ android {
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            // 未配置签名时默认用 debug 签名，保证 assembleRelease 也能产出 APK
-            signingConfig signingConfigs.debug
+            // 有正式签名（local.properties 配齐）就用正式的，否则回退 debug 保证可构建
+            signingConfig hasXbwSigning ? signingConfigs.release : signingConfigs.debug
         }
     }
 
