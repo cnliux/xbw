@@ -45,7 +45,7 @@ android {
 
         // 原生宿主 libxbwcore.so：dlopen 各 libretro 核心（libfceumm.so …）
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86_64'
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
         }
         externalNativeBuild {
             cmake {
