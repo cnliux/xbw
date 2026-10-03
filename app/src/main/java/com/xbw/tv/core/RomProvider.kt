@@ -29,7 +29,8 @@ import java.util.zip.ZipInputStream
  *    FBNeo 数据表里 → 下载全部段，主段加载失败时逐段兜底（见 RetroCore
  *    .loadAlternativeRom）。
  *
- * 缓存：<filesDir>/roms/<gameId>/ 下命中即复用 → 二次进入离线秒开。
+ * 缓存：<filesDir>/roms/<gameId>/ 下命中即复用 → 二次进入离线秒开；
+ * 缓存总量封顶 500MB，超限按"最久未玩"整目录清（连存档），回 400MB 停。
  * .romspec 行格式：[0]核心名 [1]主 ROM 绝对路径 [2]gsystem（FC 为空串）
  *                  [3..]备选 ROM 绝对路径；旧行数 <3 视为旧格式，作废重取。
  */
@@ -67,12 +68,43 @@ object RomProvider {
     private fun cacheDirOf(context: Context, gameId: String): File =
         File(context.filesDir, "roms/$gameId").apply { mkdirs() }
 
+    /* 缓存封顶：roms/ 总量 >500MB 触发清理，清回 400MB 停（留 100MB 余量避免
+     * 每次进游戏都触发删除）。按"最久未玩"（目录 mtime）整目录删——ROM 和
+     * <rom>.sram 存档都在游戏目录里，清掉即一并回收；BIOS 全局缓存极小不计入。 */
+    private const val MAX_CACHE_BYTES = 500L * 1024 * 1024
+    private const val EVICT_TARGET_BYTES = 400L * 1024 * 1024
+
+    /** 缓存超限清理：删除最久未访问的游戏缓存目录，直到总量回落到目标 */
+    private fun evictIfNeeded(context: Context, keepGameId: String) {
+        try {
+            val roms = File(context.filesDir, "roms")
+            var total = roms.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+            if (total <= MAX_CACHE_BYTES) return
+            Log.w(TAG, "rom cache ${total / 1MB}MB exceeds ${MAX_CACHE_BYTES / 1MB}MB cap, evicting LRU")
+            val dirs = roms.listFiles()
+                ?.filter { it.isDirectory && it.name != keepGameId }
+                ?.sortedBy { it.lastModified() }
+                ?: return
+            for (d in dirs) {
+                if (total <= EVICT_TARGET_BYTES) break
+                val bytes = d.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+                if (d.deleteRecursively()) {
+                    total -= bytes
+                    Log.i(TAG, "evicted rom cache ${d.name} (~${bytes / 1MB}MB)")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "rom cache evict failed", e)
+        }
+    }
+
     /**
      * 下载（或命中缓存）游戏 [gameId] 的 ROM。
      * @return 核心加载所需的全部信息；不支持/失败返回 null
      */
     suspend fun prepare(context: Context, gameId: String): RomSpec? {
         val dir = cacheDirOf(context, gameId)
+        evictIfNeeded(context, gameId)
         // 缓存命中：.romspec 记录核心名 + ROM 文件位置 + 兜底列表
         val meta = File(dir, ".romspec")
         if (meta.exists()) {
@@ -84,6 +116,7 @@ object RomProvider {
                         val ff = File(l)
                         if (ff.exists() && ff.length() > 16) ff else null
                     }
+                    dir.setLastModified(System.currentTimeMillis())   // 记录访问时间供 LRU
                     Log.i(TAG, "rom cached id=$gameId core=${lines[0]} fallbacks=${fallbacks.size}")
                     return RomSpec(lines[0], f, File(dir, "system"), true, fallbacks)
                 }
