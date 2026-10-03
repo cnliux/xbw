@@ -41,7 +41,7 @@
     <string name="settings_reset_map">恢复默认按键映射</string>
     <string name="settings_diagnose">站点结构诊断</string>
     <string name="settings_about">关于</string>
-    <string name="settings_about_body">本应用不内置任何游戏数据，所有游戏列表与游戏本体均来自 yikm.net，仅作技术演示；请在授权范围内使用并尊重原站。</string>
+    <string name="settings_about_body">版本 %1$s\n\n本应用不内置任何游戏数据，所有游戏列表与游戏本体均来自 yikm.net，仅作技术演示；请在授权范围内使用并尊重原站。\n\n特别感谢：\n· yikm.net（小霸王，其乐无穷）—— 游戏列表、ROM 与金手指数据来源，本应用因它而完整\n· libretro / FCEUmm / FBNeo —— 模拟器核心</string>
 
     <!-- 诊断 -->
     <string name="diagnose_title">站点结构诊断</string>

@@ -72,7 +72,14 @@ class SettingsActivity : AppCompatActivity() {
             refreshStatic()
         }
         binding.rowAbout.setOnClickListener {
-            Nav.toast(this@SettingsActivity, getString(R.string.settings_about_body))
+            val ver = try {
+                packageManager.getPackageInfo(packageName, 0).versionName
+            } catch (e: Exception) { "?" }
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(getString(R.string.settings_about))
+                .setMessage(getString(R.string.settings_about_body, ver))
+                .setPositiveButton(android.R.string.ok, null)
+                .show()
         }
 
         gamepads.state
