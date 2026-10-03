@@ -17,11 +17,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
+      # runner 预装 Android SDK（ANDROID_HOME=/usr/local/lib/android/sdk），
+      # android-actions/setup-android@v3 在 cmdline-tools 16.0 上装废弃 tools 包必炸，弃用
       - name: Install NDK / CMake
-        run: sdkmanager --install "ndk;27.2.12479018" "cmake;3.22.1" > /dev/null
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;27.2.12479018" "cmake;3.22.1" > /dev/null
 
       - name: Restore release signing from secrets
         env:
