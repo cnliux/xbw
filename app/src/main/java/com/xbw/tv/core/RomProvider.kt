@@ -80,7 +80,7 @@ object RomProvider {
             val roms = File(context.filesDir, "roms")
             var total = roms.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
             if (total <= MAX_CACHE_BYTES) return
-            Log.w(TAG, "rom cache ${total / 1MB}MB exceeds ${MAX_CACHE_BYTES / 1MB}MB cap, evicting LRU")
+            Log.w(TAG, "rom cache ${total / 1048576}MB exceeds ${MAX_CACHE_BYTES / 1048576}MB cap, evicting LRU")
             val dirs = roms.listFiles()
                 ?.filter { it.isDirectory && it.name != keepGameId }
                 ?.sortedBy { it.lastModified() }
@@ -90,7 +90,7 @@ object RomProvider {
                 val bytes = d.walkBottomUp().filter { it.isFile }.sumOf { it.length() }
                 if (d.deleteRecursively()) {
                     total -= bytes
-                    Log.i(TAG, "evicted rom cache ${d.name} (~${bytes / 1MB}MB)")
+                    Log.i(TAG, "evicted rom cache ${d.name} (~${bytes / 1048576}MB)")
                 }
             }
         } catch (e: Exception) {
