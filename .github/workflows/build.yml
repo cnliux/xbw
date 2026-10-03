@@ -22,6 +22,9 @@ jobs:
           git init -q vendor/libretro-fceumm && git -C vendor/libretro-fceumm remote add origin https://github.com/libretro/libretro-fceumm.git
           git -C vendor/libretro-fceumm fetch -q --depth=1 origin 7a542dab1e87679921962a9f056186eca425c0c2
           git -C vendor/libretro-fceumm checkout -q FETCH_HEAD
+          git init -q vendor/libretro-common && git -C vendor/libretro-common remote add origin https://github.com/libretro/libretro-common.git
+          git -C vendor/libretro-common fetch -q --depth=1 origin 9b73a999df01db5657db95b2490cf031e4b51cff
+          git -C vendor/libretro-common checkout -q FETCH_HEAD
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
