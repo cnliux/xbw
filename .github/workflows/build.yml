@@ -11,6 +11,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # vendor/ 是独立 git 仓库、被 .gitignore 排除，checkout 后没有核心源码。
+      # 这里按本地锁定的 commit 从上游精确还原（两个仓库本地均无改动）。
+      - name: Restore vendor cores (pinned)
+        run: |
+          mkdir -p vendor
+          git init -q vendor/fbneo && git -C vendor/fbneo remote add origin https://github.com/libretro/fbneo.git
+          git -C vendor/fbneo fetch -q --depth=1 origin a4012b161e48b33b94940f07987323574c237448
+          git -C vendor/fbneo checkout -q FETCH_HEAD
+          git init -q vendor/libretro-fceumm && git -C vendor/libretro-fceumm remote add origin https://github.com/libretro/libretro-fceumm.git
+          git -C vendor/libretro-fceumm fetch -q --depth=1 origin 7a542dab1e87679921962a9f056186eca425c0c2
+          git -C vendor/libretro-fceumm checkout -q FETCH_HEAD
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
