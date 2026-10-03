@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 卡片封面占位图：手柄 logo + 深色底。Glide placeholder/error 都用它。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/xbw_surface_high" />
+            <corners android:radius="10dp" />
+        </shape>
+    </item>
+    <item
+        android:width="48dp"
+        android:height="32dp"
+        android:gravity="center"
+        android:drawable="@drawable/ic_gamepad_small" />
+</layer-list>

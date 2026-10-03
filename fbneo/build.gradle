@@ -1,0 +1,34 @@
+// libretro FBNeo 核心（街机 CPS1/CPS2/NeoGeo/PGM…）—— 独立原生库模块。
+// 产物 libfbneo.so 打进 APK；运行时由 xbwcore dlopen。
+// STL 用 c++_static（与官方 jni/Application.mk 一致，自包含不依赖系统 libc++）。
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.xbw.tv.core.fbneo'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+        ndk {
+            // 首轮只 arm64（.37 真机）快速迭代，通过后恢复三 ABI
+            abiFilters 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_static'
+                // 街机驱动海量小文件，并行编译
+            }
+        }
+    }
+
+    ndkVersion '27.2.12479018'
+
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+}

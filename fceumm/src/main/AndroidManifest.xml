@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 纯原生库模块：只贡献 lib/<abi>/libfceumm.so，无 Java/Kotlin 代码 -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" />

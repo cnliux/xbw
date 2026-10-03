@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TV 桌面横幅（320x180dp）。正式版请替换为设计稿导出的位图；
+     这里用渐变 + 矢量占位，保证无需额外位图也能编译安装。 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="0"
+                android:startColor="#FF5A5F"
+                android:endColor="#8B1E22" />
+        </shape>
+    </item>
+    <item
+        android:drawable="@drawable/banner_text"
+        android:gravity="center" />
+</layer-list>

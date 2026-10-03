@@ -1,0 +1,28 @@
+pluginManagement {
+    repositories {
+        // 国内镜像优先，官方源兜底。网络通畅的环境可注释掉前三行。
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/central") }
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/central") }
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.name = "XiaoBaWangTV"
+include ':app'
+// libretro 核心的原生编译模块（每个核心一个目录，CMake 产出 lib<core>.so）
+include ':fceumm'
+include ':fbneo'
+

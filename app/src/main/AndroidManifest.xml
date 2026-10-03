@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- 网络：所有游戏数据均实时抓取，无内置数据 -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- 手柄：声明为「可选」，保证手机/盒子也能安装调试；遥控器同样可用 -->
+    <uses-feature
+        android:name="android.hardware.gamepad"
+        android:required="false" />
+    <!-- TV 设备特性：非触屏设备 -->
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <!-- 游戏需要 USB 手柄（热插拔） -->
+    <uses-feature
+        android:name="android.hardware.usb.host"
+        android:required="false" />
+
+    <application
+        android:name=".XbwApplication"
+        android:allowBackup="true"
+        android:banner="@drawable/tv_banner"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false"
+        android:largeHeap="true"
+        android:theme="@style/Theme.XbwTv"
+        tools:targetApi="34">
+
+        <!-- 大厅（TV 启动入口：category=leanback.launcher） -->
+        <activity
+            android:name=".ui.lobby.LobbyActivity"
+            android:banner="@drawable/tv_banner"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.XbwTv.Lobby">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <!-- TV 桌面入口 -->
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+                <!-- 兼容手机/平板桌面，方便用真机调试 -->
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- 游戏页：libretro 原生核心（FC=FCEUmm，街机=FBNeo） -->
+        <activity
+            android:name=".ui.game.NativeGameActivity"
+            android:configChanges="orientation|screenSize|keyboard|keyboardHidden|navigation|uiMode|density|screenLayout|smallestScreenSize"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.XbwTv.Game" />
+
+        <!-- 搜索页 -->
+        <activity
+            android:name=".ui.search.SearchActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.XbwTv.Lobby"
+            android:windowSoftInputMode="stateVisible|adjustResize" />
+
+        <!-- 设置页（手柄状态 / 按键映射 / 缓存） -->
+        <activity
+            android:name=".ui.settings.SettingsActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.XbwTv.Lobby" />
+
+        <!-- 按键映射编辑器 -->
+        <activity
+            android:name=".ui.settings.KeyMappingActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.XbwTv.Lobby" />
+
+        <!-- 调试页：展示站点结构诊断结果（选择器失配时第一时间看这里） -->
+        <activity
+            android:name=".ui.diagnose.DiagnoseActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.XbwTv.Lobby" />
+    </application>
+
+</manifest>

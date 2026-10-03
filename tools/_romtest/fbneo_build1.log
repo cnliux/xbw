@@ -1,0 +1,1169 @@
+﻿To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.9/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :fbneo:preBuild UP-TO-DATE
+> Task :fbneo:preDebugBuild UP-TO-DATE
+
+> Task :fbneo:configureCMakeDebug[arm64-v8a]
+C/C++: CMake Warning at CMakeLists.txt:102 (message):
+C/C++:   FBNeo ���������� 82/89�������ļ���ɾ��������
+
+> Task :fbneo:buildCMakeDebug[arm64-v8a]
+C/C++: ninja: Entering directory `G:\git\xbw\fbneo\.cxx\Debug\3t4p335w\arm64-v8a'
+C/C++: G:\tools\android-sdk\ndk\27.2.12479018\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android21 --sysroot=G:/tools/android-sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID -DCHDR_SYSTEM_ZLIB -DGIT_VERSION=\"xbw\" -DHAVE_UNISTD_H -DINCLUDE_7Z_SUPPORT -DINCLUDE_CHD_SUPPORT -DLSB_FIRST -DUSE_LIBRETRO_VFS -DUSE_SPEEDHACKS -DZ7_PPMD_SUPPORT -DZ7_ST -D_FILE_OFFSET_BITS=64 -D__LIBRETRO__ -Dfbneo_EXPORTS -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/win32 -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro/libretro-common/include -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/snd -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/devices -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/input -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/cd -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/audio -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/f8 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/hmcs40 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8039 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8051 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8085 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8x41 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/m377 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/m6805 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/tlcs900 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/tms32010 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/upd7725 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/upd7810 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/v60 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/t11 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/xa -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/z80 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/z180 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/sh4 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/pic16c5x -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/zlib -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/lib7z -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/dr_libs -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/stb_vorbis -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/r8brain -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/libchdr/include -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/lzma -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/capcom -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/konami -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/dataeast -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/cave -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/neogeo -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/psikyo -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/sega -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/toaplan -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/taito -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/irem -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/pce -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/galaxian -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/generated -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro/deps/ugui -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -O2 -w -ffast-math -fexceptions -frtti -std=gnu99 -Wno-write-strings -std=gnu++98 -MD -MT CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_dasm.cpp.o -MF CMakeFiles\fbneo.dir\G_\git\xbw\vendor\fbneo\src\cpu\tms34010\tms34010_dasm.cpp.o.d -o CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_dasm.cpp.o -c G:/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_dasm.cpp
+C/C++: G:/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_dasm.cpp:8:10: fatal error: 'memhandler.h' file not found
+C/C++:     8 | #include "memhandler.h"
+C/C++:       |          ^~~~~~~~~~~~~~
+C/C++: 1 error generated.
+C/C++: G:\tools\android-sdk\ndk\27.2.12479018\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android21 --sysroot=G:/tools/android-sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDROID -DCHDR_SYSTEM_ZLIB -DGIT_VERSION=\"xbw\" -DHAVE_UNISTD_H -DINCLUDE_7Z_SUPPORT -DINCLUDE_CHD_SUPPORT -DLSB_FIRST -DUSE_LIBRETRO_VFS -DUSE_SPEEDHACKS -DZ7_PPMD_SUPPORT -DZ7_ST -D_FILE_OFFSET_BITS=64 -D__LIBRETRO__ -Dfbneo_EXPORTS -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/win32 -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro/libretro-common/include -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/snd -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/devices -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/input -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/cd -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/audio -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/f8 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/hmcs40 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8039 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8051 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8085 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8x41 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/m377 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/m6805 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/tlcs900 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/tms32010 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/upd7725 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/upd7810 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/v60 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/t11 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/xa -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/z80 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/z180 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/sh4 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/pic16c5x -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/zlib -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/lib7z -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/dr_libs -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/stb_vorbis -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/r8brain -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/libchdr/include -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/lzma -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/capcom -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/konami -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/dataeast -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/cave -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/neogeo -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/psikyo -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/sega -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/toaplan -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/taito -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/irem -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/pce -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/galaxian -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/generated -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro/deps/ugui -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -O2 -w -ffast-math -fexceptions -frtti -std=gnu99 -Wno-write-strings -std=gnu++98 -MD -MT CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_newdasm.cpp.o -MF CMakeFiles\fbneo.dir\G_\git\xbw\vendor\fbneo\src\cpu\tms34010\tms34010_newdasm.cpp.o.d -o CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_newdasm.cpp.o -c G:/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_newdasm.cpp
+C/C++: G:/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_newdasm.cpp:8:10: fatal error: 'memhandler.h' file not found
+C/C++:     8 | #include "memhandler.h"
+C/C++:       |          ^~~~~~~~~~~~~~
+C/C++: 1 error generated.
+
+> Task :fbneo:buildCMakeDebug[arm64-v8a] FAILED
+gradle.bat : 
+所在位置 行:3 字符: 1
++ & 'G:\tools\gradle\gradle-8.9\bin\gradle.bat' :fbneo:assembleDebug -- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':fbneo:buildCMakeDebug[arm64-v8a]'.
+> com.android.ide.common.process.ProcessException: ninja: Entering directory `G:\git\xbw\fbneo\.cxx\Debug\3t4p335w\arm6
+4-v8a'
+  [0/2] Re-checking globbed directories...
+  [1/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/watchdog.cpp.o
+  [2/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/tlc34076.cpp.o
+  [3/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/v3021.cpp.o
+  [4/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/taito_m68705.cpp.o
+  [5/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/timekpr.cpp.o
+  [6/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/st0020.cpp.o
+  [7/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/beep.cpp.o
+  [8/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/sknsspr.cpp.o
+  [9/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/astrocde_snd.cpp.o
+  [10/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/tms9928a.cpp.o
+  [11/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/vdc.cpp.o
+  [12/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/x2212.cpp.o
+  [13/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/slapstic.cpp.o
+  [14/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/t5182.cpp.o
+  [15/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/tms34061.cpp.o
+  [16/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ym3526.cpp.o
+  [17/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ym2612.cpp.o
+  [18/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/asteroids.cpp.o
+  [19/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ym3812.cpp.o
+  [20/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ymf262.cpp.o
+  [21/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ymf271.cpp.o
+  [22/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_md2612.cpp.o
+  [23/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_y8950.cpp.o
+  [24/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ym2413.cpp.o
+  [25/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ym2151.cpp.o
+  [26/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ym2608.cpp.o
+  [27/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/flt_rc.cpp.o
+  [28/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ym2610.cpp.o
+  [29/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/flower.cpp.o
+  [30/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ym2203.cpp.o
+  [31/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/dac.cpp.o
+  [32/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/es8712.cpp.o
+  [33/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/burn_ymf278b.cpp.o
+  [34/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/c6280.cpp.o
+  [35/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/exidy440_snd.cpp.o
+  [36/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/es5506.cpp.o
+  [37/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/c140.cpp.o
+  [38/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/bzone.cpp.o
+  [39/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/c352.cpp.o
+  [40/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/iremga20.cpp.o
+  [41/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/gaelco.cpp.o
+  [42/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ics2115.cpp.o
+  [43/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/digitalk.cpp.o
+  [44/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/hc55516.cpp.o
+  [45/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/k005289.cpp.o
+  [46/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/i5000.cpp.o
+  [47/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/k053260.cpp.o
+  [48/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/k007232.cpp.o
+  [49/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/k054539.cpp.o
+  [50/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/llander.cpp.o
+  [51/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/k051649.cpp.o
+  [52/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ay8910.c.o
+  [53/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ym2612.c.o
+  [54/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ymf278b.c.o
+  [55/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ym2413.c.o
+  [56/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/mpeg_audio.cpp.o
+  [57/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/fmopl.c.o
+  [58/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ymdeltat.c.o
+  [59/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/msm5205.cpp.o
+  [60/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ym2151.c.o
+  [61/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/fm.c.o
+  [62/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/msm5232.cpp.o
+  [63/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/multipcm.cpp.o
+  [64/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/phoenixsound.cpp.o
+  [65/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/msm6295.cpp.o
+  [66/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/saa1099.cpp.o
+  [67/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/rf5c68.cpp.o
+  [68/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/s14001a.cpp.o
+  [69/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/namco_snd.cpp.o
+  [70/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/pleiadssound.cpp.o
+  [71/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/nes_apu.cpp.o
+  [72/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/redbaron.cpp.o
+  [73/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/d_parent.cpp.o
+  [74/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ymz770.cpp.o
+  [75/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ymz280b.cpp.o
+  [76/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_akkaarrh.cpp.o
+  [77/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/pokey.cpp.o
+  [78/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/segapcm.cpp.o
+  [79/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/sn76496.cpp.o
+  [80/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/sn76477.cpp.o
+  [81/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/snk6502_sound.cpp.o
+  [82/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ymf271.cpp.o
+  [83/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/sp0256.cpp.o
+  [84/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/t6w28.cpp.o
+  [85/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/timeplt_snd.cpp.o
+  [86/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/sp0250.cpp.o
+  [87/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/vlm5030.cpp.o
+  [88/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps.cpp.o
+  [89/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/x1010.cpp.o
+  [90/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/tiamc1_snd.cpp.o
+  [91/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/tms36xx.cpp.o
+  [92/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/wiping.cpp.o
+  [93/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/upd7759.cpp.o
+  [94/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/tms5220.cpp.o
+  [95/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/tms5110.cpp.o
+  [96/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/votrax.cpp.o
+  [97/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_vindictr.cpp.o
+  [98/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_xybots.cpp.o
+  [99/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_thunderj.cpp.o
+  [100/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/ymf262.cpp.o
+  [101/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_toobin.cpp.o
+  [102/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_arcadecl.cpp.o
+  [103/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_atarig1.cpp.o
+  [104/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_badlands.cpp.o
+  [105/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_batman.cpp.o
+  [106/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_atarisy2.cpp.o
+  [107/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_blstroid.cpp.o
+  [108/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_gauntlet.cpp.o
+  [109/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_atarisy1.cpp.o
+  [110/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_klax.cpp.o
+  [111/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_eprom.cpp.o
+  [112/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_offtwall.cpp.o
+  [113/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_rampart.cpp.o
+  [114/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/snd/samples.cpp.o
+  [115/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_marblmd2.cpp.o
+  [116/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_skullxbo.cpp.o
+  [117/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_missile.cpp.o
+  [118/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/ps_m.cpp.o
+  [119/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_relief.cpp.o
+  [120/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/kabuki.cpp.o
+  [121/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/atari/d_shuuz.cpp.o
+  [122/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/qs.cpp.o
+  [123/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/ps_z.cpp.o
+  [124/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/ps.cpp.o
+  [125/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps_config.cpp.o
+  [126/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/qs_c.cpp.o
+  [127/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps_mem.cpp.o
+  [128/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps_draw.cpp.o
+  [129/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps2_crpt.cpp.o
+  [130/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps_obj.cpp.o
+  [131/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps_pal.cpp.o
+  [132/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps_run.cpp.o
+  [133/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cpst.cpp.o
+  [134/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps_rw.cpp.o
+  [135/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cps_scr.cpp.o
+  [136/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/6821pia.cpp.o
+  [137/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cpsr.cpp.o
+  [138/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/74259.cpp.o
+  [139/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/8255ppi.cpp.o
+  [140/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/6840ptm.cpp.o
+  [141/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/cpsrd.cpp.o
+  [142/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/fcrash_snd.cpp.o
+  [143/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/alpha8201.cpp.o
+  [144/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/8257dma.cpp.o
+  [145/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/atarijsa.cpp.o
+  [146/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/bsmt2000.cpp.o
+  [147/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/c169.cpp.o
+  [148/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/cxd1095.cpp.o
+  [149/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/d_mitchell.cpp.o
+  [150/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/avgdvg.cpp.o
+  [151/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/atarimo.cpp.o
+  [152/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/ad59mc07.cpp.o
+  [153/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/atariic.cpp.o
+  [154/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/atarivad.cpp.o
+  [155/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/atarirle.cpp.o
+  [156/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/dtimer.cpp.o
+  [157/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/decobsmt.cpp.o
+  [158/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/ds2404.cpp.o
+  [159/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/earom.cpp.o
+  [160/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/eeprom.cpp.o
+  [161/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/i2ceeprom.cpp.o
+  [162/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/joyprocess.cpp.o
+  [163/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/i8255.cpp.o
+  [164/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/gaelco_crypt.cpp.o
+  [165/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/intelfsh.cpp.o
+  [166/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/k051316.cpp.o
+  [167/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/i4x00.cpp.o
+  [168/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/mb87078.cpp.o
+  [169/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/kaneko_tmap.cpp.o
+  [170/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/i8155.cpp.o
+  [171/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/kaneko_hit.cpp.o
+  [172/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/mathbox.cpp.o
+  [173/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/k1ge.cpp.o
+  [174/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/midsat.cpp.o
+  [175/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/k053936.cpp.o
+  [176/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/mermaid.cpp.o
+  [177/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/mc8123.cpp.o
+  [178/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/midcsd.cpp.o
+  [179/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/midsg.cpp.o
+  [180/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/midcvsd.cpp.o
+  [181/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/midssio.cpp.o
+  [182/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/midtcs.cpp.o
+  [183/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/nb1414m4.cpp.o
+  [184/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/rtc9701.cpp.o
+  [185/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/namco_c45.cpp.o
+  [186/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/namcoio.cpp.o
+  [187/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/nb1414m4_8bit.cpp.o
+  [188/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/resnet.cpp.o
+  [189/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/serflash.cpp.o
+  [190/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/nmk112.cpp.o
+  [191/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/d_cps2.cpp.o
+  [192/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/pandora.cpp.o
+  [193/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/pit8253.cpp.o
+  [194/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/seibusnd.cpp.o
+  [195/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/nmk004.cpp.o
+  [196/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/pic8259.cpp.o
+  [197/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/qs1000.cpp.o
+  [198/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/seibucop.cpp.o
+  [199/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/poly.cpp.o
+  [200/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/konamiic.cpp.o
+  [201/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_carjmbre.cpp.o
+  [202/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ccastles.cpp.o
+  [203/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_capbowl.cpp.o
+  [204/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_cbasebal.cpp.o
+  [205/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/d_cps1.cpp.o
+  [206/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/megadrive/d_mdarcbl.cpp.o
+  [207/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/konamigx.cpp.o
+  [208/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_cclimber.cpp.o
+  [209/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/d_tunit.cpp.o
+  [210/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/megadrive/stm95.cpp.o
+  [211/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/midwayic.cpp.o
+  [212/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/narc_sound.cpp.o
+  [213/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/d_wunit.cpp.o
+  [214/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/dcs2k.cpp.o
+  [215/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/williams_cvsd.cpp.o
+  [216/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/yawdim_sound.cpp.o
+  [217/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/d_xunit.cpp.o
+  [218/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/midwunit.cpp.o
+  [219/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/megadrive/megadrive.cpp.o
+  [220/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/d_yunit.cpp.o
+  [221/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/williams_adpcm.cpp.o
+  [222/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/neogeo/neo_decrypt.cpp.o
+  [223/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/neogeo/neo_upd4990a.cpp.o
+  [224/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/neogeo/neo_palette.cpp.o
+  [225/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/neogeo/neogeo.cpp.o
+  [226/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/neogeo/neo_run.cpp.o
+  [227/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/midway/midtunit.cpp.o
+  [228/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/ctv.cpp.o
+  [229/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/neogeo/neo_text.cpp.o
+  [230/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pce/pce.cpp.o
+  [231/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/pgm_asic25.cpp.o
+  [232/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pce/pce_cd.cpp.o
+  [233/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/pgm_asic3.cpp.o
+  [234/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/pgm_asic27a_type1.cpp.o
+  [235/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/pgm_asic27a_type2.cpp.o
+  [236/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/pgm_asic27a_type3.cpp.o
+  [237/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm2/pgm2_crypt.cpp.o
+  [238/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/nes/nes.cpp.o
+  [239/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm2/pgm2_draw.cpp.o
+  [240/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/pgm_crypt.cpp.o
+  [241/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm2/d_pgm2.cpp.o
+  [242/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/d_pgm.cpp.o
+  [243/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_akazukin.cpp.o
+  [244/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/pgm_run.cpp.o
+  [245/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_1943.cpp.o
+  [246/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm2/pgm2_run.cpp.o
+  [247/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_aeroboto.cpp.o
+  [248/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pgm/pgm_draw.cpp.o
+  [249/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pce/d_pce.cpp.o
+  [250/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/devices/epic12.cpp.o
+  [251/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_1942.cpp.o
+  [252/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_4enraya.cpp.o
+  [253/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_alinvade.cpp.o
+  [254/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_alpha68k.cpp.o
+  [255/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_alpha68k1.cpp.o
+  [256/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_arabian.cpp.o
+  [257/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_amspdwy.cpp.o
+  [258/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_alpha68k2.cpp.o
+  [259/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_atetris.cpp.o
+  [260/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_argus.cpp.o
+  [261/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ambush.cpp.o
+  [262/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_armedf.cpp.o
+  [263/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_aztarac.cpp.o
+  [264/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_bagman.cpp.o
+  [265/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_asteroids.cpp.o
+  [266/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/neogeo/d_neogeo.cpp.o
+  [267/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_battlane.cpp.o
+  [268/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_baraduke.cpp.o
+  [269/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_battlex.cpp.o
+  [270/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_blockade.cpp.o
+  [271/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_bbusters.cpp.o
+  [272/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_beaminv.cpp.o
+  [273/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_bionicc.cpp.o
+  [274/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_berzerk.cpp.o
+  [275/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_astrocde.cpp.o
+  [276/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_blktiger.cpp.o
+  [277/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_bombjack.cpp.o
+  [278/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_blueprnt.cpp.o
+  [279/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_bogeyman.cpp.o
+  [280/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_calorie.cpp.o
+  [281/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_blockout.cpp.o
+  [282/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_bwidow.cpp.o
+  [283/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_canyon.cpp.o
+  [284/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_btime.cpp.o
+  [285/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_cabal.cpp.o
+  [286/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_bzone.cpp.o
+  [287/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/neogeo/neo_sprite.cpp.o
+  [288/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_matmania.cpp.o
+  [289/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mastboyo.cpp.o
+  [290/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_circus.cpp.o
+  [291/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_cheekyms.cpp.o
+  [292/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_clshroad.cpp.o
+  [293/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mcr68.cpp.o
+  [294/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_chinagat.cpp.o
+  [295/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mcr3.cpp.o
+  [296/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_champbas.cpp.o
+  [297/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_cloak.cpp.o
+  [298/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_cloud9.cpp.o
+  [299/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mcr.cpp.o
+  [300/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_commando.cpp.o
+  [301/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_copsnrob.cpp.o
+  [302/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_citycon.cpp.o
+  [303/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_darkmist.cpp.o
+  [304/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_dacholer.cpp.o
+  [305/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_cop01.cpp.o
+  [306/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_cybertnk.cpp.o
+  [307/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_deadang.cpp.o
+  [308/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ddayjlc.cpp.o
+  [309/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_djboy.cpp.o
+  [310/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_dday.cpp.o
+  [311/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_dorachan.cpp.o
+  [312/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_dogfgt.cpp.o
+  [313/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_dribling.cpp.o
+  [314/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_docastle.cpp.o
+  [315/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ddragon.cpp.o
+  [316/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_epos.cpp.o
+  [317/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_dynduke.cpp.o
+  [318/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_drmicro.cpp.o
+  [319/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_efdt.cpp.o
+  [320/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_espial.cpp.o
+  [321/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ettrivia.cpp.o
+  [322/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_exerion.cpp.o
+  [323/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_exedexes.cpp.o
+  [324/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_equites.cpp.o
+  [325/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_fantland.cpp.o
+  [326/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_exterm.cpp.o
+  [327/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_dkong.cpp.o
+  [328/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_exidy440.cpp.o
+  [329/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_exprraid.cpp.o
+  [330/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_fcombat.cpp.o
+  [331/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_firetrap.cpp.o
+  [332/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_flipjack.cpp.o
+  [333/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_flower.cpp.o
+  [334/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_funkybee.cpp.o
+  [335/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_fastfred.cpp.o
+  [336/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_exidy.cpp.o
+  [337/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_gaplus.cpp.o
+  [338/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_foodf.cpp.o
+  [339/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_galaga.cpp.o
+  [340/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_freekick.cpp.o
+  [341/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_galgame.cpp.o
+  [342/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_gridlee.cpp.o
+  [343/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ginganin.cpp.o
+  [344/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_gng.cpp.o
+  [345/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_gotya.cpp.o
+  [346/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_galivan.cpp.o
+  [347/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_gunsmoke.cpp.o
+  [348/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_headonb.cpp.o
+  [349/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_higemaru.cpp.o
+  [350/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_goindol.cpp.o
+  [351/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_hvyunit.cpp.o
+  [352/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_invaders.cpp.o
+  [353/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_himesiki.cpp.o
+  [354/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_holeland.cpp.o
+  [355/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_jedi.cpp.o
+  [356/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_jack.cpp.o
+  [357/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_jrpacman.cpp.o
+  [358/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_iqblock.cpp.o
+  [359/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_kingofbox.cpp.o
+  [360/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_kncljoe.cpp.o
+  [361/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_kyugo.cpp.o
+  [362/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_kangaroo.cpp.o
+  [363/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_lasso.cpp.o
+  [364/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_lwings.cpp.o
+  [365/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/msx/d_msx.cpp.o
+  [366/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_lastduel.cpp.o
+  [367/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ladybug.cpp.o
+  [368/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_lockon.cpp.o
+  [369/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_marineb.cpp.o
+  [370/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mappy.cpp.o
+  [371/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mainsnk.cpp.o
+  [372/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_magmax.cpp.o
+  [373/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mario.cpp.o
+  [374/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_markham.cpp.o
+  [375/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_deco156.cpp.o
+  [376/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/sf2mdt_snd.cpp.o
+  [377/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/capcom/qs_z.cpp.o
+  [378/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/cave_palette.cpp.o
+  [379/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/cave.cpp.o
+  [380/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_dodonpachi.cpp.o
+  [381/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_donpachi.cpp.o
+  [382/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_cv1k.cpp.o
+  [383/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_deco32.cpp.o
+  [384/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_gaia.cpp.o
+  [385/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_decocass.cpp.o
+  [386/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_hotdogst.cpp.o
+  [387/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_dec8.cpp.o
+  [388/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_esprade.cpp.o
+  [389/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/cave_tile.cpp.o
+  [390/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_guwange.cpp.o
+  [391/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_feversos.cpp.o
+  [392/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_metmqstr.cpp.o
+  [393/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_mazinger.cpp.o
+  [394/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/cave_sprite.cpp.o
+  [395/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_korokoro.cpp.o
+  [396/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_backfire.cpp.o
+  [397/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_uopoko.cpp.o
+  [398/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cps3/cps3snd.cpp.o
+  [399/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_tjumpman.cpp.o
+  [400/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_pwrinst2.cpp.o
+  [401/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cps3/cps3run.cpp.o
+  [402/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cave/d_sailormn.cpp.o
+  [403/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_boogwing.cpp.o
+  [404/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/channelf/d_channelf.cpp.o
+  [405/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_cbuster.cpp.o
+  [406/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/cps3/d_cps3.cpp.o
+  [407/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_actfancr.cpp.o
+  [408/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_bwing.cpp.o
+  [409/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_brkthru.cpp.o
+  [410/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_chanbara.cpp.o
+  [411/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_compgolf.cpp.o
+  [412/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_dblewing.cpp.o
+  [413/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_dassault.cpp.o
+  [414/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_darkseal.cpp.o
+  [415/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_cninja.cpp.o
+  [416/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m63.cpp.o
+  [417/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m90.cpp.o
+  [418/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m58.cpp.o
+  [419/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_decomlc.cpp.o
+  [420/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m72.cpp.o
+  [421/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_dietgogo.cpp.o
+  [422/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_dreambal.cpp.o
+  [423/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_karnov.cpp.o
+  [424/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m62.cpp.o
+  [425/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_funkyjet.cpp.o
+  [426/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/megadrive/d_megadrive.cpp.o
+  [427/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_madmotor.cpp.o
+  [428/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m92.cpp.o
+  [429/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_dec0.cpp.o
+  [430/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_liberate.cpp.o
+  [431/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_lemmings.cpp.o
+  [432/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_mirage.cpp.o
+  [433/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_simpl156.cpp.o
+  [434/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_kchamp.cpp.o
+  [435/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_progolf.cpp.o
+  [436/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_metlclsh.cpp.o
+  [437/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_pktgaldx.cpp.o
+  [438/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_pcktgal.cpp.o
+  [439/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_shootout.cpp.o
+  [440/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_sidepckt.cpp.o
+  [441/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_tumblep.cpp.o
+  [442/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_sshangha.cpp.o
+  [443/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_rohga.cpp.o
+  [444/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/decobac06.cpp.o
+  [445/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_vaportra.cpp.o
+  [446/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/deco146.cpp.o
+  [447/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/galaxian/cclimber_audio.cpp.
+o
+  [448/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_stadhero.cpp.o
+  [449/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/d_supbtime.cpp.o
+  [450/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/galaxian/d_119.cpp.o
+  [451/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/dataeast/deco16ic.cpp.o
+  [452/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/galaxian/gal_stars.cpp.o
+  [453/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/galaxian/gal_run.cpp.o
+  [454/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/galaxian/gal_sound.cpp.o
+  [455/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/galaxian/gal_gfx.cpp.o
+  [456/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/irem_sound.cpp.o
+  [457/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m57.cpp.o
+  [458/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m52.cpp.o
+  [459/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/irem_cpu.cpp.o
+  [460/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_m107.cpp.o
+  [461/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_88games.cpp.o
+  [462/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_vigilant.cpp.o
+  [463/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_asterix.cpp.o
+  [464/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/irem/d_travrusa.cpp.o
+  [465/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_aliens.cpp.o
+  [466/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_battlnts.cpp.o
+  [467/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_bishi.cpp.o
+  [468/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_ajax.cpp.o
+  [469/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_chqflag.cpp.o
+  [470/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_bladestl.cpp.o
+  [471/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_bottom9.cpp.o
+  [472/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/coleco/d_coleco.cpp.o
+  [473/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/nes/d_nes.cpp.o
+  [474/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_blockhl.cpp.o
+  [475/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_circusc.cpp.o
+  [476/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_dbz.cpp.o
+  [477/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_fastlane.cpp.o
+  [478/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_combatsc.cpp.o
+  [479/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_finalzr.cpp.o
+  [480/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_crimfght.cpp.o
+  [481/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_divebomb.cpp.o
+  [482/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/gba/gba.cpp.o
+  [483/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_gberet.cpp.o
+  [484/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_ddribble.cpp.o
+  [485/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_gbusters.cpp.o
+  [486/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_contra.cpp.o
+  [487/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_gradius3.cpp.o
+  [488/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_flkatck.cpp.o
+  [489/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_hexion.cpp.o
+  [490/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_gijoe.cpp.o
+  [491/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_hyperspt.cpp.o
+  [492/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_gyruss.cpp.o
+  [493/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_jailbrek.cpp.o
+  [494/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_kontest.cpp.o
+  [495/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_ironhors.cpp.o
+  [496/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_hcastle.cpp.o
+  [497/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_mikie.cpp.o
+  [498/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_junofrst.cpp.o
+  [499/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_jackal.cpp.o
+  [500/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_labyrunr.cpp.o
+  [501/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_mogura.cpp.o
+  [502/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_lethal.cpp.o
+  [503/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_mainevt.cpp.o
+  [504/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_megazone.cpp.o
+  [505/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_rocnrope.cpp.o
+  [506/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_pooyan.cpp.o
+  [507/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_pingpong.cpp.o
+  [508/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_parodius.cpp.o
+  [509/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_pandoras.cpp.o
+  [510/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/galaxian/d_galaxian.cpp.o
+  [511/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_moo.cpp.o
+  [512/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_rockrage.cpp.o
+  [513/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_scotrsht.cpp.o
+  [514/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_shaolins.cpp.o
+  [515/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_sbasketb.cpp.o
+  [516/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_nemesis.cpp.o
+  [517/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_timeplt.cpp.o
+  [518/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_rollerg.cpp.o
+  [519/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_simpsons.cpp.o
+  [520/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_mystwarr.cpp.o
+  [521/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_spy.cpp.o
+  [522/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_tutankhm.cpp.o
+  [523/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_tp84.cpp.o
+  [524/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_surpratk.cpp.o
+  [525/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_thunderx.cpp.o
+  [526/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_trackfld.cpp.o
+  [527/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_twin16.cpp.o
+  [528/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_ultraman.cpp.o
+  [529/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k007121.cpp.o
+  [530/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k007342_k007420.cpp.o
+  [531/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_yiear.cpp.o
+  [532/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_xmen.cpp.o
+  [533/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k051733.cpp.o
+  [534/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k007452.cpp.o
+  [535/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_xexex.cpp.o
+  [536/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k052109.cpp.o
+  [537/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_wecleman.cpp.o
+  [538/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_vendetta.cpp.o
+  [539/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k053250.cpp.o
+  [540/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k053245.cpp.o
+  [541/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k051960.cpp.o
+  [542/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k053251.cpp.o
+  [543/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k054338.cpp.o
+  [544/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k055555.cpp.o
+  [545/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k053247.cpp.o
+  [546/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k054000.cpp.o
+  [547/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_miconkit.cpp.o
+  [548/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/d_tmnt.cpp.o
+  [549/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/konami/k056832.cpp.o
+  [550/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_metlfrzr.cpp.o
+  [551/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_meijinsn.cpp.o
+  [552/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mjkjidai.cpp.o
+  [553/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mhavoc.cpp.o
+  [554/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mmagic.cpp.o
+  [555/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mouser.cpp.o
+  [556/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mole.cpp.o
+  [557/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mrdo.cpp.o
+  [558/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mirax.cpp.o
+  [559/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_millipede.cpp.o
+  [560/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mrjong.cpp.o
+  [561/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_momoko.cpp.o
+  [562/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mrflea.cpp.o
+  [563/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_nitedrvr.cpp.o
+  [564/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_naughtyb.cpp.o
+  [565/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mystston.cpp.o
+  [566/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_munchmo.cpp.o
+  [567/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_mustache.cpp.o
+  [568/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_omegrace.cpp.o
+  [569/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_olibochu.cpp.o
+  [570/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_pacland.cpp.o
+  [571/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_megasys1.cpp.o
+  [572/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_pac2650.cpp.o
+  [573/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_namcos1.cpp.o
+  [574/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_namcos86.cpp.o
+  [575/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_pitnrun.cpp.o
+  [576/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ninjakd2.cpp.o
+  [577/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_pbaction.cpp.o
+  [578/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_popper.cpp.o
+  [579/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_phoenix.cpp.o
+  [580/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_pengadvb.cpp.o
+  [581/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_pturn.cpp.o
+  [582/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_pkunwar.cpp.o
+  [583/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_quizo.cpp.o
+  [584/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_prehisle.cpp.o
+  [585/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_psychic5.cpp.o
+  [586/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_popeye.cpp.o
+  [587/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_punchout.cpp.o
+  [588/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_quantum.cpp.o
+  [589/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_safarir.cpp.o
+  [590/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_redclash.cpp.o
+  [591/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_qbert.cpp.o
+  [592/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_r2dtank.cpp.o
+  [593/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_rallyx.cpp.o
+  [594/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_renegade.cpp.o
+  [595/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_route16.cpp.o
+  [596/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_pacman.cpp.o
+  [597/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_scregg.cpp.o
+  [598/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_sauro.cpp.o
+  [599/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_rpunch.cpp.o
+  [600/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_seicross.cpp.o
+  [601/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_senjyo.cpp.o
+  [602/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_shisen.cpp.o
+  [603/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_shangkid.cpp.o
+  [604/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_sf.cpp.o
+  [605/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_skykid.cpp.o
+  [606/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_skyarmy.cpp.o
+  [607/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_sidearms.cpp.o
+  [608/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_skyfox.cpp.o
+  [609/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_snk6502.cpp.o
+  [610/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_sprcros2.cpp.o
+  [611/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_solomon.cpp.o
+  [612/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_sonson.cpp.o
+  [613/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_spacefb.cpp.o
+  [614/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_snk68.cpp.o
+  [615/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_speedbal.cpp.o
+  [616/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_sstrangr.cpp.o
+  [617/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_spbactn.cpp.o
+  [618/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_spdodgeb.cpp.o
+  [619/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_ssozumo.cpp.o
+  [620/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_splndrbt.cpp.o
+  [621/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_stfight.cpp.o
+  [622/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_srumbler.cpp.o
+  [623/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tagteam.cpp.o
+  [624/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_starwars.cpp.o
+  [625/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_sub.cpp.o
+  [626/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tankbatt.cpp.o
+  [627/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_stuntair.cpp.o
+  [628/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tattack.cpp.o
+  [629/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_snk.cpp.o
+  [630/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tankbust.cpp.o
+  [631/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_taxidriv.cpp.o
+  [632/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tail2nose.cpp.o
+  [633/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tempest.cpp.o
+  [634/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tbowl.cpp.o
+  [635/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tceptor.cpp.o
+  [636/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_suna8.cpp.o
+  [637/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tiamc1.cpp.o
+  [638/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tehkanwc.cpp.o
+  [639/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_thedeep.cpp.o
+  [640/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_thief.cpp.o
+  [641/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tecmo.cpp.o
+  [642/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_terracre.cpp.o
+  [643/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_timelimt.cpp.o
+  [644/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_thepit.cpp.o
+  [645/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tigeroad.cpp.o
+  [646/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_toypop.cpp.o
+  [647/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_vball.cpp.o
+  [648/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tsamurai.cpp.o
+  [649/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_usgames.cpp.o
+  [650/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_vastar.cpp.o
+  [651/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_vampire.cpp.o
+  [652/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_wallc.cpp.o
+  [653/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_toki.cpp.o
+  [654/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_tubep.cpp.o
+  [655/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_vulgus.cpp.o
+  [656/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_warpsped.cpp.o
+  [657/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_warpwarp.cpp.o
+  [658/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_wiping.cpp.o
+  [659/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_wink.cpp.o
+  [660/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_xyonix.cpp.o
+  [661/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_williams.cpp.o
+  [662/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_wc90.cpp.o
+  [663/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_wc90b.cpp.o
+  [664/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_xxmissio.cpp.o
+  [665/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_xain.cpp.o
+  [666/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_wwfsstar.cpp.o
+  [667/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_vicdual.cpp.o
+  [668/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_zwackery.cpp.o
+  [669/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/psikyo/psikyo_palette.cpp.o
+  [670/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_wiz.cpp.o
+  [671/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_zaccaria.cpp.o
+  [672/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pre90s/d_zodiack.cpp.o
+  [673/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/psikyo/d_psikyo4.cpp.o
+  [674/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/psikyo/d_psikyo.cpp.o
+  [675/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_20pacgal.cpp.o
+  [676/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/psikyo/psikyo_tile.cpp.o
+  [677/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/psikyo/d_psikyosh.cpp.o
+  [678/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_1945kiii.cpp.o
+  [679/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_3x3puzzl.cpp.o
+  [680/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_bestleag.cpp.o
+  [681/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_aquarium.cpp.o
+  [682/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_airbustr.cpp.o
+  [683/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/psikyo/psikyosh_render.cpp.o
+  [684/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_artmagic.cpp.o
+  [685/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_bloodbro_ms.cpp.o
+  [686/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_blmbycar.cpp.o
+  [687/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_blackt96.cpp.o
+  [688/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_btoads.cpp.o
+  [689/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_bigstrkb.cpp.o
+  [690/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_crshrace.cpp.o
+  [691/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_cultures.cpp.o
+  [692/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_crospang.cpp.o
+  [693/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_aerofgt.cpp.o
+  [694/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_bloodbro.cpp.o
+  [695/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_discoboy.cpp.o
+  [696/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_dcon.cpp.o
+  [697/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_deniam.cpp.o
+  [698/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_diverboy.cpp.o
+  [699/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_dreamwld.cpp.o
+  [700/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_ddragon3.cpp.o
+  [701/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_eolith.cpp.o
+  [702/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_egghunt.cpp.o
+  [703/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_esd16.cpp.o
+  [704/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_cischeat.cpp.o
+  [705/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_dooyong.cpp.o
+  [706/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_f-32.cpp.o
+  [707/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_f1gp.cpp.o
+  [708/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_drgnmst.cpp.o
+  [709/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_funybubl.cpp.o
+  [710/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_drtomy.cpp.o
+  [711/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_eolith16.cpp.o
+  [712/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/psikyo/psikyo_sprite.cpp.o
+  [713/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_galspnbl.cpp.o
+  [714/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_go2000.cpp.o
+  [715/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_gotcha.cpp.o
+  [716/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_galpanic.cpp.o
+  [717/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_fuukifg2.cpp.o
+  [718/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_galpani3.cpp.o
+  [719/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_glass.cpp.o
+  [720/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_gaiden.cpp.o
+  [721/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_fuukifg3.cpp.o
+  [722/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_gaelco.cpp.o
+  [723/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_gaelco2.cpp.o
+  [724/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_expro02.cpp.o
+  [725/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_gstream.cpp.o
+  [726/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_goori.cpp.o
+  [727/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_inufuku.cpp.o
+  [728/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_hyprduel.cpp.o
+  [729/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_gumbo.cpp.o
+  [730/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_ladyfrog.cpp.o
+  [731/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_kickgoal.cpp.o
+  [732/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_hyperpac.cpp.o
+  [733/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_jchan.cpp.o
+  [734/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_igs011.cpp.o
+  [735/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_limenko.cpp.o
+  [736/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_littlerb.cpp.o
+  [737/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_macrossp.cpp.o
+  [738/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_itech8.cpp.o
+  [739/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_lordgun.cpp.o
+  [740/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_legionna.cpp.o
+  [741/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_midas.cpp.o
+  [742/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_megaphx.cpp.o
+  [743/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_mcatadv.cpp.o
+  [744/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_mosaic.cpp.o
+  [745/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_mugsmash.cpp.o
+  [746/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_itech32.cpp.o
+  [747/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_missb2.cpp.o
+  [748/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_news.cpp.o
+  [749/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_musclem.cpp.o
+  [750/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_mwarr.cpp.o
+  [751/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_ms32.cpp.o
+  [752/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_metro.cpp.o
+  [753/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_ohmygod.cpp.o
+  [754/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_oneshot.cpp.o
+  [755/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_kaneko16.cpp.o
+  [756/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_namcona1.cpp.o
+  [757/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_pasha2.cpp.o
+  [758/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_pass.cpp.o
+  [759/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_nmg5.cpp.o
+  [760/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_namconb1.cpp.o
+  [761/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_onetwo.cpp.o
+  [762/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_pirates.cpp.o
+  [763/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_pipedrm.cpp.o
+  [764/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_patapata.cpp.o
+  [765/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_powerbal.cpp.o
+  [766/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_pkscram.cpp.o
+  [767/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_ppmast93.cpp.o
+  [768/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_namcos2.cpp.o
+  [769/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_rabbit.cpp.o
+  [770/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_playmark.cpp.o
+  [771/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_powerins.cpp.o
+  [772/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_ngp.cpp.o
+  [773/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_pushman.cpp.o
+  [774/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_raiden.cpp.o
+  [775/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_sderby.cpp.o
+  [776/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_sandscrp.cpp.o
+  [777/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_nmk16.cpp.o
+  [778/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_silkroad.cpp.o
+  [779/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_speedspn.cpp.o
+  [780/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_shangha3.cpp.o
+  [781/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_shadfrce.cpp.o
+  [782/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_suna16.cpp.o
+  [783/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_seibuspi.cpp.o
+  [784/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_raiden2.cpp.o
+  [785/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_silvmil.cpp.o
+  [786/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_supduck.cpp.o
+  [787/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_splash.cpp.o
+  [788/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_ssv.cpp.o
+  [789/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_targeth.cpp.o
+  [790/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_seta2.cpp.o
+  [791/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_topdrive.cpp.o
+  [792/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_taotaido.cpp.o
+  [793/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_vegaeo.cpp.o
+  [794/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_tecmo16.cpp.o
+  [795/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_tecmosys.cpp.o
+  [796/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_suprnova.cpp.o
+  [797/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_thoop2.cpp.o
+  [798/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_tetrisp2.cpp.o
+  [799/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_seta.cpp.o
+  [800/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_x2222.cpp.o
+  [801/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_welltris.cpp.o
+  [802/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_unico.cpp.o
+  [803/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_xorworld.cpp.o
+  [804/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_xorworld_ms.cpp.o
+  [805/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_vamphalf.cpp.o
+  [806/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_zerozone.cpp.o
+  [807/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_wwfwfest.cpp.o
+  [808/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_wrally.cpp.o
+  [809/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_yunsung8.cpp.o
+  [810/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_tumbleb.cpp.o
+  [811/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/pst90s/d_yunsun16.cpp.o
+  [812/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_retofinv.cpp.o
+  [813/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_qix.cpp.o
+  [814/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_dotrikun.cpp.o
+  [815/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_nycaptor.cpp.o
+  [816/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_rollrace.cpp.o
+  [817/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_bankp.cpp.o
+  [818/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_othunder.cpp.o
+  [819/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_appoooh.cpp.o
+  [820/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_angelkds.cpp.o
+  [821/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_hangon.cpp.o
+  [822/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_segae.cpp.o
+  [823/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_segag80v.cpp.o
+  [824/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_suprloco.cpp.o
+  [825/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_outrun.cpp.o
+  [826/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_segag80r.cpp.o
+  [827/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_segac2.cpp.o
+  [828/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_zaxxon.cpp.o
+  [829/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_sys18.cpp.o
+  [830/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_sys16a.cpp.o
+  [831/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/fd1089.cpp.o
+  [832/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_ybrd.cpp.o
+  [833/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_xbrd.cpp.o
+  [834/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_sys24.cpp.o
+  [835/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/fd1094.cpp.o
+  [836/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_sys1.cpp.o
+  [837/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/fd1094_intf.cpp.o
+  [838/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_turbo.cpp.o
+  [839/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/sega_speech.cpp.o
+  [840/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/genesis_vid.cpp.o
+  [841/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/sys16_fd1094.cpp.o
+  [842/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/smspio.cpp.o
+  [843/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_sys16b.cpp.o
+  [844/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/smssound.cpp.o
+  [845/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/sms.cpp.o
+  [846/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/sega_315_5195.cpp.o
+  [847/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/usb_snd.cpp.o
+  [848/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/smsfmintf.cpp.o
+  [849/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/d_segas32.cpp.o
+  [850/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/gba/d_gba.cpp.o
+  [851/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/smssystem.cpp.o
+  [852/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/smstms.cpp.o
+  [853/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/smsvdp.cpp.o
+  [854/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/smsrender.cpp.o
+  [855/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/sys16_run.cpp.o
+  [856/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/cart.cpp.o
+  [857/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/apu.cpp.o
+  [858/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/epsonrtc.cpp.o
+  [859/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/dsp.cpp.o
+  [860/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/cx4.cpp.o
+  [861/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/dma.cpp.o
+  [862/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/input.cpp.o
+  [863/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/msu1.cpp.o
+  [864/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/cpu_sa1.cpp.o
+  [865/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/ppu.cpp.o
+  [866/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/cpu.cpp.o
+  [867/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/msu1_backend.cpp.o
+  [868/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/snes_other.cpp.o
+  [869/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/spc7110.cpp.o
+  [870/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/sdd1.cpp.o
+  [871/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/gsu.cpp.o
+  [872/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/snes.cpp.o
+  [873/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/sa1.cpp.o
+  [874/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sg1000/d_sg1000.cpp.o
+  [875/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/st018.cpp.o
+  [876/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/statehandler.cpp.o
+  [877/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sega/sys16_gfx.cpp.o
+  [878/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/spc.cpp.o
+  [879/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/cchip.cpp.o
+  [880/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_ashnojoe.cpp.o
+  [881/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/spectrum/spectrum.cpp.o
+  [882/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_arkanoid.cpp.o
+  [883/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_crbaloon.cpp.o
+  [884/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_buggychl.cpp.o
+  [885/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_darius2.cpp.o
+  [886/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_asuka.cpp.o
+  [887/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_chaknpop.cpp.o
+  [888/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_exzisus.cpp.o
+  [889/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_bublbobl.cpp.o
+  [890/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_groundfx.cpp.o
+  [891/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_cyclemb.cpp.o
+  [892/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_flstory.cpp.o
+  [893/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_galastrm.cpp.o
+  [894/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_ksayakyu.cpp.o
+  [895/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_lkage.cpp.o
+  [896/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_jollyjgr.cpp.o
+  [897/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_gunbuster.cpp.o
+  [898/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_minivdr.cpp.o
+  [899/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_gladiatr.cpp.o
+  [900/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_mexico86.cpp.o
+  [901/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_lsasquad.cpp.o
+  [902/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_superchs.cpp.o
+  [903/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_halleys.cpp.o
+  [904/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_msisaac.cpp.o
+  [905/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_ssrj.cpp.o
+  [906/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_slapshot.cpp.o
+  [907/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_sbowling.cpp.o
+  [908/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_superqix.cpp.o
+  [909/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_supridr.cpp.o
+  [910/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitox.cpp.o
+  [911/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitob.cpp.o
+  [912/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitosj.cpp.o
+  [913/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitoh.cpp.o
+  [914/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_undrfire.cpp.o
+  [915/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitol.cpp.o
+  [916/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitomisc.cpp.o
+  [917/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_wyvernf0.cpp.o
+  [918/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/pc080sn.cpp.o
+  [919/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitof3.cpp.o
+  [920/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/pc090oj.cpp.o
+  [921/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/taitof3_snd.cpp.o
+  [922/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/taito_ic.cpp.o
+  [923/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/msu1_decoders.c.o
+  [924/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitof2.cpp.o
+  [925/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0140syt.cpp.o
+  [926/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0110pcr.cpp.o
+  [927/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_tnzs.cpp.o
+  [928/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/d_taitoz.cpp.o
+  [929/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0180vcu.cpp.o
+  [930/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/taito.cpp.o
+  [931/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0150rod.cpp.o
+  [932/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0280grd.cpp.o
+  [933/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0360pri.cpp.o
+  [934/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0100scn.cpp.o
+  [935/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0510nio.cpp.o
+  [936/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0220ioc.cpp.o
+  [937/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0640fio.cpp.o
+  [938/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tnzs_prot.cpp.o
+  [939/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/tc0480scp.cpp.o
+  [940/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_batsugun.cpp.o
+  [941/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_dogyuun.cpp.o
+  [942/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_fixeight.cpp.o
+  [943/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/taito/taitof3_video.cpp.o
+  [944/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_enmadaio.cpp.o
+  [945/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_batrider.cpp.o
+  [946/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_bbakraid.cpp.o
+  [947/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_kbash2.cpp.o
+  [948/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_battleg.cpp.o
+  [949/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_ghox.cpp.o
+  [950/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_pipibibs.cpp.o
+  [951/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_kbash.cpp.o
+  [952/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_mahoudai.cpp.o
+  [953/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_shippumd.cpp.o
+  [954/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_snowbro2.cpp.o
+  [955/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_tekipaki.cpp.o
+  [956/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_truxton2.cpp.o
+  [957/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_vfive.cpp.o
+  [958/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_slapfght.cpp.o
+  [959/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_wardner.cpp.o
+  [960/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_twincobr.cpp.o
+  [961/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/arm7_intf.cpp.o
+  [962/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/adsp2100_intf.cpp.o
+  [963/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/toa_palette.cpp.o
+  [964/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/toa_extratext.cpp.o
+  [965/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/arm9_intf.cpp.o
+  [966/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/arm_intf.cpp.o
+  [967/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/d_toaplan1.cpp.o
+  [968/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/h6280_intf.cpp.o
+  [969/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/hd6309_intf.cpp.o
+  [970/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/toaplan.cpp.o
+  [971/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/konami_intf.cpp.o
+  [972/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/toaplan1.cpp.o
+  [973/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/pic16c5x_intf.cpp.o
+  [974/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/toa_bcu2.cpp.o
+  [975/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m6800_intf.cpp.o
+  [976/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/toaplan/toa_gp9001.cpp.o
+  [977/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/nec_intf.cpp.o
+  [978/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m68000_intf.cpp.o
+  [979/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/t11_intf.cpp.o
+  [980/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m6805_intf.cpp.o
+  [981/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m6502_intf.cpp.o
+  [982/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/sms/d_sms.cpp.o
+  [983/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m6809_intf.cpp.o
+  [984/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/xa_intf.cpp.o
+  [985/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tlcs90_intf.cpp.o
+  [986/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o
+  [987/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/z180_intf.cpp.o
+  [988/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/s2650_intf.cpp.o
+  [989/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/z80_intf.cpp.o
+  [990/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/streams
+/file_stream_transforms.c.o
+  [991/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/file/co
+nfig_file_userdata.c.o
+  [992/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/arm/arm.cpp.o
+  [993/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/feature
+s/features_cpu.c.o
+  [994/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/arm7/arm7.cpp.o
+  [995/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/f8/f8.cpp.o
+  [996/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/arm9/arm9.cpp.o
+  [997/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/file/co
+nfig_file.c.o
+  [998/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/streams
+/file_stream.c.o
+  [999/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m68k/m68kcpu.c.o
+  [1000/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/adsp2100/adsp2100.cpp.o
+  [1001/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/pic16c5x/pic16c5x.cpp.o
+  [1002/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/h6280/h6280.cpp.o
+  [1003/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/hmcs40/hmcs40.cpp.o
+  [1004/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/mb88xx/mb88xx.cpp.o
+  [1005/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/hd6309/hd6309.cpp.o
+  [1006/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/sh2/sh2.cpp.o
+  [1007/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m6502/m6502.cpp.o
+  [1008/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/nec/v25.cpp.o
+  [1009/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/nec/nec.cpp.o
+  [1010/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/sh4/sh4.cpp.o
+  [1011/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_optable.cpp.o
+  [1012/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/i8x41/mcs48.cpp.o
+  [1013/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/i8051/mcs51.cpp.o
+  [1014/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/i8039/i8039.cpp.o
+  [1015/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/i386/i386.cpp.o
+  [1016/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/e132xs/e132xs.cpp.o
+  [1017/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/upd7725/upd7725.cpp.o
+  [1018/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/i8085/i8085.cpp.o
+  [1019/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_dasm.cpp.o
+  FAILED: CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_dasm.cpp.o 
+  G:\tools\android-sdk\ndk\27.2.12479018\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-
+linux-android21 --sysroot=G:/tools/android-sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDR
+OID -DCHDR_SYSTEM_ZLIB -DGIT_VERSION=\"xbw\" -DHAVE_UNISTD_H -DINCLUDE_7Z_SUPPORT -DINCLUDE_CHD_SUPPORT -DLSB_FIRST -DU
+SE_LIBRETRO_VFS -DUSE_SPEEDHACKS -DZ7_PPMD_SUPPORT -DZ7_ST -D_FILE_OFFSET_BITS=64 -D__LIBRETRO__ -Dfbneo_EXPORTS -IG:/g
+it/xbw/fbneo/../vendor/fbneo/src/burner/win32 -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro/libretro-common/in
+clude -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn -IG:/git/xbw/f
+bneo/../vendor/fbneo/src/cpu -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/snd -IG:/git/xbw/fbneo/../vendor/fbneo/src/bur
+n/devices -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/input -IG:/git/xbw/fb
+neo/../vendor/fbneo/src/intf/cd -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/audio -IG:/git/xbw/fbneo/../vendor/fbneo/sr
+c/burner -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/f8 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/hmcs40 -IG:/git/xbw/f
+bneo/../vendor/fbneo/src/cpu/i8039 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8051 -IG:/git/xbw/fbneo/../vendor/fbneo/
+src/cpu/i8085 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8x41 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/m377 -IG:/git
+/xbw/fbneo/../vendor/fbneo/src/cpu/m6805 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/tlcs900 -IG:/git/xbw/fbneo/../vendo
+r/fbneo/src/cpu/tms32010 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/upd7725 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/
+upd7810 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/v60 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/t11 -IG:/git/xbw/fbne
+o/../vendor/fbneo/src/cpu/xa -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/z80 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/
+z180 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/sh4 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/pic16c5x -IG:/git/xbw/fb
+neo/../vendor/fbneo/src/dep/libs/zlib -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/lib7z -IG:/git/xbw/fbneo/../vendo
+r/fbneo/src/dep/libs/dr_libs -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/stb_vorbis -IG:/git/xbw/fbneo/../vendor/fb
+neo/src/dep/libs/r8brain -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/lib
+s/libchdr/include -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/lzma -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/
+capcom -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/konami -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/dataeast 
+-IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/cave -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/neogeo -IG:/git/xb
+w/fbneo/../vendor/fbneo/src/burn/drv/psikyo -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/sega -IG:/git/xbw/fbneo/../
+vendor/fbneo/src/burn/drv/toaplan -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/taito -IG:/git/xbw/fbneo/../vendor/fb
+neo/src/burn/drv/irem -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/pce -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/d
+rv/galaxian -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/generated -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro
+/deps/ugui -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-pref
+ixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -O2 -w -ffast-math -fexception
+s -frtti -std=gnu99 -Wno-write-strings -std=gnu++98 -MD -MT CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms340
+10/tms34010_dasm.cpp.o -MF CMakeFiles\fbneo.dir\G_\git\xbw\vendor\fbneo\src\cpu\tms34010\tms34010_dasm.cpp.o.d -o CMake
+Files/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_dasm.cpp.o -c G:/git/xbw/vendor/fbneo/src/cpu/tms3401
+0/tms34010_dasm.cpp
+  G:/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_dasm.cpp:8:10: fatal error: 'memhandler.h' file not found
+      8 | #include "memhandler.h"
+        |          ^~~~~~~~~~~~~~
+  1 error generated.
+  [1020/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_newdasm.cpp.o
+  FAILED: CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_newdasm.cpp.o 
+  G:\tools\android-sdk\ndk\27.2.12479018\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-
+linux-android21 --sysroot=G:/tools/android-sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/sysroot -DANDR
+OID -DCHDR_SYSTEM_ZLIB -DGIT_VERSION=\"xbw\" -DHAVE_UNISTD_H -DINCLUDE_7Z_SUPPORT -DINCLUDE_CHD_SUPPORT -DLSB_FIRST -DU
+SE_LIBRETRO_VFS -DUSE_SPEEDHACKS -DZ7_PPMD_SUPPORT -DZ7_ST -D_FILE_OFFSET_BITS=64 -D__LIBRETRO__ -Dfbneo_EXPORTS -IG:/g
+it/xbw/fbneo/../vendor/fbneo/src/burner/win32 -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro/libretro-common/in
+clude -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn -IG:/git/xbw/f
+bneo/../vendor/fbneo/src/cpu -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/snd -IG:/git/xbw/fbneo/../vendor/fbneo/src/bur
+n/devices -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/input -IG:/git/xbw/fb
+neo/../vendor/fbneo/src/intf/cd -IG:/git/xbw/fbneo/../vendor/fbneo/src/intf/audio -IG:/git/xbw/fbneo/../vendor/fbneo/sr
+c/burner -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/f8 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/hmcs40 -IG:/git/xbw/f
+bneo/../vendor/fbneo/src/cpu/i8039 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8051 -IG:/git/xbw/fbneo/../vendor/fbneo/
+src/cpu/i8085 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/i8x41 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/m377 -IG:/git
+/xbw/fbneo/../vendor/fbneo/src/cpu/m6805 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/tlcs900 -IG:/git/xbw/fbneo/../vendo
+r/fbneo/src/cpu/tms32010 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/upd7725 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/
+upd7810 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/v60 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/t11 -IG:/git/xbw/fbne
+o/../vendor/fbneo/src/cpu/xa -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/z80 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/
+z180 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/sh4 -IG:/git/xbw/fbneo/../vendor/fbneo/src/cpu/pic16c5x -IG:/git/xbw/fb
+neo/../vendor/fbneo/src/dep/libs/zlib -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/lib7z -IG:/git/xbw/fbneo/../vendo
+r/fbneo/src/dep/libs/dr_libs -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/stb_vorbis -IG:/git/xbw/fbneo/../vendor/fb
+neo/src/dep/libs/r8brain -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/lib
+s/libchdr/include -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/libs/lzma -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/
+capcom -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/konami -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/dataeast 
+-IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/cave -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/neogeo -IG:/git/xb
+w/fbneo/../vendor/fbneo/src/burn/drv/psikyo -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/sega -IG:/git/xbw/fbneo/../
+vendor/fbneo/src/burn/drv/toaplan -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/taito -IG:/git/xbw/fbneo/../vendor/fb
+neo/src/burn/drv/irem -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/drv/pce -IG:/git/xbw/fbneo/../vendor/fbneo/src/burn/d
+rv/galaxian -IG:/git/xbw/fbneo/../vendor/fbneo/src/dep/generated -IG:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro
+/deps/ugui -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-pref
+ixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -fPIC -O2 -w -ffast-math -fexception
+s -frtti -std=gnu99 -Wno-write-strings -std=gnu++98 -MD -MT CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms340
+10/tms34010_newdasm.cpp.o -MF CMakeFiles\fbneo.dir\G_\git\xbw\vendor\fbneo\src\cpu\tms34010\tms34010_newdasm.cpp.o.d -o
+ CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_newdasm.cpp.o -c G:/git/xbw/vendor/fbneo/src/cp
+u/tms34010/tms34010_newdasm.cpp
+  G:/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010_newdasm.cpp:8:10: fatal error: 'memhandler.h' file not found
+      8 | #include "memhandler.h"
+        |          ^~~~~~~~~~~~~~
+  1 error generated.
+  [1021/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/s2650/s2650.cpp.o
+  [1022/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34010/tms34010.cpp.o
+  [1023/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms32010/tms32010.cpp.o
+  [1024/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m6800/m6800.cpp.o
+  [1025/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m6805/m6805.cpp.o
+  [1026/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/konami/konami.cpp.o
+  [1027/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m6809/m6809.cpp.o
+  [1028/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/v60/v60.cpp.o
+2 actionable tasks: 2 executed
+  [1029/1142] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m68k/m68kops.c.o
+  [1030/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/m377/m37710.cpp.o
+  [1031/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/snes/d_snes.cpp.o
+  [1032/1142] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/drv/spectrum/d_spectrum.cpp.o
+  ninja: build stopped: subcommand failed.
+  
+  C++ build system [build] failed while executing:
+      @echo off
+      "G:\\tools\\android-sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+        -C ^
+        "G:\\git\\xbw\\fbneo\\.cxx\\Debug\\3t4p335w\\arm64-v8a" ^
+        fbneo
+    from G:\git\xbw\fbneo
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 3m 47s

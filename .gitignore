@@ -1,0 +1,28 @@
+# Gradle / AGP
+.gradle/
+build/
+.cxx/
+captures/
+
+# 本机配置
+local.properties
+*.keystore
+*.jks
+
+# IDE
+.idea/
+*.iml
+.DS_Store
+
+# 上游 vendor 是独立 git 仓库（vendor/fbneo）
+vendor/
+
+# 散落产物
+*.so
+*.nes
+
+# Agent 工作区
+.easyclaw/
+.ohmyagent/
+memory/
+MEMORY.md

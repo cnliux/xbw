@@ -1,0 +1,383 @@
+﻿To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.9/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :fbneo:preBuild UP-TO-DATE
+> Task :fbneo:preDebugBuild UP-TO-DATE
+
+> Task :fbneo:configureCMakeDebug[arm64-v8a]
+C/C++: CMake Warning at CMakeLists.txt:103 (message):
+C/C++:   FBNeo ���������� 84/91�������ļ���ɾ��������
+
+> Task :fbneo:buildCMakeDebug[arm64-v8a] FAILED
+C/C++: ninja: Entering directory `G:\git\xbw\fbneo\.cxx\Debug\3t4p335w\arm64-v8a'
+C/C++: cmd.exe /C "cd . && G:\tools\android-sdk\ndk\27.2.12479018\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --target=aarch64-none-linux-android21 --sysroot=G:/tools/android-sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x86_64/sysroot -fPIC -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -static-libstdc++ -Wl,--build-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments    -Wl,--version-script=G:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro/link.T -Wl,-z,max-page-size=16384 -Wl,-no-undefined -shared -Wl,-soname,libfbneo.so -o ..\..\..\..\build\intermediates\cxx\Debug\3t4p335w\obj\arm64-v8a\libfbneo.so @CMakeFiles\fbneo.rsp  && cd ."
+C/C++: ld.lld: error: undefined symbol: tms34010_set_context(void*)
+C/C++: >>> referenced by tms34_intf.cpp:71 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:71)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Open(int))
+C/C++: >>> referenced by tms34_intf.cpp:71 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:71)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+C/C++: >>> referenced by tms34_intf.cpp:71 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:71)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+C/C++: >>> referenced 5 more times
+C/C++: ld.lld: error: undefined symbol: tms34010_get_context(void*)
+C/C++: >>> referenced by tms34_intf.cpp:82 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:82)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Close())
+C/C++: >>> referenced by tms34_intf.cpp:82 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:82)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+C/C++: >>> referenced by tms34_intf.cpp:82 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:82)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+C/C++: >>> referenced 5 more times
+C/C++: ld.lld: error: undefined symbol: tms34010_total_cycles()
+C/C++: >>> referenced by tms34_intf.cpp:99 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:99)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010TotalCycles())
+C/C++: ld.lld: error: undefined symbol: tms34010_set_irq_line(int, int)
+C/C++: >>> referenced by tms34_intf.cpp:104 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:104)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetIRQLine(int, int, int))
+C/C++: >>> referenced by tms34_intf.cpp:284 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:284)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010GenerateIRQ(unsigned int))
+C/C++: >>> referenced by tms34_intf.cpp:289 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:289)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010ClearIRQ(unsigned int))
+C/C++: ld.lld: error: undefined symbol: tms34010_new_frame()
+C/C++: >>> referenced by tms34_intf.cpp:241 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:241)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+C/C++: >>> referenced by tms34_intf.cpp:241 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:241)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+C/C++: ld.lld: error: undefined symbol: tms34010_idle(int)
+C/C++: >>> referenced by tms34_intf.cpp:224 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:224)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Idle(int))
+C/C++: ld.lld: error: undefined symbol: tms34010_run(int)
+C/C++: >>> referenced by tms34_intf.cpp:219 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:219)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Run(int))
+C/C++: ld.lld: error: undefined symbol: tms34010_stop()
+C/C++: >>> referenced by tms34_intf.cpp:248 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:248)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010RunEnd())
+C/C++: ld.lld: error: undefined symbol: tms34010_reset()
+C/C++: >>> referenced by tms34_intf.cpp:277 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:277)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Reset())
+C/C++: ld.lld: error: undefined symbol: tms34020_reset()
+C/C++: >>> referenced by tms34_intf.cpp:278 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:278)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Reset())
+C/C++: ld.lld: error: undefined symbol: tms34010_scan(int)
+C/C++: >>> referenced by tms34_intf.cpp:255 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:255)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Scan(int))
+C/C++: >>> referenced by tms34_intf.cpp:255 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:255)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Scan(int))
+C/C++: ld.lld: error: undefined symbol: tms34010_exit()
+C/C++: >>> referenced by tms34_intf.cpp:188 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:188)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Exit())
+C/C++: >>> referenced by tms34_intf.cpp:188 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:188)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Exit())
+C/C++: ld.lld: error: undefined symbol: tms34010_context_size()
+C/C++: >>> referenced by tms34_intf.cpp:149 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:149)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Init_Internal(int, int))
+C/C++: ld.lld: error: undefined symbol: tms34010_init()
+C/C++: >>> referenced by tms34_intf.cpp:152 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:152)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Init_Internal(int, int))
+C/C++: ld.lld: error: undefined symbol: tms34010_set_toshift(void (*)(unsigned int, unsigned short*))
+C/C++: >>> referenced by tms34_intf.cpp:299 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:299)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Init_Internal(int, int))
+C/C++: >>> referenced by tms34_intf.cpp:299 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:299)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetToShift(void (*)(unsigned int, unsigned short*)))
+C/C++: ld.lld: error: undefined symbol: tms34010_set_fromshift(void (*)(unsigned int, unsigned short*))
+C/C++: >>> referenced by tms34_intf.cpp:304 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:304)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Init_Internal(int, int))
+C/C++: >>> referenced by tms34_intf.cpp:304 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:304)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetFromShift(void (*)(unsigned int, unsigned short*)))
+C/C++: ld.lld: error: undefined symbol: tms34010_set_cycperframe(int)
+C/C++: >>> referenced by tms34_intf.cpp:199 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:199)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetCpuCyclesPerFrame(int))
+C/C++: ld.lld: error: undefined symbol: tms34010_set_pixclock(int, int)
+C/C++: >>> referenced by tms34_intf.cpp:204 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:204)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetPixClock(int, int))
+C/C++: ld.lld: error: undefined symbol: tms34010_set_output_int(void (*)(int))
+C/C++: >>> referenced by tms34_intf.cpp:209 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:209)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetOutputINT(void (*)(int)))
+C/C++: ld.lld: error: undefined symbol: tms34010_set_halt_on_reset(int)
+C/C++: >>> referenced by tms34_intf.cpp:214 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:214)
+C/C++: >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetHaltOnReset(int))
+C/C++: ld.lld: error: too many errors emitted, stopping now (use --error-limit=0 to see all errors)
+C/C++: clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+C/C++: ninja: build stopped: subcommand failed.
+gradle.bat : 
+所在位置 行:3 字符: 1
++ & 'G:\tools\gradle\gradle-8.9\bin\gradle.bat' :fbneo:assembleDebug -- ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':fbneo:buildCMakeDebug[arm64-v8a]'.
+> com.android.ide.common.process.ProcessException: ninja: Entering directory `G:\git\xbw\fbneo\.cxx\Debug\3t4p335w\arm6
+4-v8a'
+  [0/2] Re-checking globbed directories...
+  [1/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/upd7810/7810dasm.c.o
+  [2/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/deps/ugui/ugui_textbox.c.o
+  [3/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/deps/ugui/font_8x8.c.o
+  [4/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/ugui_tools.c.o
+  [5/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/z80/z80daisy.cpp.o
+  [6/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/z80/z80pio.cpp.o
+  [7/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/z80/z80ctc.cpp.o
+  [8/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/deps/ugui/ugui.c.o
+  [9/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn_sound.cpp.o
+  [10/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tlcs90/tlcs90.cpp.o
+  [11/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/cheat.cpp.o
+  [12/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/xa/xa.cpp.o
+  [13/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn_memory.cpp.o
+  [14/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn_led.cpp.o
+  [15/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn_bitmap.cpp.o
+  [16/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/xa/xa_ops.cpp.o
+  [17/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/hiscore.cpp.o
+  [18/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn_gun.cpp.o
+  [19/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/timer.cpp.o
+  [20/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/debug_track.cpp.o
+  [21/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/load.cpp.o
+  [22/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn_sha1.cpp.o
+  [23/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn_shift.cpp.o
+  [24/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/tilemap_generic.cpp.o
+  [25/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/ioapi.c.o
+  [26/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn_pal.cpp.o
+  [27/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/vector.cpp.o
+  [28/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/romdata.cpp.o
+  [29/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tlcs900/tlcs900.cpp.o
+  [30/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/statec.cpp.o
+  [31/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/burn.cpp.o
+  [32/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/conc.cpp.o
+  [33/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/zipfn.cpp.o
+  [34/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/z80/z80.cpp.o
+  [35/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/intf/audio/aud_dsp.cpp.o
+  [36/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/nvram.cpp.o
+  [37/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/unzip.c.o
+  [38/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/intf/audio/lowpass2.cpp.o
+  [39/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/dat.cpp.o
+  [40/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/retro_pgm2_cards.cpp.o
+  [41/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/cdlist.cpp.o
+  [42/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/file/retr
+o_dirent.c.o
+  [43/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/z180/z180.cpp.o
+  [44/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/file/file
+_path_io.c.o
+  [45/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/file/file
+_path.c.o
+  [46/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/compat/co
+mpat_posix_string.c.o
+  [47/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/compat/fo
+pen_utf8.c.o
+  [48/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/compat/co
+mpat_strldup.c.o
+  [49/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/upd7810/upd7810.cpp.o
+  [50/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/encodings
+/encoding_utf.c.o
+  [51/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/compat/co
+mpat_strl.c.o
+  [52/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/compat/co
+mpat_strcasestr.c.o
+  [53/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/string/st
+dstring.c.o
+  [54/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/lists/str
+ing_list.c.o
+  [55/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/memmap/me
+malign.c.o
+  [56/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/time/rtim
+e.c.o
+  [57/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zlib/zutil.c.o
+  [58/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro-common/vfs/vfs_i
+mplementation.c.o
+  [59/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burn/tiles_generic.cpp.o
+  [60/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/retro_string.cpp.o
+  [61/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zlib/trees.c.o
+  [62/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/retro_cdemu.cpp.o
+  [63/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zlib/inflate.c.o
+  [64/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/t11/t11.cpp.o
+  [65/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/un7z.cpp.o
+  [66/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zlib/inftrees.c.o
+  [67/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/retro_memory.cpp.o
+  [68/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/7zBuf.c.o
+  [69/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/7zCrcOpt.c.o
+  [70/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/ips_manager.cpp.o
+  [71/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/7zCrc.c.o
+  [72/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zlib/crc32.c.o
+  [73/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zlib/adler32.c.o
+  [74/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/7zStream.c.o
+  [75/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zlib/inffast.c.o
+  [76/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/retro_common.cpp.o
+  [77/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/Bcj2.c.o
+  [78/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/Bra86.c.o
+  [79/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/Delta.c.o
+  [80/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/BraIA64.c.o
+  [81/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/7zDec.c.o
+  [82/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/Lzma2Dec.c.o
+  [83/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zlib/deflate.c.o
+  [84/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/CpuArch.c.o
+  [85/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/Bra.c.o
+  [86/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/7zArcIn.c.o
+  [87/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/Ppmd7Dec.c.o
+  [88/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/Ppmd7.c.o
+  [89/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_bitstream.c.o
+  [90/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_huff.c.o
+  [91/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/intf/cd/cd_chd.cpp.o
+  [92/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_zlib.c.o
+  [93/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_flac.c.o
+  [94/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_cdzl.c.o
+  [95/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lib7z/LzmaDec.c.o
+  [96/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_zstd.c.o
+  [97/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_huffman.c.o
+  [98/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_chd.c.o
+  [99/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_cdfl.c.o
+  [100/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_lzma.c.o
+  [101/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_cdlz.c.o
+  [102/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_codec_cdzs.c.o
+  [103/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_cdrom.c.o
+  [104/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/retro_input.cpp.o
+  [105/110] Building CXX object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/libretro.cpp.o
+  [106/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/lzma/libchdr_lzma.c.o
+  [107/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/burner/libretro/deps/ugui/SourceHanSansC
+N_Medium_13X17.c.o
+  [108/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/libchdr/libchdr_flac.c.o
+  [109/110] Building C object CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/dep/libs/zstd/zstddeclib.c.o
+  [110/110] Linking CXX shared library ..\..\..\..\build\intermediates\cxx\Debug\3t4p335w\obj\arm64-v8a\libfbneo.so
+  FAILED: ../../../../build/intermediates/cxx/Debug/3t4p335w/obj/arm64-v8a/libfbneo.so 
+  cmd.exe /C "cd . && G:\tools\android-sdk\ndk\27.2.12479018\toolchains\llvm\prebuilt\windows-x86_64\bin\clang++.exe --
+target=aarch64-none-linux-android21 --sysroot=G:/tools/android-sdk/ndk/27.2.12479018/toolchains/llvm/prebuilt/windows-x
+86_64/sysroot -fPIC -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canon
+ical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security   -fno-limit-debug-info  -static-libstdc++ -Wl,--bui
+ld-id=sha1 -Wl,--no-rosegment -Wl,--no-undefined-version -Wl,--fatal-warnings -Wl,--no-undefined -Qunused-arguments    
+-Wl,--version-script=G:/git/xbw/fbneo/../vendor/fbneo/src/burner/libretro/link.T -Wl,-z,max-page-size=16384 -Wl,-no-und
+efined -shared -Wl,-soname,libfbneo.so -o ..\..\..\..\build\intermediates\cxx\Debug\3t4p335w\obj\arm64-v8a\libfbneo.so 
+@CMakeFiles\fbneo.rsp  && cd ."
+  ld.lld: error: undefined symbol: tms34010_set_context(void*)
+  >>> referenced by tms34_intf.cpp:71 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:71)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Open(int))
+  >>> referenced by tms34_intf.cpp:71 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:71)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+  >>> referenced by tms34_intf.cpp:71 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:71)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+  >>> referenced 5 more times
+  
+  ld.lld: error: undefined symbol: tms34010_get_context(void*)
+  >>> referenced by tms34_intf.cpp:82 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:82)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Close())
+  >>> referenced by tms34_intf.cpp:82 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:82)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+  >>> referenced by tms34_intf.cpp:82 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:82)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+  >>> referenced 5 more times
+  
+2 actionable tasks: 2 executed
+  ld.lld: error: undefined symbol: tms34010_total_cycles()
+  >>> referenced by tms34_intf.cpp:99 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:99)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010TotalCycles())
+  
+  ld.lld: error: undefined symbol: tms34010_set_irq_line(int, int)
+  >>> referenced by tms34_intf.cpp:104 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:104)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetIRQLine(int, int,
+ int))
+  >>> referenced by tms34_intf.cpp:284 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:284)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010GenerateIRQ(unsigned
+ int))
+  >>> referenced by tms34_intf.cpp:289 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:289)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010ClearIRQ(unsigned in
+t))
+  
+  ld.lld: error: undefined symbol: tms34010_new_frame()
+  >>> referenced by tms34_intf.cpp:241 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:241)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+  >>> referenced by tms34_intf.cpp:241 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:241)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010NewFrame())
+  
+  ld.lld: error: undefined symbol: tms34010_idle(int)
+  >>> referenced by tms34_intf.cpp:224 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:224)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Idle(int))
+  
+  ld.lld: error: undefined symbol: tms34010_run(int)
+  >>> referenced by tms34_intf.cpp:219 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:219)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Run(int))
+  
+  ld.lld: error: undefined symbol: tms34010_stop()
+  >>> referenced by tms34_intf.cpp:248 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:248)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010RunEnd())
+  
+  ld.lld: error: undefined symbol: tms34010_reset()
+  >>> referenced by tms34_intf.cpp:277 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:277)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Reset())
+  
+  ld.lld: error: undefined symbol: tms34020_reset()
+  >>> referenced by tms34_intf.cpp:278 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:278)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Reset())
+  
+  ld.lld: error: undefined symbol: tms34010_scan(int)
+  >>> referenced by tms34_intf.cpp:255 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:255)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Scan(int))
+  >>> referenced by tms34_intf.cpp:255 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:255)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Scan(int))
+  
+  ld.lld: error: undefined symbol: tms34010_exit()
+  >>> referenced by tms34_intf.cpp:188 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:188)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Exit())
+  >>> referenced by tms34_intf.cpp:188 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:188)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Exit())
+  
+  ld.lld: error: undefined symbol: tms34010_context_size()
+  >>> referenced by tms34_intf.cpp:149 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:149)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Init_Internal(int, i
+nt))
+  
+  ld.lld: error: undefined symbol: tms34010_init()
+  >>> referenced by tms34_intf.cpp:152 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:152)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Init_Internal(int, i
+nt))
+  
+  ld.lld: error: undefined symbol: tms34010_set_toshift(void (*)(unsigned int, unsigned short*))
+  >>> referenced by tms34_intf.cpp:299 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:299)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Init_Internal(int, i
+nt))
+  >>> referenced by tms34_intf.cpp:299 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:299)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetToShift(void (*)(
+unsigned int, unsigned short*)))
+  
+  ld.lld: error: undefined symbol: tms34010_set_fromshift(void (*)(unsigned int, unsigned short*))
+  >>> referenced by tms34_intf.cpp:304 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:304)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010Init_Internal(int, i
+nt))
+  >>> referenced by tms34_intf.cpp:304 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:304)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetFromShift(void (*
+)(unsigned int, unsigned short*)))
+  
+  ld.lld: error: undefined symbol: tms34010_set_cycperframe(int)
+  >>> referenced by tms34_intf.cpp:199 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:199)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetCpuCyclesPerFrame
+(int))
+  
+  ld.lld: error: undefined symbol: tms34010_set_pixclock(int, int)
+  >>> referenced by tms34_intf.cpp:204 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:204)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetPixClock(int, int
+))
+  
+  ld.lld: error: undefined symbol: tms34010_set_output_int(void (*)(int))
+  >>> referenced by tms34_intf.cpp:209 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:209)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetOutputINT(void (*
+)(int)))
+  
+  ld.lld: error: undefined symbol: tms34010_set_halt_on_reset(int)
+  >>> referenced by tms34_intf.cpp:214 (G:/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp:214)
+  >>>               CMakeFiles/fbneo.dir/G_/git/xbw/vendor/fbneo/src/cpu/tms34_intf.cpp.o:(TMS34010SetHaltOnReset(int))
+  
+  ld.lld: error: too many errors emitted, stopping now (use --error-limit=0 to see all errors)
+  clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+  ninja: build stopped: subcommand failed.
+  
+  C++ build system [build] failed while executing:
+      @echo off
+      "G:\\tools\\android-sdk\\cmake\\3.22.1\\bin\\ninja.exe" ^
+        -C ^
+        "G:\\git\\xbw\\fbneo\\.cxx\\Debug\\3t4p335w\\arm64-v8a" ^
+        fbneo
+    from G:\git\xbw\fbneo
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 35s

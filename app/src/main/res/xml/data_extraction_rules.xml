@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<data-extraction-rules>
+    <cloud-backup>
+        <include domain="sharedpref" path="keymap.xml" />
+        <exclude domain="database" path="xbw.db" />
+    </cloud-backup>
+    <device-transfer>
+        <include domain="sharedpref" path="keymap.xml" />
+        <!-- 最近玩过属于个人数据，换机不带走 -->
+    </device-transfer>
+</data-extraction-rules>

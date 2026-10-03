@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 设置页：全部原生行，方向键逐行聚焦，A 键触发（方案第九步打磨项）。 -->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/settings_scroll"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_lobby"
+    android:clipToPadding="false"
+    android:paddingBottom="32dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingLeft="48dp"
+        android:paddingTop="24dp"
+        android:paddingRight="48dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="@string/settings_title"
+            android:textColor="@color/xbw_text_primary"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <!-- ① 手柄状态 -->
+        <LinearLayout
+            android:id="@+id/row_gamepad"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_gamepad"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/val_gamepad"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/xbw_text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- ② 菜单呼出键 -->
+        <LinearLayout
+            android:id="@+id/row_hotkey"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_menu_key"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/val_hotkey"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/xbw_success"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- ③ 按键映射 -->
+        <LinearLayout
+            android:id="@+id/row_mapping"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_mapping"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="›"
+                android:textColor="@color/xbw_text_disabled"
+                android:textSize="18sp" />
+        </LinearLayout>
+
+        <!-- ⑥ 站点诊断 -->
+        <LinearLayout
+            android:id="@+id/row_diagnose"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_diagnose"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="›"
+                android:textColor="@color/xbw_text_disabled"
+                android:textSize="18sp" />
+        </LinearLayout>
+
+        <!-- ⑦ 清除列表缓存 -->
+        <LinearLayout
+            android:id="@+id/row_clear_cache"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_clear_cache"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/val_cache_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/xbw_text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- ⑧ 清除最近玩过 -->
+        <LinearLayout
+            android:id="@+id/row_clear_recent"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_clear_recent"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/val_recent_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/xbw_text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- ⑨ 恢复默认映射 -->
+        <LinearLayout
+            android:id="@+id/row_reset_map"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_reset_map"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+        </LinearLayout>
+
+        <!-- ⑩ 关于 -->
+        <LinearLayout
+            android:id="@+id/row_about"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_about"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="›"
+                android:textColor="@color/xbw_text_disabled"
+                android:textSize="18sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/hotkey_capture_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_hint_bar"
+            android:padding="12dp"
+            android:textColor="@color/xbw_warning"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>

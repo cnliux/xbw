@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  大厅页（方案 4.1）：
+   ┌ 顶栏：Logo · 分类芯片行(横滑) · [搜索][设置] ┐
+   ├ Loading / Error / Empty 覆盖层                │
+   └ RecyclerView 网格（4~6 列，分页加载）          ┘
+  焦点管理：进页面焦点落在第一个卡片；分类切换后焦点回第一张卡。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/lobby_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_lobby"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <!-- ═══ 顶栏 ═══ -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingLeft="28dp"
+            android:paddingTop="18dp"
+            android:paddingRight="28dp"
+            android:paddingBottom="10dp">
+
+            <TextView
+                android:id="@+id/brand"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/app_name"
+                android:textColor="@color/xbw_accent"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/brand_sub"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:text="@string/app_slogan"
+                android:textColor="@color/xbw_text_disabled"
+                android:textSize="12sp" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <Button
+                android:id="@+id/btn_search"
+                style="@style/TVButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawableLeft="@drawable/ic_search"
+                android:drawablePadding="6dp"
+                android:text="@string/lobby_search" />
+
+            <Button
+                android:id="@+id/btn_settings"
+                style="@style/TVButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:text="@string/lobby_settings" />
+        </LinearLayout>
+
+        <!-- ═══ 分类芯片行（横向 RecyclerView，焦点可入）═══ -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_categories"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:paddingLeft="24dp"
+            android:paddingRight="24dp"
+            android:paddingTop="2dp"
+            android:paddingBottom="6dp" />
+
+        <!-- 状态行：缓存提示 / 刷新提示 -->
+        <TextView
+            android:id="@+id/status_line"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="32dp"
+            android:paddingBottom="4dp"
+            android:textColor="@color/xbw_text_disabled"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <!-- ═══ 游戏网格 ═══ -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipChildren="false"
+            android:clipToPadding="false">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_games"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:clipToOutline="false"
+                android:paddingLeft="24dp"
+                android:paddingRight="24dp"
+                android:paddingBottom="28dp" />
+
+            <!-- ═══ Loading：骨架屏（方案 3.4）═══ -->
+            <LinearLayout
+                android:id="@+id/loading_panel"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <ProgressBar
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:indeterminateTint="@color/xbw_accent" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/loading"
+                    android:textColor="@color/xbw_text_secondary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="@string/loading_sub"
+                    android:textColor="@color/xbw_text_disabled"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- ═══ Error（重试按钮可聚焦）═══ -->
+            <LinearLayout
+                android:id="@+id/error_panel"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/error_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/error_network"
+                    android:textColor="@color/xbw_error"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/error_detail"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:maxWidth="560dp"
+                    android:textColor="@color/xbw_text_secondary"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btn_retry"
+                    style="@style/TVButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="18dp"
+                    android:text="@string/retry" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- ═══ 分页行（整页翻页，替代旧的触底自动加载）═══ -->
+        <LinearLayout
+            android:id="@+id/pager_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical|center_horizontal"
+            android:orientation="horizontal"
+            android:paddingLeft="24dp"
+            android:paddingRight="24dp"
+            android:paddingBottom="12dp"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_prev_page"
+                style="@style/TVButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/lobby_prev_page" />
+
+            <TextView
+                android:id="@+id/pager_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="20dp"
+                android:layout_marginRight="20dp"
+                android:gravity="center"
+                android:minWidth="140dp"
+                android:textColor="@color/xbw_text_secondary"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/btn_next_page"
+                style="@style/TVButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/lobby_next_page" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>

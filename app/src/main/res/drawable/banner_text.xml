@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 横幅上的文字图样（纯矢量占位，避免捆绑位图资源） -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="220dp"
+    android:height="72dp"
+    android:viewportWidth="220"
+    android:viewportHeight="72">
+    <!-- 手柄轮廓 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M60,20 L160,20 A28,28 0 0 1 188,48 L188,52 A12,12 0 0 1 164,56 L150,44 L70,44 L56,56 A12,12 0 0 1 32,52 L32,48 A28,28 0 0 1 60,20 Z" />
+    <path
+        android:fillColor="#FF8B1E22"
+        android:pathData="M52,34 h8 v-8 h8 v8 h8 v8 h-8 v8 h-8 v-8 h-8 Z" />
+    <path
+        android:fillColor="#FF8B1E22"
+        android:pathData="M158,28 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+    <path
+        android:fillColor="#FF8B1E22"
+        android:pathData="M172,40 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+    <!-- 文字「小霸王 TV」用矩形点阵近似（正式版换 <text> 或位图） -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M70,60 h80 v6 h-80 Z" />
+</vector>

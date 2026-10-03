@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 基础主题：基于 Theme.AppCompat（TV 上不用 Material3 组件，焦点表现更可控） -->
+    <style name="Theme.XbwTv" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/xbw_bg</item>
+        <item name="android:colorBackground">@color/xbw_bg</item>
+        <item name="colorPrimary">@color/xbw_accent</item>
+        <item name="colorAccent">@color/xbw_accent</item>
+        <item name="android:textColorPrimary">@color/xbw_text_primary</item>
+        <item name="android:textColorSecondary">@color/xbw_text_secondary</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <style name="Theme.XbwTv.Lobby">
+        <item name="android:windowBackground">@drawable/bg_lobby</item>
+    </style>
+
+    <style name="Theme.XbwTv.Game">
+        <item name="android:windowBackground">@android:color/black</item>
+        <!-- 游戏页全屏沉浸式：隐藏状态栏，避免 TV 顶部状态条压画面 -->
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+    <!-- 卡片标题 -->
+    <style name="TextAppearance.Xbw.CardTitle" parent="TextAppearance.AppCompat">
+        <item name="android:textColor">@color/xbw_text_primary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:gravity">center_horizontal</item>
+    </style>
+
+    <!-- 分类行标题 -->
+    <style name="TextAppearance.Xbw.SectionTitle" parent="TextAppearance.AppCompat">
+        <item name="android:textColor">@color/xbw_text_primary</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- TV 按钮：焦点放大由 TvFocusAnimator 做，这里只管静态外观 -->
+    <style name="TVButton" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:minWidth">88dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">false</item>
+        <item name="android:background">@drawable/btn_tv</item>
+        <item name="android:textColor">@color/xbw_text_primary</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:paddingLeft">18dp</item>
+        <item name="android:paddingRight">18dp</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- 设置页列表项 -->
+    <style name="SettingItem">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:minHeight">64dp</item>
+        <item name="android:focusable">true</item>
+        <item name="android:focusableInTouchMode">false</item>
+        <item name="android:background">@drawable/bg_setting_item</item>
+        <item name="android:padding">16dp</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:gravity">center_vertical</item>
+    </style>
+</resources>

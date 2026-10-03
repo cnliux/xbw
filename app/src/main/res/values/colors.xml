@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TV 深色主题色板：低亮度背景 + 高对比文字，远距离可读 -->
+    <color name="xbw_bg">#0B0E13</color>
+    <color name="xbw_bg_gradient_top">#141B26</color>
+    <color name="xbw_surface">#171E29</color>
+    <color name="xbw_surface_high">#222B39</color>
+    <color name="xbw_card_bg">#141A24</color>
+    <color name="xbw_card_pressed">#1E2836</color>
+
+    <color name="xbw_accent">#FF5A5F</color>
+    <color name="xbw_accent_soft">#33FF5A5F</color>
+    <color name="xbw_focus_ring">#FFFFFFFF</color>
+    <color name="xbw_focus_glow">#66FF5A5F</color>
+    <color name="xbw_text_primary">#FFFFFFFF</color>
+    <color name="xbw_text_secondary">#B3C2D1</color>
+    <color name="xbw_text_disabled">#5C6B7F</color>
+
+    <color name="xbw_success">#3DDC97</color>
+    <color name="xbw_warning">#FFC94D</color>
+    <color name="xbw_error">#FF6B6B</color>
+
+    <color name="xbw_scrim">#B3000000</color>
+    <!-- 工具条/提示条：半透明浮层，尽量不遮挡游戏画面（TV OSD 风格） -->
+    <color name="xbw_toolbar_bg">#99151B24</color>
+    <color name="xbw_hint_bg">#990B0E13</color>
+    <color name="xbw_tag_bg">#263246</color>
+
+    <color name="ic_launcher_background">#FF5A5F</color>
+</resources>

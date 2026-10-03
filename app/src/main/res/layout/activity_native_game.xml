@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 原生核心游戏页：SurfaceView 全屏 + 底部工具条 + 加载层 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#FF000000">
+
+    <!-- 游戏画面：native 直接 lock/unlockAndPost，无 GL。
+         可聚焦：工具条/金手指面板关闭时把焦点收回来，避免面板残留焦点 -->
+    <SurfaceView
+        android:id="@+id/game_surface"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"
+        android:focusable="true"
+        android:focusableInTouchMode="true" />
+
+    <!-- 右上信息角标：游戏名 + 核心名 -->
+    <TextView
+        android:id="@+id/meta_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|end"
+        android:layout_margin="12dp"
+        android:background="#66000000"
+        android:paddingHorizontal="10dp"
+        android:paddingVertical="4dp"
+        android:textColor="#CCFFFFFF"
+        android:textSize="13sp"
+        android:visibility="gone" />
+
+    <!-- 底部工具条：暂停/重置/存档/读档/退出（手柄可聚焦，菜单键唤出） -->
+    <LinearLayout
+        android:id="@+id/toolbar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="18dp"
+        android:background="#CC16161A"
+        android:orientation="horizontal"
+        android:padding="6dp"
+        android:visibility="gone">
+
+        <Button
+            android:id="@+id/btn_pause"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/TVButton"
+            android:text="暂停" />
+
+        <Button
+            android:id="@+id/btn_reset"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/TVButton"
+            android:text="重置" />
+
+        <Button
+            android:id="@+id/btn_save_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/TVButton"
+            android:text="即时存档" />
+
+        <Button
+            android:id="@+id/btn_load_state"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/TVButton"
+            android:text="即时读档" />
+
+        <Button
+            android:id="@+id/btn_cheat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/TVButton"
+            android:text="金手指" />
+
+        <Button
+            android:id="@+id/btn_exit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/TVButton"
+            android:text="退出" />
+    </LinearLayout>
+
+    <!-- 中央提示条（操作说明，几秒后自动隐藏） -->
+    <TextView
+        android:id="@+id/hint_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="80dp"
+        android:background="#99000000"
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="6dp"
+        android:text="菜单键（Select/SELECT 或 MENU）呼出工具条"
+        android:textColor="#AAFFFFFF"
+        android:textSize="13sp" />
+
+    <!-- 金手指面板（FC=RAM 码，街机=选项环切；从工具条呼出，BACK/菜单键关闭） -->
+    <LinearLayout
+        android:id="@+id/cheat_panel"
+        android:layout_width="620dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:background="#F216161A"
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/cheat_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="金手指"
+            android:textColor="#FFFFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/cheat_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:padding="24dp"
+            android:text="该游戏还没有金手指"
+            android:textColor="#88FFFFFF"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/cheat_list"
+            android:layout_width="match_parent"
+            android:layout_height="360dp"
+            android:layout_marginTop="12dp" />
+
+        <Button
+            android:id="@+id/btn_cheat_off_all"
+            style="@style/TVButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="全部关闭" />
+    </LinearLayout>
+
+    <!-- 加载层 -->
+    <LinearLayout
+        android:id="@+id/loading_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#FF000000"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ProgressBar
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            android:indeterminateTint="#FFFF5A5F" />
+
+        <TextView
+            android:id="@+id/loading_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:text="正在准备 ROM…"
+            android:textColor="#AAFFFFFF"
+            android:textSize="15sp" />
+    </LinearLayout>
+</FrameLayout>
