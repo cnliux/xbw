@@ -303,11 +303,44 @@ class NativeGameActivity : AppCompatActivity() {
     /** notifyDataSetChanged 后子 View 要等下一帧布局才存在，重试直到首行可聚焦 */
     private fun focusFirstCheat(attempt: Int = 0) {
         if (attempt >= 6) return
+        if (attempt == 0) binding.cheatList.scrollToPosition(0)   // 可能已滚到列表底部
         binding.cheatList.postDelayed({
             if (!cheatPanelVisible) return@postDelayed
             val vh = binding.cheatList.findViewHolderForAdapterPosition(0)
-            if (vh != null) vh.itemView.requestFocus()
-            else focusFirstCheat(attempt + 1)
+            // requestFocus 可能因面板尚未完成布局而失败（返回 false），要和"行还没生成"一样重试
+            if (vh == null || !vh.itemView.requestFocus()) focusFirstCheat(attempt + 1)
+        }, 40L)
+    }
+
+    /** 焦点落在第几行；焦点不在列表上返回 -1 */
+    private fun focusedCheatPosition(): Int {
+        val child = binding.cheatList.focusedChild ?: return -1
+        return binding.cheatList.getChildAdapterPosition(child)
+    }
+
+    private fun focusIsLastCheatRow(): Boolean {
+        val pos = focusedCheatPosition()
+        return pos >= 0 && pos == cheatAdapter.itemCount - 1
+    }
+
+    private fun focusIsFirstCheatRow(): Boolean = focusedCheatPosition() == 0
+
+    /** 从"全部关闭"回到列表末行：先滚到底，再聚焦最后一个已绑定行，滚完没到底就重试 */
+    private fun focusLastCheatRow(attempt: Int = 0) {
+        if (!cheatPanelVisible || cheatAdapter.itemCount == 0) return
+        binding.cheatList.scrollToPosition(cheatAdapter.itemCount - 1)
+        binding.cheatList.postDelayed({
+            if (!cheatPanelVisible) return@postDelayed
+            val vh = binding.cheatList.findViewHolderForAdapterPosition(cheatAdapter.itemCount - 1)
+            if (vh != null) {
+                if (!vh.itemView.requestFocus() && attempt < 6) focusLastCheatRow(attempt + 1)
+                return@postDelayed
+            }
+            // scrollToPosition 还没滚到底：重试；实在等不到就退而聚焦最后一个可见行
+            if (attempt < 6) focusLastCheatRow(attempt + 1)
+            else (0 until binding.cheatList.childCount)
+                .mapNotNull { binding.cheatList.getChildAt(it) as? View }
+                .lastOrNull()?.requestFocus()
         }, 40L)
     }
 
@@ -336,6 +369,8 @@ class NativeGameActivity : AppCompatActivity() {
             }
             arcadeOptions.forEach { core.setCoreOption(it, 0) }   // 0 = Disabled
             renderArcadeRows()
+            // submit=notifyDataSetChanged 会销毁持有焦点的行，必须把焦点请回来
+            focusFirstCheat()
             toast("已全部关闭")
             return
         }
@@ -346,6 +381,7 @@ class NativeGameActivity : AppCompatActivity() {
         enabledCheats.clear()
         renderFcCheats()
         applyCheats()
+        focusFirstCheat()
         toast("已全部关闭")
     }
 
@@ -398,6 +434,22 @@ class NativeGameActivity : AppCompatActivity() {
                 KeyEvent.KEYCODE_BACK -> {
                     if (event.action == KeyEvent.ACTION_UP) hideCheatPanel()
                     return true
+                }
+                KeyEvent.KEYCODE_DPAD_DOWN -> {
+                    // 末行再按下：RecyclerView 会把搜索吞回自己肚子里，显式交给按钮
+                    if (event.action == KeyEvent.ACTION_UP && focusIsLastCheatRow()) {
+                        binding.btnCheatOffAll.requestFocus(); return true
+                    }
+                }
+                KeyEvent.KEYCODE_DPAD_UP -> {
+                    if (event.action != KeyEvent.ACTION_UP) return super.dispatchKeyEvent(event)
+                    when {
+                        // 首行再按上：标题不可聚焦，吞掉免得焦点流落到面板外
+                        focusIsFirstCheatRow() -> return true
+                        // "全部关闭"按上回列表：按钮的 nextFocusUp 指向 RV 本身，
+                        // 自然搜索找不到内部行，显式落回末行
+                        binding.btnCheatOffAll.isFocused -> { focusLastCheatRow(0); return true }
+                    }
                 }
             }
             // 菜单热键（默认 SELECT）也能关面板
@@ -474,7 +526,10 @@ class NativeGameActivity : AppCompatActivity() {
         val src = event.source and (android.view.InputDevice.SOURCE_JOYSTICK or
                 android.view.InputDevice.SOURCE_GAMEPAD or
                 android.view.InputDevice.SOURCE_DPAD)
-        if (src == 0 || toolbarVisible) return super.onGenericMotionEvent(event)
+        // 工具条/金手指面板打开时方向输入归焦点系统：这里必须放行给 super，
+        // 系统才会把摇杆/十字键(hat 轴)合成 DPAD 按键驱动列表换行；
+        // 若在此吞成游戏输入，面板里方向键完全失灵（街机金手指"无法聚焦"的根因）
+        if (src == 0 || toolbarVisible || cheatPanelVisible) return super.onGenericMotionEvent(event)
 
         var bits = 0
         val x = event.getAxisValue(MotionEvent.AXIS_X)

@@ -134,7 +134,8 @@
             android:id="@+id/cheat_list"
             android:layout_width="match_parent"
             android:layout_height="360dp"
-            android:layout_marginTop="12dp" />
+            android:layout_marginTop="12dp"
+            android:nextFocusDown="@id/btn_cheat_off_all" />
 
         <Button
             android:id="@+id/btn_cheat_off_all"
@@ -142,6 +143,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
+            android:nextFocusUp="@id/cheat_list"
             android:text="全部关闭" />
     </LinearLayout>
 

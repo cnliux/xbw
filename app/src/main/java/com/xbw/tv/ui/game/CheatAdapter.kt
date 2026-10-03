@@ -43,7 +43,7 @@ class CheatAdapter(
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
-        holder.bind(rows[position])
+        holder.bind(rows[position], position)
     }
 
     override fun getItemCount() = rows.size
@@ -67,7 +67,7 @@ class CheatAdapter(
             }
         }
 
-        fun bind(row: Row) {
+        fun bind(row: Row, position: Int) {
             name.text = row.title
             if (row.subtitle.isBlank()) {
                 code.visibility = View.GONE
@@ -77,6 +77,11 @@ class CheatAdapter(
             }
             state.text = if (row.on) "开启" else "关闭"
             state.setTextColor(if (row.on) 0xFF7CE38B.toInt() else 0x66FFFFFF.toInt())
+            // RecyclerView 内部吞掉自己的 nextFocusDown（只对"当前获焦子 View"上的
+            // 显式 pin 生效）：到末行必须给行本身设 nextFocusDown，否则方向键
+            // 走不出列表、"全部关闭"永远够不着（实机 .37 复现）。
+            itemView.nextFocusDownId =
+                if (position == itemCount - 1) R.id.btn_cheat_off_all else View.NO_ID
         }
     }
 }

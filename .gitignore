@@ -21,6 +21,9 @@ vendor/
 *.so
 *.nes
 
+# Node 工具链（tools/ 的本地依赖）
+node_modules/
+
 # Agent 工作区
 .easyclaw/
 .ohmyagent/
