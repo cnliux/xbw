@@ -1,9 +1,7 @@
 name: Build APK
 
 on:
-  push:
-    branches: [master, main]
-  workflow_dispatch:
+  workflow_dispatch:   # 仅手动触发（Actions 页 → Build APK → Run workflow）
 
 jobs:
   build:
