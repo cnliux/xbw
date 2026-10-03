@@ -6,6 +6,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # 创建 Release 并挂 APK 附件
     steps:
       - uses: actions/checkout@v4
 
@@ -64,16 +66,17 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
 
-      - name: Upload debug APK
-        uses: actions/upload-artifact@v4
+      # Release 附件是原始文件（不 zip），Releases 页直接下载 .apk
+      - name: Publish APKs to Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: xbw-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-
-      - name: Upload release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: xbw-release-apk
-          path: app/build/outputs/apk/release/*.apk
-          if-no-files-found: error
+          tag_name: build-${{ github.run_number }}
+          name: XiaoBaWang TV build #${{ github.run_number }}
+          body: |
+            自动构建 ${{ github.sha }}
+            - app-debug.apk — 调试版
+            - app-release.apk — 正式签名版
+          files: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release.apk
+          fail_on_unmatched_files: true
