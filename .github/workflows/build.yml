@@ -25,6 +25,15 @@ jobs:
           git init -q vendor/libretro-common && git -C vendor/libretro-common remote add origin https://github.com/libretro/libretro-common.git
           git -C vendor/libretro-common fetch -q --depth=1 origin 9b73a999df01db5657db95b2490cf031e4b51cff
           git -C vendor/libretro-common checkout -q FETCH_HEAD
+          git init -q vendor/snes9x && git -C vendor/snes9x remote add origin https://github.com/libretro/snes9x.git
+          git -C vendor/snes9x fetch -q --depth=1 origin fae2fea08f74180759ef540ee94259213f503480
+          git -C vendor/snes9x checkout -q FETCH_HEAD
+          git init -q vendor/mgba && git -C vendor/mgba remote add origin https://github.com/libretro/mgba.git
+          git -C vendor/mgba fetch -q --depth=1 origin 7a12d6d4b9acb14c0ae62c9166b6a2f3d08007f6
+          git -C vendor/mgba checkout -q FETCH_HEAD
+          git init -q vendor/Genesis-Plus-GX && git -C vendor/Genesis-Plus-GX remote add origin https://github.com/libretro/Genesis-Plus-GX.git
+          git -C vendor/Genesis-Plus-GX fetch -q --depth=1 origin c838c7dc4236fc2fe94e5dbd08b41486067918e
+          git -C vendor/Genesis-Plus-GX checkout -q FETCH_HEAD
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
