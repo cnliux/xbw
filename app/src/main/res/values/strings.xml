@@ -6,8 +6,6 @@
     <!-- 大厅 -->
     <string name="lobby_search">搜索</string>
     <string name="lobby_settings">设置</string>
-    <string name="lobby_refresh">刷新</string>
-    <string name="lobby_title_all">全部游戏</string>
     <string name="loading">正在抓取 yikm.net…</string>
     <string name="loading_sub">首次加载需要几秒，之后会用缓存秒开并后台刷新</string>
     <string name="refreshing">后台刷新中…</string>
@@ -24,18 +22,11 @@
     <string name="fav_added">已收藏《%1$s》（菜单键或长按可取消）</string>
     <string name="fav_removed">已取消收藏《%1$s》</string>
 
-    <string name="confirm">确认退出</string>
-    <string name="cancel">继续玩</string>
-
     <!-- 设置 -->
     <string name="settings_title">设置</string>
     <string name="settings_gamepad">手柄连接状态</string>
     <string name="settings_mapping">按键映射</string>
     <string name="settings_menu_key">菜单呼出键</string>
-    <string name="settings_inject_mode">按键注入方式</string>
-    <string name="settings_remove_ads">屏蔽广告</string>
-    <string name="settings_native_engine">原生引擎（FC）</string>
-    <string name="settings_cache">缓存管理</string>
     <string name="settings_clear_cache">清除游戏列表缓存</string>
     <string name="settings_clear_recent">清除最近玩过</string>
     <string name="settings_reset_map">恢复默认按键映射</string>
@@ -51,15 +42,12 @@
     <string name="gamepad_connected_fmt">已连接 %1$d 个手柄：%2$s</string>
 
     <!-- 设置：按键映射 -->
-    <string name="settings_hotkey_hint">当前菜单键：%1$s。若你的手柄把 SELECT 用作游戏功能键（如街机投币），建议改成 MENU 或 L3。</string>
     <string name="mapping_hint">上下选择逻辑键，左右改网页键。按 A/确认 后 0.3 秒内再按要绑定的物理键（支持 USB 手柄模式和键盘模式，十字轴也能绑）。</string>
-    <string name="toast_saved">已保存</string>
     <string name="toast_cleared">缓存已清除</string>
     <string name="toast_reset_done">已恢复默认映射</string>
     <string name="toast_cleared_recent">最近玩过已清空</string>
     <string name="mapping_saved_hint">已保存 %1$s → 网页 %2$s</string>
     <string name="hotkey_saved">菜单键已设为 %1$s</string>
-    <string name="inject_saved">注入方式已切换为：%1$s</string>
 
     <!-- 搜索 -->
     <string name="search_hint">输入游戏名，如：魂斗罗</string>
@@ -70,8 +58,6 @@
 
     <!-- 诊断 -->
     <string name="diagnose_hint">诊断会真实抓取首页/列表/搜索/游戏页，并显示状态码与卡片命中数。如果命中数为 0，请按 docs 更新 SiteConfig 选择器。</string>
-    <string name="diagnose_ok">✔</string>
-    <string name="diagnose_bad">✘</string>
     <string name="diagnose_running">诊断中…</string>
 
     <string name="desc_cover">游戏封面</string>

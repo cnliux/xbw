@@ -9,7 +9,6 @@
     <color name="xbw_card_pressed">#1E2836</color>
 
     <color name="xbw_accent">#FF5A5F</color>
-    <color name="xbw_accent_soft">#33FF5A5F</color>
     <color name="xbw_focus_ring">#FFFFFFFF</color>
     <color name="xbw_focus_glow">#66FF5A5F</color>
     <color name="xbw_text_primary">#FFFFFFFF</color>
@@ -20,9 +19,7 @@
     <color name="xbw_warning">#FFC94D</color>
     <color name="xbw_error">#FF6B6B</color>
 
-    <color name="xbw_scrim">#B3000000</color>
-    <!-- 工具条/提示条：半透明浮层，尽量不遮挡游戏画面（TV OSD 风格） -->
-    <color name="xbw_toolbar_bg">#99151B24</color>
+    <!-- 工具栏/提示栏半透明遮罩，悬浮在类游戏画面（TV OSD 风格） -->
     <color name="xbw_hint_bg">#990B0E13</color>
     <color name="xbw_tag_bg">#263246</color>
 

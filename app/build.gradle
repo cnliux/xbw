@@ -116,13 +116,7 @@ dependencies {
     // ---- AndroidX 基础 ----
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.6.1'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
     implementation 'androidx.recyclerview:recyclerview:1.3.2'
-    implementation 'androidx.fragment:fragment-ktx:1.8.2'
-
-    // ---- TV 专用（Leanback：GuidedStep / BrowseFragment 等 TV 组件）----
-    implementation 'androidx.leanback:leanback:1.0.0'
-    implementation 'androidx.leanback:leanback-preference:1.0.0'
 
     // ---- 生命周期 / MVVM ----
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4'

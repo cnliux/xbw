@@ -22,22 +22,6 @@
         <item name="android:windowContentOverlay">@null</item>
     </style>
 
-    <!-- 卡片标题 -->
-    <style name="TextAppearance.Xbw.CardTitle" parent="TextAppearance.AppCompat">
-        <item name="android:textColor">@color/xbw_text_primary</item>
-        <item name="android:textSize">14sp</item>
-        <item name="android:maxLines">2</item>
-        <item name="android:ellipsize">end</item>
-        <item name="android:gravity">center_horizontal</item>
-    </style>
-
-    <!-- 分类行标题 -->
-    <style name="TextAppearance.Xbw.SectionTitle" parent="TextAppearance.AppCompat">
-        <item name="android:textColor">@color/xbw_text_primary</item>
-        <item name="android:textSize">20sp</item>
-        <item name="android:textStyle">bold</item>
-    </style>
-
     <!-- TV 按钮：焦点放大由 TvFocusAnimator 做，这里只管静态外观 -->
     <style name="TVButton" parent="Widget.AppCompat.Button.Borderless">
         <item name="android:minWidth">88dp</item>
