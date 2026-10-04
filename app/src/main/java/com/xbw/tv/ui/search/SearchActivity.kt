@@ -3,8 +3,6 @@ package com.xbw.tv.ui.search
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
-import android.view.inputmethod.InputMethodManager
-import android.content.Context
 import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -34,6 +32,12 @@ class SearchActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 窗口级屏蔽输入法：搜狗 TV 对任何获焦 View 都会主动弹自己的界面，
+        // 只有 FLAG_ALT_FOCUSABLE_IM 能让 IMMS 对本窗口完全忽略 IME 显隐
+        window.setFlags(
+            android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
+            android.view.WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM
+        )
         binding = ActivitySearchBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -70,10 +74,14 @@ class SearchActivity : AppCompatActivity() {
             } else false
         }
 
+        // 系统输入法彻底屏蔽：showSoftInputOnFocus 挡不住搜狗 TV 主动抢显，
+        // keyListener=null 直接不给 IME 建输入连接（内置键盘用 setText 写入不受影响）
+        binding.etKeyword.keyListener = null
+        binding.etKeyword.isCursorVisible = true
+        binding.etKeyword.showSoftInputOnFocus = false
         binding.etKeyword.requestFocus()
-        // 不再自动弹系统输入法（TV 上常被搜狗吞/遮挡）；中文输入走键盘里的显式入口
 
-        // 自动化/调试入口：am start --es extra_keyword xxx 直接出结果，绕开 TV 输入法
+        // 自动化/调试入口：am start --es extra_keyword xxx 直接出结果，绕开输入法
         applySeedKeyword()
     }
 
@@ -144,10 +152,7 @@ class SearchActivity : AppCompatActivity() {
             }
             addRow(keys)
         }
-        addRow(listOf(
-            "系统输入法" to { showKeyboard() },
-            "搜索" to { doSearch() }
-        ))
+        addRow(listOf("搜索" to { doSearch() }))
     }
 
     private fun appendKey(ch: Char) {
@@ -172,18 +177,9 @@ class SearchActivity : AppCompatActivity() {
         return (width / cardW).toInt().coerceIn(4, 6)
     }
 
-    private fun showKeyboard() {
-        try {
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.showSoftInput(binding.etKeyword, InputMethodManager.SHOW_IMPLICIT)
-        } catch (ignore: Exception) {
-        }
-    }
-
     private fun doSearch() {
         val kw = binding.etKeyword.text.toString().trim()
         if (kw.isEmpty()) return
-        hideKeyboard()
         binding.progress.visibility = android.view.View.VISIBLE
         binding.emptyText.visibility = android.view.View.GONE
         binding.statusLine.text = getString(R.string.search_loading)
@@ -229,14 +225,6 @@ class SearchActivity : AppCompatActivity() {
         }
     }
 
-    private fun hideKeyboard() {
-        try {
-            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-            imm.hideSoftInputFromWindow(binding.etKeyword.windowToken, 0)
-        } catch (ignore: Exception) {
-        }
-    }
-
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         // 焦点在内置键盘上：B 先回输入框，再退页面
@@ -252,9 +240,8 @@ class SearchActivity : AppCompatActivity() {
                 return
             }
         }
-        // 焦点在输入框时 B 先清焦点/键盘，再退页面（TV 习惯）
+        // 焦点在输入框时 B 先清焦点，再退页面（TV 习惯）
         if (binding.etKeyword.hasFocus()) {
-            hideKeyboard()
             binding.etKeyword.clearFocus()
             return
         }

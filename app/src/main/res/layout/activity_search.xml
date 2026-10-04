@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 搜索页：搜索框 + 软键盘 + 结果网格（复用大厅卡片）。
-     TV 上按搜索框会弹出系统 IME（支持蓝牙键盘/遥控输入）。 -->
+<!-- 搜索页：搜索框 + 内置虚拟键盘 + 结果网格（复用大厅卡片）。
+     系统 IME 已屏蔽（showSoftInputOnFocus=false），全部输入走内置键盘。 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
