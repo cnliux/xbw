@@ -6,12 +6,14 @@ import com.xbw.tv.data.local.AppDatabase
 import com.xbw.tv.data.local.FavoriteEntity
 import com.xbw.tv.data.local.GameEntity
 import com.xbw.tv.data.local.RecentPlayEntity
+import com.xbw.tv.data.local.SearchIndexEntity
 import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.model.GameItem
 import com.xbw.tv.data.net.CheatParser
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.SiteConfig
 import com.xbw.tv.data.net.YikmParser
+import com.xbw.tv.data.search.PinyinSearchIndexer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -153,6 +155,46 @@ class GameRepository(private val db: AppDatabase) {
             LoadResult(items, false, 1, 1, parsed.warnings, System.currentTimeMillis())
         }
     }
+
+    /**
+     * 搜索（带本地拼音首字母索引增强）：纯字母查询时双路合并 ——
+     * 本地前缀命中排最前，服务器结果其次，本地包含匹配垫底，按 id 去重。
+     * 服务器挂了但本地有结果时返回本地（拼音搜索离线可用）。
+     */
+    suspend fun searchEx(keyword: String): LoadResult {
+        val kw = keyword.trim()
+        if (kw.isEmpty()) return LoadResult(emptyList(), false, 1, 1)
+        val pinyinQuery = kw.length >= 2 && kw.all { it in 'a'..'z' || it in 'A'..'Z' }
+        val prefix = mutableListOf<GameItem>()
+        val contains = mutableListOf<GameItem>()
+        if (pinyinQuery) {
+            withContext(Dispatchers.IO) {
+                val dao = db.searchIndexDao()
+                val q = kw.lowercase()
+                prefix += dao.queryPrefix(q).map { it.toItem() }
+                contains += dao.queryContains(q).map { it.toItem() }
+            }
+        }
+        val server = runCatching { search(kw) }
+        if (server.isFailure && prefix.isEmpty() && contains.isEmpty()) {
+            throw server.exceptionOrNull() ?: IllegalStateException("search failed")
+        }
+        val serverItems = server.getOrNull()?.items ?: emptyList()
+        val used = prefix.mapTo(HashSet()) { it.id }
+        val merged = prefix +
+                serverItems.filterNot { it.id in used }.onEach { used.add(it.id) } +
+                contains.filterNot { it.id in used }
+        return LoadResult(merged, false, 1, 1,
+            fetchedAt = System.currentTimeMillis())
+    }
+
+    /** 拼音索引条目数（UI 展示用） */
+    suspend fun searchIndexCount(): Int =
+        withContext(Dispatchers.IO) { db.searchIndexDao().count() }
+
+    /** 索引过期/为空则后台重建（幂等，重复调用无副作用） */
+    suspend fun ensureSearchIndex(context: android.content.Context) =
+        PinyinSearchIndexer.ensureFresh(context, db)
 
     /**
      * 抓取某游戏的金手指（站点 /cheat?id=）。
@@ -321,5 +363,14 @@ class GameRepository(private val db: AppDatabase) {
         source = source,
         categoryKey = categoryKey,
         page = page
+    )
+
+    private fun SearchIndexEntity.toItem() = GameItem(
+        id = gameId,
+        name = name,
+        coverUrl = coverUrl,
+        playUrl = playUrl,
+        tags = if (tags.isBlank()) emptyList() else tags.split("|"),
+        source = GameItem.SOURCE_SEARCH
     )
 }

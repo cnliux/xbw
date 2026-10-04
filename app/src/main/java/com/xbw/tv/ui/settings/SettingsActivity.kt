@@ -10,6 +10,7 @@ import androidx.lifecycle.lifecycleScope
 import com.xbw.tv.R
 import com.xbw.tv.XbwApplication
 import com.xbw.tv.data.local.AppDatabase
+import com.xbw.tv.data.search.PinyinSearchIndexer
 import com.xbw.tv.databinding.ActivitySettingsBinding
 import com.xbw.tv.input.GamepadManager
 import com.xbw.tv.input.KeySettings
@@ -17,6 +18,9 @@ import com.xbw.tv.input.MotionKeyBridge
 import com.xbw.tv.ui.common.Nav
 import com.xbw.tv.ui.diagnose.DiagnoseActivity
 import android.content.Intent
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -71,6 +75,20 @@ class SettingsActivity : AppCompatActivity() {
             Nav.toast(this@SettingsActivity, getString(R.string.toast_reset_done))
             refreshStatic()
         }
+        binding.rowPinyin.setOnClickListener {
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle(R.string.settings_pinyin_index)
+                .setMessage("重新抓取 FC/街机/SFC/GBA/MD 全站列表并重建拼音索引，后台进行约十几分钟，期间可正常用机。确定？")
+                .setPositiveButton("重建") { _, _ ->
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        runCatching {
+                            PinyinSearchIndexer.rebuild(application, AppDatabase.get(this@SettingsActivity))
+                        }
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }
         binding.rowAbout.setOnClickListener {
             val ver = try {
                 packageManager.getPackageInfo(packageName, 0).versionName
@@ -107,6 +125,34 @@ class SettingsActivity : AppCompatActivity() {
             val (games, recents) = XbwApplication.repository(application).cacheStats()
             binding.valCacheCount.text = "$games 条"
             binding.valRecentCount.text = "$recents 款"
+        }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                PinyinSearchIndexer.progress.collect { renderPinyinStatus(it) }
+            }
+        }
+        lifecycleScope.launch {
+            val n = XbwApplication.repository(application).searchIndexCount()
+            renderPinyinStatus(PinyinSearchIndexer.progress.value, forceCount = n)
+        }
+    }
+
+    private fun renderPinyinStatus(
+        p: PinyinSearchIndexer.Progress,
+        forceCount: Int? = null
+    ) {
+        lifecycleScope.launch {
+            val n = forceCount ?: XbwApplication.repository(application).searchIndexCount()
+            binding.valPinyinCount.text = when {
+                p.running -> "$n 条 · 同步中 ${p.category} p${p.page}"
+                n == 0 -> "未构建"
+                p.syncedAt > 0 -> {
+                    val d = java.text.SimpleDateFormat("MM-dd", java.util.Locale.US)
+                        .format(java.util.Date(p.syncedAt))
+                    "$n 条 · 更新于 $d"
+                }
+                else -> "$n 条"
+            }
         }
     }
 

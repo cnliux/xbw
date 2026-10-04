@@ -109,7 +109,28 @@
                 android:textSize="18sp" />
         </LinearLayout>
 
-        <!-- ⑦ 清除列表缓存 -->
+        <!-- ⑦ 拼音索引 -->
+        <LinearLayout
+            android:id="@+id/row_pinyin"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_pinyin_index"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/val_pinyin_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/xbw_text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- ⑧ 清除列表缓存 -->
         <LinearLayout
             android:id="@+id/row_clear_cache"
             style="@style/SettingItem">

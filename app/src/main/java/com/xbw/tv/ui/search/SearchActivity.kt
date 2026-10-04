@@ -5,6 +5,7 @@ import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
@@ -15,6 +16,7 @@ import com.xbw.tv.data.net.YikmParser
 import com.xbw.tv.databinding.ActivitySearchBinding
 import com.xbw.tv.ui.common.Nav
 import com.xbw.tv.ui.lobby.GameCardAdapter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 /**
@@ -57,6 +59,23 @@ class SearchActivity : AppCompatActivity() {
         binding.etKeyword.requestFocus()
         // 延迟弹键盘，等窗口获得焦点
         binding.etKeyword.postDelayed({ showKeyboard() }, 400)
+
+        // 自动化/调试入口：am start --es extra_keyword xxx 直接出结果，绕开 TV 输入法
+        applySeedKeyword()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        applySeedKeyword()
+    }
+
+    /** 自动化/调试入口：am start --es extra_keyword xxx 直接出结果，绕开 TV 输入法 */
+    private fun applySeedKeyword() {
+        intent?.getStringExtra("extra_keyword")?.let {
+            binding.etKeyword.setText(it)
+            doSearch()
+        }
     }
 
     private fun spanCount(): Int {
@@ -83,13 +102,21 @@ class SearchActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val repo = XbwApplication.repository(application)
-            runCatching { repo.search(kw) }
+            // 纯字母查询大概率是拼音首字母：索引为空/过期就后台静默重建，本次先用现有索引
+            val letterQuery = kw.length >= 2 && kw.all { it in 'a'..'z' || it in 'A'..'Z' }
+            if (letterQuery) {
+                launch(Dispatchers.IO) { runCatching { repo.ensureSearchIndex(application) } }
+            }
+            runCatching { repo.searchEx(kw) }
                 .onSuccess { r ->
                     binding.progress.visibility = android.view.View.GONE
                     adapter.submitList(r.items)
                     if (r.items.isEmpty()) {
                         binding.emptyText.visibility = android.view.View.VISIBLE
-                        binding.statusLine.text = ""
+                        binding.statusLine.text = if (letterQuery) {
+                            val n = runCatching { repo.searchIndexCount() }.getOrDefault(0)
+                            if (n == 0) "拼音索引构建中，稍后再试" else ""
+                        } else ""
                     } else {
                         binding.statusLine.text =
                             getString(R.string.search_result_fmt, r.items.size, kw)

@@ -222,6 +222,27 @@ libretro 核心只认 `AAAA:VV` 形式（FCEUmm 的 `retro_cheat_set` 以 `+,;._
 （`retro_cheat_reset()` 清空 → 逐条 set，避免反复切换叠加）。读档会重建核心内存，
 `RetroCore.loadState()` 成功后自动重放当前已开启列表。
 
+### 2.9 搜索：站点不支持拼音，首字母检索全靠本地索引（2026-10-04 实测）
+
+- 站点 `/search?name=` 的实现 ≈ 对标题（含英文名副标题）做**全子串匹配**：
+  `sed` 能命中"约束之地-PromisedLand"（英文单词里含 sed）、`cs` 命中 46 条
+  （一堆英文标题含 cs）；而 `sld`/`konglong`/`qh` 等首字母/全拼全部 0 结果。
+  所以拼音搜索必须本地做，站点指望不上，也别再回头试服务器参数。
+- 本地方案：`PinyinSearchIndexer` 后台分页拉 FC/街机/SFC/GBA/MD 五个可玩分类的
+  列表页（**只索引能玩的**，NDS/DOS 等不进索引），标题折算首字母存
+  Room `search_index`（实测全站 9540 条唯一游戏 / 插入 12863 行跨分类去重后）。
+- 到底判定别信页数（越界页服务器返回兜底杂质）：以 `parseList` 解析出的
+  currentPage ≠ 请求页、或本页 id 与上页重复 ≥60%、或解析 0 条为准。
+- 拼音数据：pinyindb 两份 txt（Unihan 单字表 + 词组多音字表）放 `assets/pinyindb/`，
+  `Pinyin.kt` 自解析。**不要引 pinyin4j jar**——它运行时 getResourceAsStream 读
+  classpath 资源，纯 Java jar 的资源在 Android dex 环境不存在，真机必炸。
+  注意 KDoc 里写 `pinyindb/*.txt` 会因 `/*` 触发 Kotlin 嵌套注释报错。
+- 交互：纯字母查询 = 本地前缀命中 + 服务器结果 + 本地包含匹配三路合并
+  （按 id 去重）；索引为空/超 7 天则第一次字母搜索时后台静默全量重建
+  （约 12 分钟 / 500ms 每页限速），设置页有状态行与手动重建入口。
+- 搜索页支持 `am start --es extra_keyword xxx` 直传关键词（TV 输入法会吞 adb
+  注入的字符——搜狗 TV 把 `input text hld` 拼音成"回来"）。
+
 ## 三、注入通道为什么长这样（排错先读这节）
 
 `GameBridge` 的 boot 脚本（随页面注入，暴露 `window.__XBW`）合成事件的方式：
