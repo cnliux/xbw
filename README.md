@@ -48,7 +48,7 @@ minSdk 21（覆盖 Android 5.0+ 的绝大多数盒子）。debug 包名带 `.deb
 | 实时抓取 + 缓存（Room + LruCache + OkHttp） | — | `GameRepository` / `YikmParser` / `SiteConfig` |
 | 搜索（GET /search?name=，单页无分页） | 大厅右上 | `SearchActivity` |
 | 拼音首字母搜索（本地索引：站点不支持拼音，见 docs §2.9） | 搜索页输字母 | `PinyinSearchIndexer` / `Pinyin` / Room `search_index` |
-| 收藏（卡片长按/菜单键 + 「我的收藏」页签） | 大厅 | `FavoriteEntity` / `FavoriteDao` / `GameRepository.toggleFavorite` |
+| 收藏（卡片长按/菜单键/游戏内工具条「收藏」按钮 + 「我的收藏」页签） | 大厅 | `FavoriteEntity` / `FavoriteDao` / `GameRepository.toggleFavorite` |
 | 游戏运行（libretro 原生核心：FC=fceumm 街机=fbneo SFC=snes9x GBA=mgba MD=genesis_plus_gx） | 点卡片 | `NativeGameActivity` / `RetroCore` / `RomProvider` / `libxbwcore.so` + 各核心 `.so` |
 | 金手指（FC 专用，站点 /cheat?id= 实时抓取） | 游戏内工具条→金手指 | `CheatParser` / `CheatAdapter` / `RetroCore.setCheats`（仿真线程经 retro_cheat_reset/set 下发） |
 | 原生工具条（暂停/重置/存档/读档/金手指/退出） | 游戏页按 SELECT/MENU/MODE | `NativeGameActivity.wireToolbar` |
