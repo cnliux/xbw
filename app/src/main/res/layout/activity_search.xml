@@ -52,6 +52,17 @@
         android:textColor="@color/xbw_text_disabled"
         android:textSize="12sp" />
 
+    <!-- 内置虚拟键盘（方向键/手柄选字，绕开 TV 系统输入法依赖）；搜索后收起 -->
+    <LinearLayout
+        android:id="@+id/keyboard_panel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingLeft="12dp"
+        android:paddingRight="12dp"
+        android:paddingBottom="6dp" />
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
