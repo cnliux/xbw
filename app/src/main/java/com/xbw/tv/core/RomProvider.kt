@@ -328,7 +328,7 @@ object RomProvider {
                     }
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {   // 同上：R8/低版本类装载问题多为 Error，别让协程裸崩
             Log.w(TAG, "unzip failed", e)
             return null
         }
@@ -379,7 +379,7 @@ object RomProvider {
                     }
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {   // API<24 上 SeekableByteChannel 抛的是 VerifyError（Error 系）
             Log.w(TAG, "un7z failed", e)
             best?.delete()
             return null
