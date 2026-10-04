@@ -47,6 +47,9 @@ class NativeGameActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_ID = "extra_id"
         const val EXTRA_NAME = "extra_name"
+        const val EXTRA_COVER = "extra_cover"
+        const val EXTRA_PLAY_URL = "extra_play_url"
+        const val EXTRA_TAGS = "extra_tags"
 
         /** GameButton → libretro JOYPAD 位（键名以 retro.h 1.10 为准） */
         private val RETRO_BIT: Map<GameButton, Int> = mapOf(
@@ -73,6 +76,9 @@ class NativeGameActivity : AppCompatActivity() {
 
     private var gameId = ""
     private var gameName = ""
+    private var coverUrl: String? = null
+    private var playUrl = ""
+    private var tags: List<String> = emptyList()
 
     private var toolbarVisible = false
     private var paused = false
@@ -107,6 +113,11 @@ class NativeGameActivity : AppCompatActivity() {
 
         gameId = intent.getStringExtra(EXTRA_ID).orEmpty()
         gameName = intent.getStringExtra(EXTRA_NAME).orEmpty()
+        coverUrl = intent.getStringExtra(EXTRA_COVER)
+        playUrl = intent.getStringExtra(EXTRA_PLAY_URL)
+            .takeUnless { it.isNullOrBlank() }
+            ?: "https://www.yikm.net/play?id=$gameId"
+        tags = intent.getStringArrayExtra(EXTRA_TAGS)?.toList() ?: emptyList()
 
         if (gameId.isNotEmpty()) {
             lifecycleScope.launch {
@@ -190,6 +201,14 @@ class NativeGameActivity : AppCompatActivity() {
         }
         binding.btnCheat.setOnClickListener { openCheatPanel() }
         binding.btnCheatOffAll.setOnClickListener { clearCheats() }
+        binding.btnFavorite.setOnClickListener {
+            lifecycleScope.launch {
+                val repo = com.xbw.tv.XbwApplication.repository(application)
+                val added = repo.toggleFavorite(favoriteItem())
+                binding.btnFavorite.text = if (added) "已收藏" else "收藏"
+                toast(if (added) "已加入收藏" else "已取消收藏")
+            }
+        }
         binding.btnExit.setOnClickListener { confirmExit() }
 
         binding.cheatList.layoutManager = LinearLayoutManager(this)
@@ -209,7 +228,26 @@ class NativeGameActivity : AppCompatActivity() {
         toolbarVisible = true
         clearPad()
         binding.toolbar.visibility = View.VISIBLE
+        refreshFavoriteLabel()
         binding.toolbar.post { binding.btnPause.requestFocus() }
+    }
+
+    private fun favoriteItem() = com.xbw.tv.data.model.GameItem(
+        id = gameId,
+        name = gameName,
+        coverUrl = coverUrl,
+        playUrl = playUrl,
+        tags = tags,
+        source = com.xbw.tv.data.model.GameItem.SOURCE_FAVORITE
+    )
+
+    private fun refreshFavoriteLabel() {
+        if (gameId.isEmpty()) return
+        lifecycleScope.launch {
+            val repo = com.xbw.tv.XbwApplication.repository(application)
+            val fav = withContext(kotlinx.coroutines.Dispatchers.IO) { repo.isFavorite(gameId) }
+            binding.btnFavorite.text = if (fav) "已收藏" else "收藏"
+        }
     }
 
     private fun hideToolbar() {

@@ -290,6 +290,10 @@ class GameRepository(private val db: AppDatabase) {
         db.favoriteDao().all().take(limit).map { it.toItem() }
     }
 
+    /** 是否已收藏（游戏内工具条按钮文案用，不依赖内存镜像加载时机） */
+    suspend fun isFavorite(gameId: String): Boolean =
+        withContext(Dispatchers.IO) { db.favoriteDao().isFavorite(gameId) }
+
     /** 切换收藏状态，@return 切换后是否已收藏 */
     suspend fun toggleFavorite(item: GameItem): Boolean {
         val added = withContext(Dispatchers.IO) {

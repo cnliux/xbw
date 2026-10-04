@@ -13,12 +13,15 @@ import com.xbw.tv.ui.game.NativeGameActivity
 /** 导航与通用交互小工具 */
 object Nav {
 
-    /** 打开游戏：原生 libretro 核心。 */
+    /** 打开游戏：原生 libretro 核心。封面/链接/标签一并带上，游戏内收藏要用。 */
     fun openGame(activity: Activity, item: GameItem) {
         activity.startActivity(
             Intent(activity, NativeGameActivity::class.java).apply {
                 putExtra(NativeGameActivity.EXTRA_ID, item.id)
                 putExtra(NativeGameActivity.EXTRA_NAME, item.name)
+                putExtra(NativeGameActivity.EXTRA_COVER, item.coverUrl)
+                putExtra(NativeGameActivity.EXTRA_PLAY_URL, item.playUrl)
+                putExtra(NativeGameActivity.EXTRA_TAGS, item.tags.toTypedArray())
             }
         )
     }

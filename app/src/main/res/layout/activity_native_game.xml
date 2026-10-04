@@ -77,6 +77,13 @@
             android:text="金手指" />
 
         <Button
+            android:id="@+id/btn_favorite"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            style="@style/TVButton"
+            android:text="收藏" />
+
+        <Button
             android:id="@+id/btn_exit"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
