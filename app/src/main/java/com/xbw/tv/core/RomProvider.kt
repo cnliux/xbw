@@ -4,9 +4,10 @@ import android.content.Context
 import android.util.Log
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.SiteConfig
+import org.apache.commons.compress.archivers.sevenz.SevenZFile
+import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.File
 import java.io.FileInputStream
-import java.util.zip.ZipInputStream
 
 /**
  * ▶ ROM 获取层：yikm 游戏 id → 可直接喂给 libretro 核心的本地 ROM 文件。
@@ -139,16 +140,26 @@ object RomProvider {
             Log.w(TAG, "gromname not found id=$gameId")
             return null
         }
-        val core = coreFor(gameType.orEmpty()) ?: run {
-            Log.i(TAG, "gameType=$gameType not native-supported yet")
+        // 路由：街机认 gameType=arcade（整 zip 喂 FBNeo）；其余系统 play 页没有
+        // gameType，用 gromname 固定目录前缀区分（实测 2026-10）：
+        //   /fcrom/…nes → fceumm 裸文件；/gbarom/xxx.zip → mgba；
+        //   /mdrom/mdN.zip → genesis_plus_gx；/sfc/….7z → snes9x
+        val gsystem = Regex("""gsystem="([^"]+)"""").find(html)?.groupValues?.get(1).orEmpty()
+        val core = when {
+            gameType == "arcade" -> "fbneo"
+            grom.startsWith("/fcrom") -> "fceumm"
+            grom.startsWith("/gbarom") -> "mgba"
+            grom.startsWith("/mdrom") -> "genesis_plus_gx"
+            gameType == "sfc" || grom.startsWith("/sfc") ||
+                grom.substringBeforeLast('$').trim().endsWith(".7z") -> "snes9x"
+            else -> coreFor(gameType.orEmpty())
+        } ?: run {
+            Log.i(TAG, "gameType=$gameType grom=$grom not native-supported yet")
             return null
         }
         // FBNeo 靠 zip 内的 rom 名反查机型表，所以必须整套一起喂，不能拆散。
-        // FCEUmm 相反，要的是那一个 .nes。
+        // FCEUmm/mgba/gx/snes9x 相反，要的是 zip/7z 里那一个 rom 文件。
         val zip = core == "fbneo"
-        val gsystem = if (zip) {
-            Regex("""gsystem="([^"]+)"""").find(html)?.groupValues?.get(1).orEmpty()
-        } else ""
         // 街机多版本用 $ 分隔（"修改版.zip$基础版.zip"），全部要下载
         val segments = grom.split('$').map { it.trim() }.filter { it.isNotBlank() }
         val romPath = when {
@@ -182,8 +193,12 @@ object RomProvider {
             return null
         }
 
-        // 3) ZIP 壳：FBNeo 整套留用，FCEUmm 拆出单个 .nes
-        val rom = if (zip) raw else (unwrapZip(dir, raw) ?: run { raw.delete(); return null })
+        // 3) 压缩壳：FBNeo 整套留用；其余拆出单个 rom（zip 或 7z）
+        val rom = when {
+            zip -> raw
+            is7zFile(raw) -> unwrap7z(dir, raw) ?: run { raw.delete(); return null }
+            else -> unwrapZip(dir, raw) ?: run { raw.delete(); return null }
+        }
         if (rom.length() <= 16) {
             rom.delete()
             return null
@@ -284,7 +299,9 @@ object RomProvider {
         Log.i(TAG, "cheat ini ready: ${segments.size} copy(ies), ${content.length} bytes")
     }
 
-    /** PK 头则解 zip（取最大文件——站点 zip 里就一个 rom），否则原样使用 */
+    /** PK 头则解 zip（取最大文件——站点 zip 里就一个 rom），否则原样使用。
+     *  站点 zip 文件名多为 GBK 编码，java.util.zip 会 MALFORMED，
+     *  改用 commons-compress 按 GBK 解码（带 UTF-8 标志的条目自动走 UTF-8）。 */
     private fun unwrapZip(dir: File, raw: File): File? {
         val head = ByteArray(4)
         FileInputStream(raw).use { if (it.read(head) < 4) return null }
@@ -295,7 +312,7 @@ object RomProvider {
         var best: File? = null
         var bestSize = -1L
         try {
-            ZipInputStream(FileInputStream(raw)).use { zin ->
+            ZipArchiveInputStream(FileInputStream(raw), "GBK", true, false).use { zin ->
                 while (true) {
                     val e = zin.nextEntry ?: break
                     if (e.isDirectory || e.name.startsWith("__MACOSX") ||
@@ -309,11 +326,62 @@ object RomProvider {
                         best = out
                         bestSize = out.length()
                     }
-                    zin.closeEntry()
                 }
             }
         } catch (e: Exception) {
             Log.w(TAG, "unzip failed", e)
+            return null
+        }
+        raw.delete()
+        return best?.takeIf { it.length() > 16 }
+    }
+
+    /** 7z 魔数：'7' 'z' BC AF 27 1C */
+    private fun is7zFile(f: File): Boolean {
+        val h = ByteArray(6)
+        FileInputStream(f).use { if (it.read(h) < 6) return false }
+        return h[0] == '7'.code.toByte() && h[1] == 'z'.code.toByte() &&
+            h[2] == 0xBC.toByte() && h[3] == 0xAF.toByte() &&
+            h[4] == 0x27.toByte() && h[5] == 0x1C.toByte()
+    }
+
+    /**
+     * 7z 解包（站点 SFC 分发格式）：逐个取文件、留最大者。
+     * commons-compress 自带 LZMA2 解码器，纯 LZMA 封装由 xz 兜底；
+     * 加密或稀有编码器会抛异常，按加载失败处理。
+     */
+    private fun unwrap7z(dir: File, raw: File): File? {
+        var best: File? = null
+        var bestSize = -1L
+        try {
+            // 纯 Java 内存通道（SeekableByteChannel 需 API 24+，SFC 入口在更老的
+            // 系统上会失败降级，不影响其余平台）；站点 7z 仅 1~3MB，全量进内存可接受
+            val ch = org.apache.commons.compress.utils.SeekableInMemoryByteChannel(raw.readBytes())
+            SevenZFile(ch).use { zin ->
+                val buf = ByteArray(64 * 1024)
+                while (true) {
+                    val e = zin.nextEntry ?: break
+                    if (e.isDirectory) continue
+                    val name = e.name.substringAfterLast('/').substringAfterLast('\\')
+                    if (name.isBlank() || name.startsWith(".")) continue
+                    val out = File(dir, "unzipped_$name")
+                    out.outputStream().use { os ->
+                        while (true) {
+                            val n = zin.read(buf, 0, buf.size)
+                            if (n <= 0) break
+                            os.write(buf, 0, n)
+                        }
+                    }
+                    if (out.length() > bestSize) {
+                        best?.delete()
+                        best = out
+                        bestSize = out.length()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "un7z failed", e)
+            best?.delete()
             return null
         }
         raw.delete()

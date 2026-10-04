@@ -1,0 +1,31 @@
+// libretro Genesis Plus GX 核心（MD/SMS/GG…）——独立原生库模块。
+// 产物 libgenesis_plus_gx.so 打进 APK；运行时由 xbwcore dlopen。纯 C，STL none。
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.xbw.tv.core.gx'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=none'
+            }
+        }
+    }
+
+    ndkVersion '27.2.12479018'
+
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+}

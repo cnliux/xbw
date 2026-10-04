@@ -25,4 +25,7 @@ include ':app'
 // libretro 核心的原生编译模块（每个核心一个目录，CMake 产出 lib<core>.so）
 include ':fceumm'
 include ':fbneo'
+include ':snes9x'
+include ':mgba'
+include ':genesis_plus_gx'
 

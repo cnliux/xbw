@@ -110,6 +110,9 @@ dependencies {
     // ---- libretro 核心模块（各自产出 lib<core>.so 打进 APK，运行时 dlopen）----
     implementation project(':fceumm')
     implementation project(':fbneo')
+    implementation project(':snes9x')
+    implementation project(':mgba')
+    implementation project(':genesis_plus_gx')
 
 
 
@@ -133,12 +136,17 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.17.2'
     implementation 'com.github.bumptech.glide:glide:4.16.0'
     kapt 'com.github.bumptech.glide:compiler:4.16.0'
+    // SFC 的 ROM 站点以 7z 分发（file.1990i.com/sfc/*.7z）。commons-compress
+    // 自带 LZMA2 解码器；xz 兜底纯 LZMA 封装的老包。
+    implementation 'org.apache.commons:commons-compress:1.21'
+    implementation 'org.tukaani:xz:1.12'
 
     // ---- 协程 ----
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
 
     // ---- Java 8+ API 脱糖运行时（支持 Android 5.0+，见 compileOptions 注释）----
-    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    // nio 版：commons-compress 的 7z 解码用到 java.nio.file，需要 desugar_jdk_libs_nio 回填
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.0.4'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'

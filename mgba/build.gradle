@@ -1,0 +1,32 @@
+// libretro mGBA 核心（GBA）——独立原生库模块。
+// 产物 libmgba.so 打进 APK；运行时由 xbwcore dlopen。
+// 复用上游 vendor/mgba 的 CMake（BUILD_LIBRETRO=ON，最小核心 MINIMAL_CORE=2）。
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.xbw.tv.core.mgba'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=none'   // 纯 C 核心，不链 libc++
+            }
+        }
+    }
+
+    ndkVersion '27.2.12479018'
+
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+}

@@ -143,6 +143,30 @@ GET /nes?page={页码}&tag={tag}&e={e}
 **生命周期铁律**：`retro_set_environment` 必须先于 `retro_init`
 （FCEUmm 的 init 里立刻 `environ_cb(GET_LOG_INTERFACE)`，顺序反了 blr NULL 段错误）。
 
+#### 2.6.1 SFC / GBA / MD（2026-10 实测扩展）
+
+这三个系统的 play 页 **没有** `gameType`/`gsystem`，路由只能靠 `gromname` 前缀：
+
+| 系统 | gromname 形态 | 直链 | 壳 | 核心 |
+|------|--------------|------|----|------|
+| GBA | `/gbarom/0060.zip` | 原样拼接 | ZIP，内含单个 `.gba`，**要解包** | `libmgba.so` |
+| MD | `/mdrom/md1.zip` | 原样拼接 | ZIP，内含单个 `.md`，**要解包** | `libgenesis_plus_gx.so` |
+| SFC | `/sfc/Seiken Densetsu 2 (Japan).7z` | 原样拼接（空格要转义） | **7z**，内含单个 `.sfc` | `libsnes9x.so` |
+
+- 站点 zip 内文件名是 **GBK 编码**（中文游戏名），`java.util.zip` 直接抛
+  `MALFORMED`——统一改用 commons-compress `ZipArchiveInputStream(..., "GBK")`；
+- 7z 解包用 commons-compress `SevenZFile`（1.21，自带 LZMA2），入口套
+  `SeekableInMemoryByteChannel`（站点 7z 仅 1~3MB）；`SevenZFile(File)` 会走
+  `File.toPath()`（API 26+）崩 API 25，必须避开；脱糖依赖相应换成
+  `desugar_jdk_libs_nio`（commons-compress 内部引用 `java.nio.file`）；
+- 实测基线（p230 / arm64）：SFC 圣剑传说2 256×224@60.1、GBA 炎之斗士 240×160@59.7、
+  MD 三国战记 256×192@59.9，全部满速；
+- 核心模块：`snes9x/`（vendor/snes9x，C++14+c++_static）、`mgba/`（复用上游
+  CMake，`BUILD_LIBRETRO=ON`+前端全关，目标 `mgba_libretro` 需改 `PREFIX=lib`、
+  `OUTPUT_NAME=mgba` 才会被 AGP 打包）、`genesis_plus_gx/`（纯 C，不编 CHD，
+  静态 tremor + 自带 zlib 6 文件，libretro-common 用仓库自带的）。
+- 仍未覆盖：NDS/Java/DOS/Flash（无轻量 libretro 核心或站点走 ruffle/独立 wasm）。
+
 ### 2.7 帧率：为什么必须把仿真和 present 解耦（实测数据）
 
 在仿真线程里直接 `ANativeWindow_lock` + `unlockAndPost` 看着简单，实测**帧率被显示管线锁死**：

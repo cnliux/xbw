@@ -1,0 +1,32 @@
+// libretro Snes9x 核心（SFC）——独立原生库模块。
+// 产物 libsnes9x.so 打进 APK；运行时由 xbwcore dlopen。
+// STL 用 c++_static（与上游 jni 惯例一致，自包含不依赖系统 libc++）。
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.xbw.tv.core.snes9x'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
+        }
+        externalNativeBuild {
+            cmake {
+                arguments '-DANDROID_STL=c++_static'
+            }
+        }
+    }
+
+    ndkVersion '27.2.12479018'
+
+    externalNativeBuild {
+        cmake {
+            path 'CMakeLists.txt'
+            version '3.22.1'
+        }
+    }
+}

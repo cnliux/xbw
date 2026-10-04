@@ -1,6 +1,6 @@
 # 小霸王 TV（com.xbw.tv）
 
-在 Android TV / 电视盒子上，用**手柄**玩 [yikm.net](https://www.yikm.net) 的在线红白机/街机/GBA 游戏。
+在 Android TV / 电视盒子上，用**手柄**玩 [yikm.net](https://www.yikm.net) 的在线红白机/街机/SFC/GBA/MD 游戏。
 
 三条铁律贯穿全部代码：
 
@@ -48,7 +48,7 @@ minSdk 21（覆盖 Android 5.0+ 的绝大多数盒子）。debug 包名带 `.deb
 | 实时抓取 + 缓存（Room + LruCache + OkHttp） | — | `GameRepository` / `YikmParser` / `SiteConfig` |
 | 搜索（GET /search?name=，单页无分页） | 大厅右上 | `SearchActivity` |
 | 收藏（卡片长按/菜单键 + 「我的收藏」页签） | 大厅 | `FavoriteEntity` / `FavoriteDao` / `GameRepository.toggleFavorite` |
-| 游戏运行（libretro 原生核心：FC=fceumm 街机=fbneo） | 点卡片 | `NativeGameActivity` / `RetroCore` / `RomProvider` / `libxbwcore.so` + `libfceumm.so` + `libfbneo.so` |
+| 游戏运行（libretro 原生核心：FC=fceumm 街机=fbneo SFC=snes9x GBA=mgba MD=genesis_plus_gx） | 点卡片 | `NativeGameActivity` / `RetroCore` / `RomProvider` / `libxbwcore.so` + 各核心 `.so` |
 | 金手指（FC 专用，站点 /cheat?id= 实时抓取） | 游戏内工具条→金手指 | `CheatParser` / `CheatAdapter` / `RetroCore.setCheats`（仿真线程经 retro_cheat_reset/set 下发） |
 | 原生工具条（暂停/重置/存档/读档/金手指/退出） | 游戏页按 SELECT/MENU/MODE | `NativeGameActivity.wireToolbar` |
 | 输入映射（物理键→GameButton→retro 位图） | — | `KeySettings` / `MotionKeyBridge` / `NativeGameActivity` |
@@ -76,7 +76,10 @@ app/src/main/java/com/xbw/tv/
 app/src/main/cpp/xbw_core.c # 通用 libretro 宿主：dlopen 核心 + 软件渲染 + SRAM + 存档 + 金手指队列
 fceumm/                     # libretro-fceumm 上游源码编译模块 → libfceumm.so（FC）
 fbneo/                      # libretro-fbneo 编译模块 → libfbneo.so（街机；cheat 为上游空实现）
-vendor/                     # libretro-common / libretro-fceumm（上游源码，勿手改）
+snes9x/                     # libretro-snes9x 编译模块 → libsnes9x.so（SFC，7z ROM）
+mgba/                       # mGBA 上游 CMake 桥模块 → libmgba.so（GBA）
+genesis_plus_gx/            # Genesis-Plus-GX 编译模块 → libgenesis_plus_gx.so（MD）
+vendor/                     # libretro-common / 各核心上游源码（独立 git 仓库，勿手改）
 docs/
   YIKM_SITE_STRUCTURE.md   # ★ 站点结构 + 选择器维护 SOP（改版必读）
   GAMEPAD_TESTING.md       # ★ 手柄映射说明 + 15 分钟验收测试矩阵
