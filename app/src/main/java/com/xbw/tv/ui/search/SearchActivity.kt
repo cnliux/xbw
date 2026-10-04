@@ -240,11 +240,7 @@ class SearchActivity : AppCompatActivity() {
                 return
             }
         }
-        // 焦点在输入框时 B 先清焦点，再退页面（TV 习惯）
-        if (binding.etKeyword.hasFocus()) {
-            binding.etKeyword.clearFocus()
-            return
-        }
+        // 系统 IME 已屏蔽，输入框上 B 直接退出（不再走"先清焦点"那步）
         @Suppress("DEPRECATION")
         super.onBackPressed()
     }
