@@ -116,7 +116,7 @@ class SettingsActivity : AppCompatActivity() {
         refreshUpdateRows()
     }
 
-    /** 升级开关状态 + 当前版本号（版本号来自 BuildConfig，CI 用 buildNo 注入） */
+    /** 升级开关状态 + 当前版本号（版本号来自 BuildConfig，CI 用 -PappVersion 注入） */
     private fun refreshUpdateRows() {
         binding.valAutoUpdate.setText(
             if (UpdateSettings.isAutoCheck(this)) R.string.settings_auto_update_on

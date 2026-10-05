@@ -110,7 +110,7 @@ tools/
 | 搜索不到某款游戏 | 搜索只显示有原生核心的平台（NDS/DOS/Java/Flash 等被过滤）；确认它属于 FC/街机/SFC/GBA/MD，再重建拼音索引 |
 | 进入游戏提示"XX 暂无原生核心" | 该游戏平台没有编译核心（当前仅 FC/街机/SFC/GBA/MD）；按返回键退出 |
 | 进入游戏提示"ROM 下载失败/解包失败" | 网络或 CDN 临时问题，按返回重进即可；站点路径若已变更见 `SiteConfig` 与 docs §2.6 |
-| 检查更新失败 | 需要能访问 GitHub（api.github.com 或 github.com 被墙时会失败），可换网络再试 |
+| 检查更新失败 | 需要能访问 GitHub（api.github.com 或 github.com 不通时会失败，App 会明确提示"检查失败"而不是谎报已是最新）；换个网络或稍后再试 |
 | 升级装不上 | Android 8+ 首次需在系统设置里允许本应用"安装未知应用" |
 | 游戏黑屏（FC） | 抓 logcat `XbwCore`：确认 `libfceumm.so` 加载与 ROM 下载日志 |
 | 手柄按键进游戏无效 | 按 `docs/GAMEPAD_TESTING.md` §5 逐步排查；未映射的手柄键会被吞掉属预期 |
@@ -124,13 +124,16 @@ tools/
 
 1. `.github/workflows/build.yml` 按 `vendor/*` 里锁定的 commit 精确还原 6 个上游仓库；
 2. JDK 17 + NDK 27.2 + CMake 3.22.1 编 debug/release 两个 APK；
-3. 发布到 GitHub Release，**tag = `v<run_number>`**（版本号以 v 开头递增）；
-4. Gradle 通过 `-PbuildNo=<run_number>` 把同一个数字写进 `versionCode`/`versionName`，
-   App 内 `UpdateChecker` 就是拿这个数字比大小：新 tag 的数字更大就提示升级。
+3. 发布到 GitHub Release，**tag = `v<major>.<minor>.<patch>`**：首个正式版 `v0.0.1`，
+   之后每次自动 patch+1（从上一个 Release tag 推导，不需要提交回仓库）；
+4. Gradle 通过 `-PappVersion=0.0.N` 把版本号同时写进 `versionName` 和派生的 `versionCode`
+   （`0.0.1→1`、`0.0.14→14`、`1.2.3→1002003`），App 内 `UpdateChecker` 用同一套算法比大小。
 
 App 侧：设置→进游戏时自动升级（默认开，进游戏静默检测，6 小时一次）、
-设置→立即检查更新。下载同一份 Release 资产时会先 HEAD 探活 GitHub 直连与几个镜像，
-取最快可用的源；下载完成后经 FileProvider 拉起系统安装器。
+设置→立即检查更新。下载同一份 Release 资产时会**并发 HEAD 探活 GitHub 直连 + 4 个镜像**，
+按当次实测响应时间排序、最快的先下（不写死偏好，因为哪个 CDN 快完全取决于用户当前网络）；
+下载失败顺位换源重试，落盘还会校验确实是 APK（防止镜像用 200 返回错误页），
+完成后经 FileProvider 拉起系统安装器。
 
 ## 免责声明
 

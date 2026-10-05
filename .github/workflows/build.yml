@@ -2,7 +2,7 @@ name: Build APK
 
 on:
   push:
-    branches: [master]     # 推 master 自动出包（Release tag = v<run_number>）
+    branches: [master]     # 推 master 自动出包（Release tag = v<自动递增的 patch 版本>）
   workflow_dispatch:       # 也可手动触发（Actions 页 → Build APK → Run workflow）
 
 jobs:
@@ -71,27 +71,45 @@ jobs:
             echo "no signing secrets, release falls back to debug signature"
           fi
 
+# 版本号：语义化 major.minor.patch，首个正式版 v0.0.1，之后每次 patch+1。
+      # 从"上一个 Release tag"推导而不是提交回仓库，所以不需要 CI 有写权限，
+      # 也不会出现"bump 提交又触发新一轮构建"的死循环。
+      - name: Resolve version
+        id: ver
+        run: |
+          LATEST=$(curl -fsSL -H 'Accept: application/vnd.github+json' \
+                    "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
+                    | grep -m1 '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' || true)
+          if [[ "$LATEST" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+            echo "previous release: $LATEST -> next: v$VERSION"
+          else
+            VERSION="0.0.1"     # 首个正式版；旧式 tag（v13 / build-12）一律视为历史
+            echo "no semver release yet (latest='$LATEST') -> start at v$VERSION"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
       - name: Build debug + release APK
-        env:
-          BUILD_NO: ${{ github.run_number }}   # 与 Release tag 的 v<数字> 同源，App 内按它比大小
         run: |
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:assembleRelease -PbuildNo="${BUILD_NO}" --no-daemon --stacktrace
+          ./gradlew :app:assembleDebug :app:assembleRelease \
+            -PappVersion="${{ steps.ver.outputs.version }}" --no-daemon --stacktrace
 
       # Release 附件是原始文件（不 zip），Releases 页直接下载 .apk
       - name: Publish APKs to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.run_number }}
-          name: 小霸王 TV v${{ github.run_number }}
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: 小霸王 TV v${{ steps.ver.outputs.version }}
           body: |
             自动构建 `${{ github.sha }}`（${{ github.ref_name }}）
 
             - app-debug.apk — 调试版
-            - app-release.apk — 正式签名版（版本号 v${{ github.run_number }}）
+            - app-release.apk — 正式签名版（版本号 v${{ steps.ver.outputs.version }}）
 
-            App 内「设置 → 立即检查更新」会自动发现本版本。
+            App 内「设置 → 立即检查更新」会自动发现本版本；
+            下载源在多个 CDN 之间实测选最快的那个。
           files: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/release/app-release.apk

@@ -30,18 +30,26 @@ android {
         }
     }
 
-    // 版本号单一来源：CI（.github/workflows/build.yml）用 Release tag 的数字
-    // `v<run_number>` 通过 -PbuildNo=N 注入；本地不传就是 1。
-    // App 内 UpdateChecker 也按这个数字比大小（tag v12 > 本地 versionCode 11 才提示升级）。
-    def buildNoRaw = (project.findProperty('buildNo') ?: System.getenv('BUILD_NO') ?: '1').toString()
-    def buildNo = (buildNoRaw.isInteger() ? buildNoRaw.toInteger() : 1) as int
+    // 版本号：语义化 `major.minor.patch`，首个正式版从 v0.0.1 起。
+    // 单一来源是 gradle.properties 的 appVersion（本地构建就用它），
+    // CI 从"上一个 Release tag"自动 patch+1 后用 -PappVersion=0.0.N 注入，
+    // 所以不需要把版本号提交回仓库，也不会有"bump 提交又触发新构建"的死循环。
+    // versionCode 由版本号派生（0.0.1→1，0.0.14→14，1.2.3→1002003），
+    // 保证它随版本号单调递增，Android 才允许覆盖安装；App 内比大小也用同一个算法。
+    def appVersionRaw = (project.findProperty('appVersion') ?: project.findProperty('VERSION_NAME') ?: '0.0.1').toString().trim().replaceFirst('^v', '')
+    def appVersionParts = (appVersionRaw.split('\\.') + ['0', '0', '0']).take(3)
+            .collect { (it.isInteger() ? it.toInteger() : 0) as int }
+    def appVersionCode = appVersionParts[0] * 1000000 + appVersionParts[1] * 1000 + appVersionParts[2]
+    if (appVersionCode <= 0) {
+        throw new GradleException("appVersion 非法: '${appVersionRaw}'（应为 0.0.1 这样的 major.minor.patch）")
+    }
 
     defaultConfig {
         applicationId "com.xbw.tv"
         minSdk 21
         targetSdk 34
-        versionCode buildNo
-        versionName "v${buildNo}"
+        versionCode appVersionCode
+        versionName "v${appVersionRaw}"
 
         // 只打包中文资源，减小 APK 体积
         resourceConfigurations += ['zh', 'zh-rCN']

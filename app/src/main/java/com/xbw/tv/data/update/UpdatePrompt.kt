@@ -15,18 +15,28 @@ object UpdatePrompt {
 
     private const val TAG = "UpdatePrompt"
 
-    /** 设置页：主动检查，一定给结果反馈（检查中 / 已是最新 / 下载） */
+    /** 设置页：主动检查，一定给结果反馈（检查中 / 已是最新 / 检查失败 / 下载） */
     fun checkNow(activity: androidx.activity.ComponentActivity) {
         val toast = Toast.makeText(activity, R.string.update_checking, Toast.LENGTH_SHORT)
         toast.show()
         activity.lifecycleScope.launch {
-            val info = UpdateChecker.check()
+            // 网络不通要明说，否则用户会以为"刚出的版本我这儿看不到"
+            val info = try {
+                UpdateChecker.check()
+            } catch (e: Exception) {
+                Log.w(TAG, "check failed", e)
+                null
+            }
             if (info == null) {
-                Toast.makeText(
-                    activity,
-                    activity.getString(R.string.update_latest, UpdateChecker.currentVersion),
-                    Toast.LENGTH_LONG
-                ).show()
+                if (UpdateChecker.reachable()) {
+                    Toast.makeText(
+                        activity,
+                        activity.getString(R.string.update_latest, UpdateChecker.currentVersion),
+                        Toast.LENGTH_LONG
+                    ).show()
+                } else {
+                    Toast.makeText(activity, R.string.update_check_failed, Toast.LENGTH_LONG).show()
+                }
                 return@launch
             }
             showUpdateDialog(activity, info, markDismissed = false)
