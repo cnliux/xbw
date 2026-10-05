@@ -32,7 +32,7 @@ jobs:
           git -C vendor/mgba fetch -q --depth=1 origin 7a12d6d4b9acb14c0ae62c9166b6a2f3d08007f6
           git -C vendor/mgba checkout -q FETCH_HEAD
           git init -q vendor/Genesis-Plus-GX && git -C vendor/Genesis-Plus-GX remote add origin https://github.com/libretro/Genesis-Plus-GX.git
-          git -C vendor/Genesis-Plus-GX fetch -q --depth=1 origin c838c7dc4236fc2fe94e5dbd08b41486067918e
+          git -C vendor/Genesis-Plus-GX fetch -q --depth=1 origin c2838c7dc4236fc2fe94e5dbd08b41486067918e
           git -C vendor/Genesis-Plus-GX checkout -q FETCH_HEAD
 
       - name: Set up JDK 17
