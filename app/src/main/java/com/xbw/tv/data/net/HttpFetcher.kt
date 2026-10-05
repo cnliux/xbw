@@ -36,7 +36,7 @@ object HttpFetcher {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/124.0.0.0 Safari/537.36"
 
-    const val MAX_RETRY = 3
+    const val MAX_RETRY = 6
 
     class FetchException(
         val httpCode: Int = -1,
@@ -120,6 +120,16 @@ object HttpFetcher {
      * 用于 ROM 直链（file.1990i.com）等大文件；ROM ≤1MB，内存无压力但仍走流式。
      * @param onProgress 已下载字节 / 总字节（总长未知时为 -1），在 IO 线程回调
      */
+    /**
+     * 断点续传下载：失败重试时**接着上次的位置继续**，不从头再来。
+     *
+     * 电视盒子实测：38MB 的包在 GitHub 上要几分钟，中间停顿超过 [readTimeout] 就会断。
+     * 原来每次重试都 `dest.delete()` 从零开始，慢速网络下永远下不完（实测连挂 5 个源）。
+     * 现在用 `Range: bytes=<已有字节>-` 续传，服务端返回 206 就接着写，
+     * 返回 200（不支持续传）或 416（本地已完整）时分别按"重头下"/"直接完成"处理。
+     *
+     * @param onProgress 回调 (已下载, 总大小)；续传时已下载量从文件长度起算
+     */
     suspend fun downloadToFile(
         url: String,
         dest: File,
@@ -133,10 +143,11 @@ object HttpFetcher {
                     return@withContext downloadOnce(url, dest, referer, onProgress)
                 } catch (e: IOException) {
                     lastError = e
-                    dest.delete()
+                    // 不删 dest：留给下一次 Range 续传
                     if (attempt < MAX_RETRY - 1) delay(600L * (1L shl attempt))
                 }
             }
+            dest.delete()
             throw FetchException(
                 httpCode = (lastError as? FetchException)?.httpCode ?: -1,
                 cause0 = lastError,
@@ -145,23 +156,41 @@ object HttpFetcher {
         }
 
     private fun downloadOnce(
-        url: String, dest: File, referer: String?, onProgress: ((Long, Long) -> Unit)?
+        url: String, dest: File, referer: String?, onProgress: ((Long, Long) -> Unit)?,
+        timeoutMs: Long = 20_000L
     ): File {
+        dest.parentFile?.mkdirs()
+        val resumeFrom = if (dest.isFile && dest.length() > 0) dest.length() else 0L
         val rb = Request.Builder()
             .url(url)
             .header("User-Agent", UA)
             .header("Accept", "*/*")
+        if (resumeFrom > 0) rb.header("Range", "bytes=$resumeFrom-")
         referer?.let { rb.header("Referer", it) }
-        client().newCall(rb.build()).execute().use { resp ->
-            if (!resp.isSuccessful) {
+        // 大文件允许更长的读超时：盒子网络慢但连接是活的，宁可等也不要从头再来
+        val call = client().newBuilder()
+            .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)
+            .build()
+            .newCall(rb.build())
+        call.execute().use { resp ->
+            if (resp.code == 416) return dest            // 本地已完整（Range 越界）
+            if (!resp.isSuccessful && resp.code != 206) {
                 throw FetchException(resp.code, null, "HTTP ${resp.code} ${resp.message}")
             }
             val body = resp.body ?: throw FetchException(resp.code, null, "响应体为空")
-            dest.parentFile?.mkdirs()
-            val total = body.contentLength()
-            var done = 0L
+            // 206 的 body 只含剩余部分，总大小要从 Content-Range 的尾部取
+            val total = when {
+                resp.code == 206 ->
+                    resp.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull()
+                        ?: (resumeFrom + body.contentLength())
+                else -> body.contentLength()
+            }
+            val append = resp.code == 206 && resumeFrom > 0
+            if (!append) dest.delete()
+            var done = if (append) resumeFrom else 0L
+            onProgress?.invoke(done, total)
             body.byteStream().use { ins ->
-                dest.outputStream().use { outs ->
+                java.io.FileOutputStream(dest, append).use { outs ->
                     val buf = ByteArray(64 * 1024)
                     while (true) {
                         val n = ins.read(buf)

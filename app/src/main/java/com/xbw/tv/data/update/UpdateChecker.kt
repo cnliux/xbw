@@ -273,6 +273,9 @@ object UpdateChecker {
                     TAG,
                     "source ${src.name} unusable (want=${info.sizeBytes} got=${dest.length()}), trying next"
                 )
+                // 换源时清掉半截文件：断点续传是按字节偏移的，
+                // 不同 CDN 的响应体长度未必一致，接着写会拼出坏包
+                dest.delete()
                 dest.delete()
                 if (index == 0) binding.updateProgress.progress = 0
             }
