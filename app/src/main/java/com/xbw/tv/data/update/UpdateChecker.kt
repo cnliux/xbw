@@ -264,12 +264,15 @@ object UpdateChecker {
                             }
                         }
                     )
-                }.isSuccess && looksLikeApk(dest)
+                }.isSuccess && isCompleteApk(dest, info.sizeBytes)
                 if (ok) {
                     installedFrom = src.name
                     break
                 }
-                Log.w(TAG, "download failed via ${src.name}, trying next source")
+                Log.w(
+                    TAG,
+                    "source ${src.name} unusable (want=${info.sizeBytes} got=${dest.length()}), trying next"
+                )
                 dest.delete()
                 if (index == 0) binding.updateProgress.progress = 0
             }
@@ -284,6 +287,17 @@ object UpdateChecker {
             dialog.dismiss()
             install(activity, dest)
         }
+    }
+
+    /**
+     * 镜像偶尔在 200 响应里塞 HTML 错误页或截断内容；这种文件交给系统安装器只会得到
+     * 一句"解析失败"，还不如当场换源重下。所以既看 APK 魔数，也对齐 API 报的资产大小。
+     *
+     * @param expectedSize API 给的资产字节数；0 = 未知（走了 fallback 查 tag），跳过大小校验
+     */
+    internal fun isCompleteApk(file: File, expectedSize: Long = 0L): Boolean {
+        if (!looksLikeApk(file)) return false
+        return expectedSize <= 0L || file.length() == expectedSize
     }
 
     /**

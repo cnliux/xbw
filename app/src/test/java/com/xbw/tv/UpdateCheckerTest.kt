@@ -105,14 +105,45 @@ class UpdateCheckerTest {
 
     @Test
     fun `PK 魔数且够大的文件算 APK`() {
-        val apk = File.createTempFile("good", ".apk")
+        val apk = newFakeApk()
         try {
-            val body = ByteArray(1024 * 1024 + 8)
-            body[0] = 0x50; body[1] = 0x4B
-            apk.writeBytes(body)
             assertTrue(UpdateChecker.looksLikeApk(apk))
         } finally {
             apk.delete()
         }
+    }
+
+    @Test
+    fun `大小对不上 API 报的资产大小时不算下完`() {
+        val apk = newFakeApk()
+        try {
+            assertTrue(UpdateChecker.isCompleteApk(apk, expectedSize = apk.length()))
+            // 截断：魔数对、体积对不上（实测有些镜像就干这个）
+            assertTrue(!UpdateChecker.isCompleteApk(apk, expectedSize = apk.length() + 1024L))
+            // 大小未知（fallback 查 tag 时 sizeBytes=0）时只校验魔数
+            assertTrue(UpdateChecker.isCompleteApk(apk, expectedSize = 0L))
+        } finally {
+            apk.delete()
+        }
+    }
+
+    @Test
+    fun `HTML 错误页即使体积够大也不算数`() {
+        val html = File.createTempFile("big", ".apk")
+        try {
+            html.writeBytes(ByteArray(2 * 1024 * 1024))     // 大小达标，但没有 PK 头
+            assertTrue(!UpdateChecker.isCompleteApk(html, expectedSize = html.length()))
+        } finally {
+            html.delete()
+        }
+    }
+
+    /** 造一个"够大且以 PK 开头"的假 APK，避免测试依赖真实构建产物 */
+    private fun newFakeApk(): File {
+        val apk = File.createTempFile("good", ".apk")
+        val body = ByteArray(1024 * 1024 + 8)
+        body[0] = 0x50; body[1] = 0x4B
+        apk.writeBytes(body)
+        return apk
     }
 }
