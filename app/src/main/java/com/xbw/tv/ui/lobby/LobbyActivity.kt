@@ -132,6 +132,8 @@ class LobbyActivity : AppCompatActivity() {
             pendingFocusPosition = 0
             viewModel.nextPage()
         }
+        // 页码标签即下拉入口
+        binding.pagerLabel.setOnClickListener { showPagePicker() }
     }
 
     private fun scrollToChildRow(child: View) {
@@ -196,7 +198,12 @@ class LobbyActivity : AppCompatActivity() {
                     else -> "共 ${state.items.size} 款"
                 }
                 updatePager(state)
-                cardAdapter.submitList(state.items) {
+                // 网格铺平：整页数据（非末页）裁到列数的整数倍，避免最后一行剩 2 张的锯齿排布；
+                // 末页/单页列表（最近玩过/收藏/搜索）不裁，防止吞掉真实条目
+                val span = (binding.rvGames.layoutManager as? GridLayoutManager)?.spanCount ?: 1
+                val shown = if (state.maxPage > 1 && state.page < state.maxPage && span > 1)
+                    state.items.take(state.items.size / span * span) else state.items
+                cardAdapter.submitList(shown) {
                     // 数据替换完成后再恢复焦点，避免定位到旧位置
                     pendingFocusPosition?.let { pos ->
                         pendingFocusPosition = null
@@ -235,9 +242,22 @@ class LobbyActivity : AppCompatActivity() {
             return
         }
         binding.pagerRow.visibility = View.VISIBLE
-        binding.pagerLabel.text = getString(R.string.lobby_page_fmt, state.page, state.maxPage)
+        binding.pagerLabel.text = getString(R.string.lobby_page_fmt, state.page, state.maxPage) + " ▾"
         binding.btnPrevPage.isEnabled = state.page > 1
         binding.btnNextPage.isEnabled = state.page < state.maxPage
+    }
+
+    /** 页码下拉：点「第 X/Y 页 ▾」弹出全部页码列表，遥控器上下选页直达 */
+    private fun showPagePicker() {
+        val st = viewModel.state.value as? LobbyViewModel.State.Content ?: return
+        val pages = Array(st.maxPage) { "第 ${it + 1} 页" }
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.lobby_page_picker_title)
+            .setItems(pages) { _, which ->
+                pendingFocusPosition = 0
+                viewModel.goToPage(which + 1)
+            }
+            .show()
     }
 
     /** 从游戏页返回时强制后台刷新（方案 3.4：缓存只是加速，回到大厅看最新） */

@@ -68,6 +68,9 @@ class LobbyViewModel(
     var currentCategory: GameCategory = GameCategory.ALL
         private set
 
+    /** 当前页：进游戏退出后 onResume 会重新 enter，必须回到本页而不是第 1 页 */
+    private var currentPage = 1
+
     /** 首页热门区块（大厅顶部横向卡片行用） */
     private val _homeSections = MutableLiveData<List<YikmParser.HomeSection>>()
     val homeSections: LiveData<List<YikmParser.HomeSection>> = _homeSections
@@ -78,12 +81,14 @@ class LobbyViewModel(
     /** 首次进入分类：缓存先行 + 后台刷新 */
     fun enter(category: GameCategory, forceRefresh: Boolean = true) {
         if (loadJob?.isActive == true && currentCategory == category && !forceRefresh) return
+        if (currentCategory != category) currentPage = 1   // 换分类从第 1 页开始
+        val target = currentPage
         currentCategory = category
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _state.value = State.Loading
             // 1) 先给内存/磁盘缓存
-            val cached = repo.peekCache(category, 1) ?: runCatching { repo.cachedList(category, 1) }.getOrNull()
+            val cached = repo.peekCache(category, target) ?: runCatching { repo.cachedList(category, target) }.getOrNull()
             if (!cached?.items.isNullOrEmpty()) {
                 _state.value = State.Content(
                     cached!!.items, true, cached.page, cached.maxPage.coerceAtLeast(cached.page),
@@ -95,7 +100,7 @@ class LobbyViewModel(
                 State.Refreshing((_state.value as State.Content).items)
             else State.Loading
 
-            runCatching { repo.fetchList(category, 1, force = true) }
+            runCatching { repo.fetchList(category, target, force = true) }
                 .onSuccess { r ->
                     _state.value = State.Content(r.items, false, r.page, r.maxPage, r.warnings, r.fetchedAt)
                 }
@@ -104,16 +109,16 @@ class LobbyViewModel(
                     when {
                         e is YikmParser.ParseException ->
                             _state.value = if (keep != null)
-                                State.Content(keep, true, 1, 1,
+                                State.Content(keep, true, target, target,
                                     listOf("站点结构可能已变更：${e.message}（当前展示的是缓存）"))
                             else State.Error("站点结构可能已变更：${e.message}", State.Kind.SITE_CHANGED)
                         e is HttpFetcher.FetchException || e is java.io.IOException ->
                             _state.value = if (keep != null)
-                                State.Content(keep, true, 1, 1, listOf("网络异常，展示缓存：${e.message}"))
+                                State.Content(keep, true, target, target, listOf("网络异常，展示缓存：${e.message}"))
                             else State.Error("网络请求失败：${e.message}", State.Kind.NETWORK)
                         e is GameRepository.EmptySiteException ->
                             _state.value = if (keep != null)
-                                State.Content(keep, true, 1, 1, listOf("站点返回空列表，展示缓存"))
+                                State.Content(keep, true, target, target, listOf("站点返回空列表，展示缓存"))
                             else State.Error("这个分类暂时没有可玩的游戏", State.Kind.EMPTY)
                         else ->
                             _state.value = State.Error(e.message ?: "未知错误", State.Kind.UNKNOWN)
@@ -137,6 +142,7 @@ class LobbyViewModel(
             val cached = repo.peekCache(currentCategory, target)
                 ?: runCatching { repo.cachedList(currentCategory, target) }.getOrNull()
             val hitCache = !cached?.items.isNullOrEmpty()
+            currentPage = target   // 立刻记住目标页：加载中途退到游戏再回来也回这里
             _state.value = if (hitCache) {
                 State.Content(
                     cached!!.items, true, target,
