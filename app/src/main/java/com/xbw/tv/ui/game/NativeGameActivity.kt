@@ -17,6 +17,7 @@ import com.xbw.tv.core.RetroCore
 import com.xbw.tv.core.RomProvider
 import com.xbw.tv.data.model.GameItem
 import com.xbw.tv.data.net.CheatParser
+import com.xbw.tv.data.update.UpdatePrompt
 import com.xbw.tv.databinding.ActivityNativeGameBinding
 import com.xbw.tv.input.GameButton
 import com.xbw.tv.input.KeySettings
@@ -137,6 +138,9 @@ class NativeGameActivity : AppCompatActivity() {
         wireToolbar()
         binding.hintBar.postDelayed({ binding.hintBar.visibility = View.GONE }, 6000)
 
+        // 进游戏时静默检测是否需要升级（设置里可关；只有真有新版本才弹窗）
+        UpdatePrompt.autoCheckOnGameStart(this)
+
         loadAndRun()
     }
 
@@ -144,10 +148,20 @@ class NativeGameActivity : AppCompatActivity() {
     private fun loadAndRun() {
         lifecycleScope.launch {
             binding.loadingText.text = "正在准备 ROM…"
-            val spec = withContext(Dispatchers.IO) { RomProvider.prepare(this@NativeGameActivity, gameId) }
-            if (spec == null) {
-                failLoad("无法准备 ROM（该平台暂无原生核心）")
-                return@launch
+            val result = withContext(Dispatchers.IO) {
+                RomProvider.prepare(this@NativeGameActivity, gameId)
+            }
+            // 分三类提示：没核心 / 下载或站点失败（可重试）/ 真加载失败
+            val spec = when (result) {
+                is RomProvider.RomResult.Ready -> result.spec
+                is RomProvider.RomResult.Unsupported -> {
+                    failLoad("${result.platform} 暂无原生核心（可在设置里查看已支持平台）")
+                    return@launch
+                }
+                is RomProvider.RomResult.Failed -> {
+                    failLoad(result.reason)
+                    return@launch
+                }
             }
             coreName = spec.coreName
             binding.loadingText.text = "正在启动 ${spec.coreName} 核心…"
@@ -377,7 +391,7 @@ class NativeGameActivity : AppCompatActivity() {
             // scrollToPosition 还没滚到底：重试；实在等不到就退而聚焦最后一个可见行
             if (attempt < 6) focusLastCheatRow(attempt + 1)
             else (0 until binding.cheatList.childCount)
-                .mapNotNull { binding.cheatList.getChildAt(it) as? View }
+                .mapNotNull { binding.cheatList.getChildAt(it) }
                 .lastOrNull()?.requestFocus()
         }, 40L)
     }

@@ -1,7 +1,9 @@
 name: Build APK
 
 on:
-  workflow_dispatch:   # 仅手动触发（Actions 页 → Build APK → Run workflow）
+  push:
+    branches: [master]     # 推 master 自动出包（Release tag = v<run_number>）
+  workflow_dispatch:       # 也可手动触发（Actions 页 → Build APK → Run workflow）
 
 jobs:
   build:
@@ -70,21 +72,26 @@ jobs:
           fi
 
       - name: Build debug + release APK
+        env:
+          BUILD_NO: ${{ github.run_number }}   # 与 Release tag 的 v<数字> 同源，App 内按它比大小
         run: |
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
-          ./gradlew :app:assembleDebug :app:assembleRelease --no-daemon --stacktrace
+          ./gradlew :app:assembleDebug :app:assembleRelease -PbuildNo="${BUILD_NO}" --no-daemon --stacktrace
 
       # Release 附件是原始文件（不 zip），Releases 页直接下载 .apk
       - name: Publish APKs to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: build-${{ github.run_number }}
-          name: XiaoBaWang TV build #${{ github.run_number }}
+          tag_name: v${{ github.run_number }}
+          name: 小霸王 TV v${{ github.run_number }}
           body: |
-            自动构建 ${{ github.sha }}
+            自动构建 `${{ github.sha }}`（${{ github.ref_name }}）
+
             - app-debug.apk — 调试版
-            - app-release.apk — 正式签名版
+            - app-release.apk — 正式签名版（版本号 v${{ github.run_number }}）
+
+            App 内「设置 → 立即检查更新」会自动发现本版本。
           files: |
             app/build/outputs/apk/debug/app-debug.apk
             app/build/outputs/apk/release/app-release.apk

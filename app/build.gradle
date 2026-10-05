@@ -30,18 +30,21 @@ android {
         }
     }
 
+    // 版本号单一来源：CI（.github/workflows/build.yml）用 Release tag 的数字
+    // `v<run_number>` 通过 -PbuildNo=N 注入；本地不传就是 1。
+    // App 内 UpdateChecker 也按这个数字比大小（tag v12 > 本地 versionCode 11 才提示升级）。
+    def buildNoRaw = (project.findProperty('buildNo') ?: System.getenv('BUILD_NO') ?: '1').toString()
+    def buildNo = (buildNoRaw.isInteger() ? buildNoRaw.toInteger() : 1) as int
+
     defaultConfig {
         applicationId "com.xbw.tv"
         minSdk 21
         targetSdk 34
-        versionCode 1
-        versionName "1.0.0"
+        versionCode buildNo
+        versionName "v${buildNo}"
 
         // 只打包中文资源，减小 APK 体积
         resourceConfigurations += ['zh', 'zh-rCN']
-
-        // Jsoup 选择器等可变信息通过 BuildConfig 暴露，方便调试页展示
-        buildConfigField "String", "YIKM_BASE_URL", '"https://www.yikm.net"'
 
         // 原生宿主 libxbwcore.so：dlopen 各 libretro 核心（libfceumm.so …）
         ndk {

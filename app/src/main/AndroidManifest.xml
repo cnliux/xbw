@@ -5,6 +5,20 @@
     <!-- 网络：所有游戏数据均实时抓取，无内置数据 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- 自动升级：下载 APK 后拉起系统安装器（用户需在系统里授权"安装未知应用"） -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- Android 11+ 包可见性：自更新要能查到系统安装器与浏览器 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/vnd.android.package-archive" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+    </queries>
 
     <!-- 手柄：声明为「可选」，保证手机/盒子也能安装调试；遥控器同样可用 -->
     <uses-feature
@@ -90,6 +104,16 @@
             android:exported="false"
             android:screenOrientation="landscape"
             android:theme="@style/Theme.XbwTv.Lobby" />
+    <!-- 自更新：把 cacheDir/updates 下的 APK 以 content:// 交给系统安装器 -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 
 </manifest>

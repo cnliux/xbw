@@ -20,11 +20,21 @@ data class SearchIndexEntity(
     val indexedAt: Long
 )
 
+/** 批量取 id → 分类 key（搜索过滤时用来跳过 play 页请求） */
+data class IdCategory(
+    val gameId: String,
+    val categoryKey: String
+)
+
 @Dao
 interface SearchIndexDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(items: List<SearchIndexEntity>)
+
+    /** 索引里只建了有原生核心的平台，所以"命中索引 = 可玩"，无需再问站点 */
+    @Query("SELECT gameId, categoryKey FROM search_index WHERE gameId IN (:ids)")
+    suspend fun categoriesOf(ids: List<String>): List<IdCategory>
 
     /** 前缀命中优先（sld 优先出"圣斗士…"而不是中间含 sld 的） */
     @Query("SELECT * FROM search_index WHERE initials LIKE :q || '%' ORDER BY name ASC LIMIT :lim")

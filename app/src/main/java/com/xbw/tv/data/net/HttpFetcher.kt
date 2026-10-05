@@ -118,13 +118,19 @@ object HttpFetcher {
     /**
      * 流式下载文件到本地（先写 .part 再由调用方改名），带重试。
      * 用于 ROM 直链（file.1990i.com）等大文件；ROM ≤1MB，内存无压力但仍走流式。
+     * @param onProgress 已下载字节 / 总字节（总长未知时为 -1），在 IO 线程回调
      */
-    suspend fun downloadToFile(url: String, dest: File, referer: String? = null): File =
+    suspend fun downloadToFile(
+        url: String,
+        dest: File,
+        referer: String? = null,
+        onProgress: ((done: Long, total: Long) -> Unit)? = null
+    ): File =
         withContext(Dispatchers.IO) {
             var lastError: Throwable? = null
             repeat(MAX_RETRY) { attempt ->
                 try {
-                    return@withContext downloadOnce(url, dest, referer)
+                    return@withContext downloadOnce(url, dest, referer, onProgress)
                 } catch (e: IOException) {
                     lastError = e
                     dest.delete()
@@ -138,7 +144,9 @@ object HttpFetcher {
             )
         }
 
-    private fun downloadOnce(url: String, dest: File, referer: String?): File {
+    private fun downloadOnce(
+        url: String, dest: File, referer: String?, onProgress: ((Long, Long) -> Unit)?
+    ): File {
         val rb = Request.Builder()
             .url(url)
             .header("User-Agent", UA)
@@ -150,11 +158,65 @@ object HttpFetcher {
             }
             val body = resp.body ?: throw FetchException(resp.code, null, "响应体为空")
             dest.parentFile?.mkdirs()
+            val total = body.contentLength()
+            var done = 0L
             body.byteStream().use { ins ->
-                dest.outputStream().use { outs -> ins.copyTo(outs, 64 * 1024) }
+                dest.outputStream().use { outs ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        val n = ins.read(buf)
+                        if (n <= 0) break
+                        outs.write(buf, 0, n)
+                        done += n
+                        onProgress?.invoke(done, total)
+                    }
+                }
             }
             if (dest.length() == 0L) throw FetchException(resp.code, null, "下载内容为空")
             return dest
+        }
+    }
+
+    /** 取文本（默认 UA/Referer 同抓页面），升级检查读 GitHub API 用 */
+    suspend fun fetchText(
+        url: String,
+        headers: Map<String, String> = emptyMap()
+    ): String = withContext(Dispatchers.IO) {
+        val rb = Request.Builder().url(url).header("User-Agent", UA)
+        headers.forEach { (k, v) -> rb.header(k, v) }
+        client().newCall(rb.build()).execute().use { resp ->
+            if (!resp.isSuccessful) throw FetchException(resp.code, null, "HTTP ${resp.code}")
+            resp.body?.string() ?: throw FetchException(resp.code, null, "响应体为空")
+        }
+    }
+
+    /**
+     * 只跟到重定向为止，返回**最终 URL**（不读 body）。
+     * 用于从 `releases/latest` 的 302 里抠出 tag，避开 GitHub API 的匿名限流。
+     */
+    suspend fun fetchRedirectTarget(url: String): String = withContext(Dispatchers.IO) {
+        val req = Request.Builder().url(url).header("User-Agent", UA)
+            .header("Accept", "text/html").build()
+        client().newCall(req).execute().use { it.request.url.toString() }
+    }
+
+    /**
+     * HEAD 探活：返回 Content-Length（未知的接口/镜像可能不回则给 -1），
+     * 失败（超时/404/DNS 污染）返回 -1。用于升级时"挑最快下载源"。
+     */
+    suspend fun headContentLength(url: String): Long = withContext(Dispatchers.IO) {
+        val probe = client().newBuilder()
+            .connectTimeout(6, TimeUnit.SECONDS)
+            .readTimeout(8, TimeUnit.SECONDS)
+            .build()
+        try {
+            val req = Request.Builder().url(url).method("HEAD", null)
+                .header("User-Agent", UA).build()
+            probe.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) -1L else resp.header("Content-Length")?.toLongOrNull() ?: -1L
+            }
+        } catch (e: Exception) {
+            -1L
         }
     }
 

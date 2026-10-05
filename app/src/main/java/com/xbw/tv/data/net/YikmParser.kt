@@ -1,4 +1,4 @@
-package com.xbw.tv.data.net
+﻿package com.xbw.tv.data.net
 
 import com.xbw.tv.data.model.GameItem
 import org.jsoup.Jsoup
@@ -63,7 +63,11 @@ object YikmParser {
         "img"
     )
 
-    /** 解析列表页 / 搜索结果页 */
+    /**
+     * 解析列表页 / 搜索结果页。
+     * @param pageHint 请求的页码。站点分页控件缺失/改版时用它兜底，
+     *   否则 currentPage 会一律回落成 1，翻页状态与 UI 显示就会错位。
+     */
     fun parseList(html: String, pageHint: Int = 1): ParseResult {
         if (html.isBlank()) {
             throw ParseException(ParseException.Kind.EMPTY_BODY, "返回内容为空")
@@ -73,9 +77,6 @@ object YikmParser {
 
         // 站点改版常见信号：出现"服务器错误/404"文案
         val body = doc.body()
-        if (body == null) {
-            throw ParseException(ParseException.Kind.EMPTY_BODY, "页面没有 body")
-        }
 
         var cards: Elements? = null
         for (sel in FALLBACK_CARD_SELECTORS) {
@@ -99,7 +100,7 @@ object YikmParser {
         val out = LinkedHashMap<String, GameItem>()
         var noTitle = 0
         for (card in cards) {
-            val item = parseCard(card, warnings)
+            val item = parseCard(card)
             if (item == null) {
                 noTitle++
             } else {
@@ -116,12 +117,18 @@ object YikmParser {
             )
         }
 
-        val (cur, max) = parsePager(doc)
+        val (pagerCur, pagerMax) = parsePager(doc)
+        // 分页控件缺失或被限流截断时，用请求页码兜底，别把 currentPage 谎报成 1
+        val cur = pagerCur.takeIf { it > 0 } ?: pageHint.coerceAtLeast(1)
+        val max = maxOf(pagerMax, pageHint.coerceAtLeast(1))
+        if (pagerMax < pageHint) {
+            warnings += "分页控件未解析出第 $pageHint 页，按请求页码兜底"
+        }
         return ParseResult(out.values.toList(), cur, max, cards.size, warnings)
     }
 
     /** 单卡片 → GameItem；取不到有效链接/标题返回 null */
-    private fun parseCard(card: Element, warnings: MutableList<String>): GameItem? {
+    private fun parseCard(card: Element): GameItem? {
         // 标题 + 链接
         var titleEl: Element? = null
         for (sel in FALLBACK_TITLE_SELECTORS) {
@@ -216,7 +223,6 @@ object YikmParser {
      */
     fun parseHomeSections(html: String): List<HomeSection> {
         val doc = Jsoup.parse(html)
-        val warnings = mutableListOf<String>()
         val sections = mutableListOf<HomeSection>()
         val containers = doc.select("div.container")
         var currentTitle: String? = null
@@ -224,7 +230,7 @@ object YikmParser {
 
         fun flush() {
             val title = currentTitle ?: return
-            val items = buffer.mapNotNull { parseCard(it, warnings) }
+            val items = buffer.mapNotNull { parseCard(it) }
                 .distinctBy { it.id }
             if (items.isNotEmpty()) {
                 sections += HomeSection(
@@ -252,7 +258,7 @@ object YikmParser {
         // 兜底：区块解析失败时，把整页卡片当作一个"全部游戏"区块
         if (sections.isEmpty()) {
             val all = doc.select(SiteConfig.CARD_SELECTOR)
-                .mapNotNull { parseCard(it, warnings) }
+                .mapNotNull { parseCard(it) }
                 .distinctBy { it.id }
             if (all.isNotEmpty()) {
                 sections += HomeSection("全部游戏", SiteConfig.listUrl(1), all)

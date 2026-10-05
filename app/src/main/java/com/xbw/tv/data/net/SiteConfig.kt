@@ -26,8 +26,13 @@ object SiteConfig {
     /** 列表页模板：%d = 页码，%s = tag，%s = e */
     const val LIST_URL_TEMPLATE = BASE_URL + "/nes?page=%d&tag=%s&e=%s"
 
-    /** 搜索页：GET /search?name=关键词（实测无分页，返回完整结果列表） */
-    const val SEARCH_URL_TEMPLATE = BASE_URL + "/search?name=%s"
+    /**
+     * 搜索页：GET /search?name=关键词&page=N
+     *
+     * ⚠️ 必须显式带 page=1：站点对缺省 page 的搜索请求会返回空列表（实测中文
+     * 关键词稳定为空，补 page=1 才有结果），因此不能沿用"无分页"的旧假设。
+     */
+    const val SEARCH_URL_TEMPLATE = BASE_URL + "/search?name=%s&page=%d"
 
     /** 游戏页 */
     const val PLAY_URL_TEMPLATE = BASE_URL + "/play?id=%s"
@@ -98,8 +103,8 @@ object SiteConfig {
     fun listUrl(page: Int, tag: String = "", e: String = ""): String =
         String.format(LIST_URL_TEMPLATE, page, encodeParam(tag), encodeParam(e))
 
-    fun searchUrl(keyword: String): String =
-        String.format(SEARCH_URL_TEMPLATE, encodeParam(keyword))
+    fun searchUrl(keyword: String, page: Int = 1): String =
+        String.format(SEARCH_URL_TEMPLATE, encodeParam(keyword), page)
 
     fun playUrl(id: String): String = String.format(PLAY_URL_TEMPLATE, id)
 

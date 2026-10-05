@@ -37,9 +37,12 @@ import java.io.FileInputStream
  */
 object RomProvider {
 
-    private const val TAG = "RomProvider"
-    private const val ROM_HOST = "https://file.1990i.com"
-    private const val CDN_HOST = "https://file.yikm.net"
+private const val TAG = "RomProvider"
+private const val ROM_HOST = "https://file.1990i.com"
+private const val CDN_HOST = "https://file.yikm.net"
+
+/** play 页正常但没有 gromname 时的提示（NDS/DOS/Java/Flash/H5 等网页版） */
+const val NO_ROM_PLATFORM = "网页版游戏"
 
     data class RomSpec(
         val coreName: String,      // "fceumm"/"fbneo" … 对应 lib<coreName>.so
@@ -50,13 +53,15 @@ object RomProvider {
     )
 
     /**
-     * play 页的 gameType → libretro 核心名。
-     * gameType 是站点自己的稳定字段（FC="fc"，街机="arcade"），比猜 gromname 路径可靠。
+     * [prepare] 的结果。区分三类失败，UI 才能给出**对症**的提示：
+     * 以前一律返回 null → 全显示"该平台暂无原生核心"，网络/站点问题会被误报成缺核心。
      */
-    private fun coreFor(gameType: String): String? = when (gameType) {
-        "fc" -> "fceumm"
-        "arcade" -> "fbneo"
-        else -> null
+    sealed class RomResult {
+        data class Ready(val spec: RomSpec) : RomResult()
+        /** 站点有这款游戏，但本 App 没编对应核心（NDS / Java / DOS / Flash / H5） */
+        data class Unsupported(val platform: String) : RomResult()
+        /** 网络/站点/解包失败，可重试 */
+        data class Failed(val reason: String) : RomResult()
     }
 
     /** 街机机种 → BIOS zip 文件名（源 file.yikm.net 根目录）；null = 无需 BIOS */
@@ -101,9 +106,9 @@ object RomProvider {
 
     /**
      * 下载（或命中缓存）游戏 [gameId] 的 ROM。
-     * @return 核心加载所需的全部信息；不支持/失败返回 null
+     * @return 成功给 [RomResult.Ready]；无核心 / 下载失败分别给对应子类，UI 提示不混淆
      */
-    suspend fun prepare(context: Context, gameId: String): RomSpec? {
+    suspend fun prepare(context: Context, gameId: String): RomResult {
         val dir = cacheDirOf(context, gameId)
         evictIfNeeded(context, gameId)
         // 缓存命中：.romspec 记录核心名 + ROM 文件位置 + 兜底列表
@@ -119,64 +124,51 @@ object RomProvider {
                     }
                     dir.setLastModified(System.currentTimeMillis())   // 记录访问时间供 LRU
                     Log.i(TAG, "rom cached id=$gameId core=${lines[0]} fallbacks=${fallbacks.size}")
-                    return RomSpec(lines[0], f, File(dir, "system"), true, fallbacks)
+                    return RomResult.Ready(RomSpec(lines[0], f, File(dir, "system"), true, fallbacks))
                 }
             }
             // 旧格式（<3 行）或文件丢失：作废重取
             meta.delete()
         }
 
-        // 1) play 页 → gameType / gromname / gsystem
-        val playUrl = "${SiteConfig.BASE_URL}/play?id=$gameId"
-        val html = try {
-            HttpFetcher.fetchHtml(playUrl)
-        } catch (e: Exception) {
-            Log.w(TAG, "play page fetch failed id=$gameId", e)
-            return null
-        }
-        val gameType = Regex("""gameType="([^"]*)"""").find(html)?.groupValues?.get(1)
-        val grom = Regex("""gromname="([^"]+)"""").find(html)?.groupValues?.get(1)
-        if (grom.isNullOrBlank()) {
-            Log.w(TAG, "gromname not found id=$gameId")
-            return null
-        }
-        // 路由：街机认 gameType=arcade（整 zip 喂 FBNeo）；其余系统 play 页没有
-        // gameType，用 gromname 固定目录前缀区分（实测 2026-10）：
-        //   /fcrom/…nes → fceumm 裸文件；/gbarom/xxx.zip → mgba；
-        //   /mdrom/mdN.zip → genesis_plus_gx；/sfc/….7z → snes9x
-        val gsystem = Regex("""gsystem="([^"]+)"""").find(html)?.groupValues?.get(1).orEmpty()
-        val core = when {
-            gameType == "arcade" -> "fbneo"
-            grom.startsWith("/fcrom") -> "fceumm"
-            grom.startsWith("/gbarom") -> "mgba"
-            grom.startsWith("/mdrom") -> "genesis_plus_gx"
-            gameType == "sfc" || grom.startsWith("/sfc") ||
-                grom.substringBeforeLast('$').trim().endsWith(".7z") -> "snes9x"
-            else -> coreFor(gameType.orEmpty())
-        } ?: run {
-            Log.i(TAG, "gameType=$gameType grom=$grom not native-supported yet")
-            return null
-        }
-        // FBNeo 靠 zip 内的 rom 名反查机型表，所以必须整套一起喂，不能拆散。
-        // FCEUmm/mgba/gx/snes9x 相反，要的是 zip/7z 里那一个 rom 文件。
-        val zip = core == "fbneo"
-        // 街机多版本用 $ 分隔（"修改版.zip$基础版.zip"），全部要下载
-        val segments = grom.split('$').map { it.trim() }.filter { it.isNotBlank() }
-        val romPath = when {
-            !zip -> grom
-            segments.isEmpty() -> return null
-            else -> {
-                if (gsystem.isBlank()) {
-                    Log.w(TAG, "gsystem missing for arcade id=$gameId")
-                    return null
+        // 1) play 页 → gameType / gromname / gsystem（路由规则见 CoreRouter）
+        var core = ""
+        var gsystem = ""
+        var romSegments: List<String> = emptyList()
+        var romPath = ""
+        when (val page = fetchPlayPage(gameId)) {
+            is CoreRouter.PlayResult.FetchFailed ->
+                return RomResult.Failed("游戏页抓取失败（网络不通或站点结构已变）")
+            // 页面正常却没有任何 ROM 字段：NDS/DOS/Java/Flash/H5 这类网页版
+            is CoreRouter.PlayResult.NoRom -> return RomResult.Unsupported(NO_ROM_PLATFORM)
+            is CoreRouter.PlayResult.Ok -> {
+                val info = page.info
+                val routed = CoreRouter.coreFor(info.gameType, info.gromname)
+                if (routed == null) {
+                    Log.i(TAG, "gameType=${info.gameType} grom=${info.gromname} not native-supported yet")
+                    return RomResult.Unsupported(info.gameType?.takeIf { it.isNotBlank() } ?: "该平台")
                 }
-                "roms/fbneo/$gsystem/${segments.first()}"
+                core = routed
+                gsystem = info.gsystem
+                // 街机多版本用 $ 分隔（"修改版.zip$基础版.zip"），全部要下载
+                romSegments = info.gromname.split('$').map { it.trim() }.filter { it.isNotBlank() }
+                romPath = when {
+                    // FBNeo 要整套 zip（靠里面的 rom 名反查机型表），其余平台要单个 rom 文件
+                    core != "fbneo" -> info.gromname
+                    romSegments.isEmpty() -> return RomResult.Failed("街机 ROM 名为空（id=$gameId）")
+                    gsystem.isBlank() -> {
+                        Log.w(TAG, "gsystem missing for arcade id=$gameId")
+                        return RomResult.Failed("街机机型字段缺失（id=$gameId）")
+                    }
+                    else -> "roms/fbneo/$gsystem/${romSegments.first()}"
+                }
+                if (romPath.isBlank()) {
+                    Log.w(TAG, "empty rom path id=$gameId grom=${info.gromname}")
+                    return RomResult.Failed("ROM 路径为空（id=$gameId）")
+                }
             }
         }
-        if (romPath.isBlank()) {
-            Log.w(TAG, "empty rom path id=$gameId grom=$grom")
-            return null
-        }
+        val zip = core == "fbneo"
 
         // 2) 直链下载（路径逐段转义，空格/中括号原样在 URL 里会被 nginx 拒）
         val encoded = romPath.trimStart('/').split('/').joinToString("/") { seg ->
@@ -190,33 +182,64 @@ object RomProvider {
         } catch (e: Exception) {
             Log.w(TAG, "rom download failed $url", e)
             raw.delete()
-            return null
+            return RomResult.Failed("ROM 下载失败（$url）")
         }
 
         // 3) 压缩壳：FBNeo 整套留用；其余拆出单个 rom（zip 或 7z）
         val rom = when {
             zip -> raw
-            is7zFile(raw) -> unwrap7z(dir, raw) ?: run { raw.delete(); return null }
-            else -> unwrapZip(dir, raw) ?: run { raw.delete(); return null }
+            is7zFile(raw) -> unwrap7z(dir, raw) ?: run {
+                raw.delete()
+                return RomResult.Failed("7z 解包失败（ROM 壳损坏或格式不支持）")
+            }
+            else -> unwrapZip(dir, raw) ?: run {
+                raw.delete()
+                return RomResult.Failed("ZIP 解包失败（ROM 壳损坏或格式不支持）")
+            }
         }
         if (rom.length() <= 16) {
             rom.delete()
-            return null
+            return RomResult.Failed("ROM 内容为空（下载到了 HTML 错误页？）")
         }
 
         // 街机专属：兜底 zip + BIOS + 金手指 ini
-        val fallbacks = if (zip) downloadFallbacks(dir, gsystem, segments.drop(1)) else emptyList()
+        val fallbacks = if (zip) downloadFallbacks(dir, gsystem, romSegments.drop(1)) else emptyList()
         val sysDir = File(dir, "system").apply { mkdirs() }
         if (zip) {
             ensureBios(context, gsystem, sysDir)
-            ensureCheatIni(sysDir, segments)
+            ensureCheatIni(sysDir, romSegments)
         }
 
         // 4) 写规格缓存
         meta.writeText(listOf(core, rom.absolutePath, gsystem)
             .plus(fallbacks.map { it.absolutePath }).joinToString("\n"))
         Log.i(TAG, "rom ready id=$gameId core=$core size=${rom.length()} fallbacks=${fallbacks.size}")
-        return RomSpec(core, rom, sysDir, false, fallbacks)
+        return RomResult.Ready(RomSpec(core, rom, sysDir, false, fallbacks))
+    }
+
+    /**
+     * 只抓 play 页判断这款游戏有没有原生核心（**不下载 ROM**）。
+     * 搜索结果过滤用它：远程搜索会返回 Java/NDS/DOS/Flash 等没核心的平台，
+     * 没有这层过滤用户点进去只会看到"暂无原生核心"。
+     */
+    suspend fun probePlatform(gameId: String): CoreRouter.Platform =
+        when (val page = fetchPlayPage(gameId)) {
+            is CoreRouter.PlayResult.Ok -> CoreRouter.platformOf(page.info)
+            // 页面正常但站点没给 ROM 直链 = 确定没有原生核心，可以放心写缓存
+            is CoreRouter.PlayResult.NoRom -> CoreRouter.Platform.Unsupported
+            // 抓不到就无法判定，保守放行且不写缓存
+            is CoreRouter.PlayResult.FetchFailed -> CoreRouter.Platform.Unknown
+        }
+
+    /** 抓 play 页并解析平台字段；抓不到返回 [CoreRouter.PlayResult.FetchFailed] */
+    private suspend fun fetchPlayPage(gameId: String): CoreRouter.PlayResult {
+        val html = try {
+            HttpFetcher.fetchHtml(SiteConfig.playUrl(gameId))
+        } catch (e: Exception) {
+            Log.w(TAG, "play page fetch failed id=$gameId", e)
+            return CoreRouter.PlayResult.FetchFailed
+        }
+        return CoreRouter.parsePlay(html) ?: CoreRouter.PlayResult.FetchFailed
     }
 
     /** 逐个下载 $ 分隔的后续段（基础版 zip）；单个失败不致命，跳过即可 */

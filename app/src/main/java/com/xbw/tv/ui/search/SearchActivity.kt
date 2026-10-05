@@ -215,8 +215,8 @@ class SearchActivity : AppCompatActivity() {
                 .onFailure { e ->
                     binding.progress.visibility = android.view.View.GONE
                     val msg = when (e) {
-                        is HttpFetcher.FetchException -> getString(R.string.error_network) + "：" + (e.message ?: "")
-                        is YikmParser.ParseException -> getString(R.string.error_site_changed) + "：" + (e.message ?: "")
+                        is HttpFetcher.FetchException -> getString(R.string.error_network) + "：" + e.message
+                        is YikmParser.ParseException -> getString(R.string.error_site_changed) + "：" + e.message
                         else -> e.message ?: getString(R.string.error_network)
                     }
                     binding.statusLine.text = msg

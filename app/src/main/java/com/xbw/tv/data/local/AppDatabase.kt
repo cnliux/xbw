@@ -9,8 +9,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [GameEntity::class, RecentPlayEntity::class, PhysicalMapEntity::class,
-        LogicalKeyEntity::class, FavoriteEntity::class, SearchIndexEntity::class],
-    version = 3,
+        LogicalKeyEntity::class, FavoriteEntity::class, SearchIndexEntity::class,
+        GamePlatformEntity::class],
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,6 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun keyMappingDao(): KeyMappingDao
     abstract fun favoriteDao(): FavoriteDao
     abstract fun searchIndexDao(): SearchIndexDao
+    abstract fun gamePlatformDao(): GamePlatformDao
 
     companion object {
         @Volatile
@@ -63,6 +65,22 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v3 → v4：游戏平台缓存（搜索只放行有原生核心的平台，见 GamePlatformDao） */
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `game_platform` (" +
+                            "`gameId` TEXT NOT NULL, " +
+                            "`categoryKey` TEXT NOT NULL, " +
+                            "`coreName` TEXT NOT NULL, " +
+                            "`updatedAt` INTEGER NOT NULL, " +
+                            "PRIMARY KEY(`gameId`))"
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_game_platform_categoryKey` " +
+                        "ON `game_platform` (`categoryKey`)")
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -70,7 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "xbw.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     // 数据都是可再生的缓存/偏好，无迁移路径时升级直接重建最稳
                     .fallbackToDestructiveMigration()
                     .build()

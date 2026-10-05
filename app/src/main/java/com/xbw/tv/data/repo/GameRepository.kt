@@ -2,9 +2,12 @@ package com.xbw.tv.data.repo
 
 import android.util.Log
 import android.util.LruCache
+import com.xbw.tv.core.CoreRouter
+import com.xbw.tv.core.RomProvider
 import com.xbw.tv.data.local.AppDatabase
 import com.xbw.tv.data.local.FavoriteEntity
 import com.xbw.tv.data.local.GameEntity
+import com.xbw.tv.data.local.GamePlatformEntity
 import com.xbw.tv.data.local.RecentPlayEntity
 import com.xbw.tv.data.local.SearchIndexEntity
 import com.xbw.tv.data.model.GameCategory
@@ -15,6 +18,9 @@ import com.xbw.tv.data.net.SiteConfig
 import com.xbw.tv.data.net.YikmParser
 import com.xbw.tv.data.search.PinyinSearchIndexer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.sync.Mutex
@@ -38,6 +44,12 @@ class GameRepository(private val db: AppDatabase) {
 
         /** 内存缓存里同一列表最多留这么多条 */
         private const val MEM_LIMIT = 240
+
+        /** 单次搜索最多现查多少个未知的 play 页（再多是"过滤掉"不如"先显示"） */
+        private const val MAX_PLATFORM_PROBE = 24
+
+        /** play 页并发探测数（站点会限流，不能一把梭） */
+        private const val PROBE_CONCURRENCY = 4
     }
 
     private val memory = LruCache<String, List<GameItem>>(12)
@@ -157,9 +169,13 @@ class GameRepository(private val db: AppDatabase) {
     }
 
     /**
-     * 搜索（带本地拼音首字母索引增强）：纯字母查询时双路合并 ——
+     * 搜索（带本地拼音首字母索引增强 + 可玩性过滤）：纯字母查询时双路合并 ——
      * 本地前缀命中排最前，服务器结果其次，本地包含匹配垫底，按 id 去重。
      * 服务器挂了但本地有结果时返回本地（拼音搜索离线可用）。
+     *
+     * 远程搜索是**全站**检索，会带回 Java / NDS / DOS / Flash 这类本 App
+     * 没有原生核心的平台，点进去只能看到"暂无原生核心"。合并后统一过一遍
+     * [filterPlayable]：索引命中的直接放行，其余按平台缓存/play 页判定。
      */
     suspend fun searchEx(keyword: String): LoadResult {
         val kw = keyword.trim()
@@ -184,8 +200,75 @@ class GameRepository(private val db: AppDatabase) {
         val merged = prefix +
                 serverItems.filterNot { it.id in used }.onEach { used.add(it.id) } +
                 contains.filterNot { it.id in used }
-        return LoadResult(merged, false, 1, 1,
+        val playable = filterPlayable(merged)
+        return LoadResult(playable, false, 1, 1,
             fetchedAt = System.currentTimeMillis())
+    }
+
+    /**
+     * 只保留有原生核心的结果。判定顺序（命中即止，避免多余请求）：
+     *   1. **卡片标签**：明确写着 NDS/Java/DOS/Flash/H5 的直接淘汰（零请求，最稳）；
+     *   2. 本地拼音索引 —— 索引只建 FC/街机/SFC/GBA/MD，命中即可玩；
+     *   3. `game_platform` 平台缓存 —— 之前解析过 play 页，结论直接复用；
+     *   4. 现查 play 页（并发 4，单次搜索最多 [MAX_PLATFORM_PROBE] 个），结果写缓存。
+     * play 页抓不到（离线/限流/改版）时**保守放行**，宁可多显示也不误伤。
+     */
+    private suspend fun filterPlayable(items: List<GameItem>): List<GameItem> {
+        if (items.isEmpty()) return items
+        // ① 标签就能判死的，先摘掉，不占后面的探测名额
+        val byTag = items.filterNot { tagSaysUnplayable(it) }
+        if (byTag.size != items.size) {
+            Log.i(TAG, "search dropped ${items.size - byTag.size} game(s) by platform tag")
+        }
+        val ids = byTag.map { it.id }.distinct()
+        val playable = HashMap<String, Boolean>(ids.size)
+        withContext(Dispatchers.IO) {
+            db.searchIndexDao().categoriesOf(ids).forEach {
+                playable[it.gameId] = CoreRouter.isPlayableCategory(it.categoryKey)
+            }
+            db.gamePlatformDao().byIds(ids).forEach {
+                playable[it.gameId] = CoreRouter.isPlayableCategory(it.categoryKey)
+            }
+        }
+        val unknown = ids.filter { it !in playable }.take(MAX_PLATFORM_PROBE)
+        if (unknown.isNotEmpty()) {
+            val rows = coroutineScope {
+                unknown.chunked(PROBE_CONCURRENCY).flatMap { chunk ->
+                    chunk.map { id ->
+                        async(Dispatchers.IO) {
+                            when (val p = RomProvider.probePlatform(id)) {
+                                // 抓不到就当可玩（放行），不写缓存，下次再试
+                                is CoreRouter.Platform.Unknown -> null
+                                is CoreRouter.Platform.Native -> id to GamePlatformEntity(
+                                    id, p.categoryKey, p.coreName, System.currentTimeMillis())
+                                CoreRouter.Platform.Unsupported -> id to
+                                        GamePlatformEntity(id, "", "", System.currentTimeMillis())
+                            }
+                        }
+                    }.awaitAll()
+                }.filterNotNull()
+            }
+            if (rows.isNotEmpty()) {
+                rows.forEach { (id, row) ->
+                    playable[id] = CoreRouter.isPlayableCategory(row.categoryKey)
+                }
+                withContext(Dispatchers.IO) { db.gamePlatformDao().upsertAll(rows.map { it.second }) }
+            }
+        }
+        val kept = byTag.filter { playable[it.id] != false }
+        if (kept.size != byTag.size) {
+            Log.i(TAG, "search filtered out ${byTag.size - kept.size} game(s) without native core")
+        }
+        return kept
+    }
+
+    /**
+     * 卡片标签明确写着没核心的平台（NDS / Java / DOS / Flash / H5）→ 直接淘汰。
+     * 题材类标签（"运动比赛"）返回 null，走后面的索引/平台缓存/play 页判定。
+     */
+    private fun tagSaysUnplayable(item: GameItem): Boolean {
+        val cat = item.tags.firstNotNullOfOrNull { GameCategory.fromLabel(it) }
+        return cat != null && !cat.playable
     }
 
     /** 拼音索引条目数（UI 展示用） */

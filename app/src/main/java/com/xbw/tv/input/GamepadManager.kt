@@ -2,11 +2,8 @@ package com.xbw.tv.input
 
 import android.content.Context
 import android.hardware.input.InputManager
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.VibrationEffect
-import android.os.Vibrator
 import android.view.InputDevice
 import android.view.KeyEvent
 import android.view.MotionEvent
@@ -20,8 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
  *  - InputManager.registerInputDeviceListener 感知增删,无需任何 USB/蓝牙权限;
  *  - 部分盒子 SOURCE_GAMEPAD 不置位,所以同时接受 SOURCE_JOYSTICK,
  *    再用"是否具备 BUTTON_A/B"区分真手柄与遥控器(遥控器只有 DPAD);
- *  - StateFlow 广播手柄列表,设置页与游戏页角标 collect 即可;
- *  - 可选振动反馈,失败静默(部分 TV 驱动不支持)。
+ *  - StateFlow 广播手柄列表,设置页与游戏页角标 collect 即可。
+ *  - 不做振动:老盒子手柄驱动不可靠,实测 vibration 时有时无,一律不用。
  */
 class GamepadManager(context: Context) {
 
@@ -29,21 +26,11 @@ class GamepadManager(context: Context) {
     private val inputManager: InputManager? =
         appContext.getSystemService(Context.INPUT_SERVICE) as? InputManager
 
-    data class PadInfo(
-        val id: Int,
-        val name: String,
-        val vendor: Int,
-        val product: Int,
-        val hasVibrator: Boolean,
-        val descriptor: String,
-        val kinds: String = ""
-    )
+    /** 连接中的手柄（只留 UI 真用到的字段：设置页显示名称与数量） */
+    data class PadInfo(val id: Int, val name: String)
 
     private val _state = MutableStateFlow<List<PadInfo>>(emptyList())
     val state: StateFlow<List<PadInfo>> = _state
-
-    /** 兼容方案文档的命名:主手柄名,无手柄 = null */
-    val primaryName: String? get() = _state.value.firstOrNull()?.name
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -76,15 +63,7 @@ class GamepadManager(context: Context) {
         for (id in im.inputDeviceIds) {
             val dev = im.getInputDevice(id) ?: continue
             if (isGamepad(dev)) {
-                found += PadInfo(
-                    id = id,
-                    name = dev.name ?: "未知手柄",
-                    vendor = dev.vendorId,
-                    product = dev.productId,
-                    hasVibrator = dev.vibrator?.hasVibrator() == true,
-                    descriptor = dev.descriptor ?: "",
-                    kinds = describeKinds(dev)
-                )
+                found += PadInfo(id, dev.name ?: "未知手柄")
             }
         }
         _state.value = found.sortedBy { it.id }
@@ -131,20 +110,6 @@ class GamepadManager(context: Context) {
         return false
     }
 
-    /** 设备分类（调试页显示用） */
-    fun describeKinds(device: InputDevice?): String {
-        if (device == null) return "?"
-        val src = device.sources
-        val kinds = mutableListOf<String>()
-        if ((src and InputDevice.SOURCE_GAMEPAD) != 0) kinds += "GAMEPAD"
-        if ((src and InputDevice.SOURCE_JOYSTICK) != 0) kinds += "JOYSTICK"
-        if ((src and InputDevice.SOURCE_KEYBOARD) != 0) kinds += "KEYBOARD"
-        if ((src and InputDevice.SOURCE_MOUSE) != 0) kinds += "MOUSE"
-        if ((src and InputDevice.SOURCE_DPAD) != 0) kinds += "DPAD"
-        if ((src and InputDevice.SOURCE_TOUCHSCREEN) != 0) kinds += "TOUCH"
-        return if (kinds.isEmpty()) "OTHER" else kinds.joinToString("+")
-    }
-
     /** 调试页:所有输入设备一览 */
     fun snapshotAllDevices(): List<String> {
         val im = inputManager ?: return emptyList()
@@ -152,26 +117,10 @@ class GamepadManager(context: Context) {
             val ids = im.inputDeviceIds ?: IntArray(0)
             ids.toList().mapNotNull { id ->
                 val d = im.getInputDevice(id) ?: return@mapNotNull null
-                "${d.id} · ${d.name} · [${describeKinds(d)}] · src=0x${Integer.toHexString(d.sources)} · gamepad=${isGamepad(d)}"
+                "${d.id} · ${d.name} · src=0x${Integer.toHexString(d.sources)} · gamepad=${isGamepad(d)}"
             }
         } catch (e: Exception) {
             emptyList()
-        }
-    }
-
-    /** 手柄振动反馈;驱动不支持时静默 */
-    @Suppress("DEPRECATION")
-    fun vibrate(deviceId: Int, ms: Long = 30) {
-        try {
-            val dev = InputDevice.getDevice(deviceId) ?: return
-            val vib: Vibrator = dev.vibrator ?: return
-            if (!vib.hasVibrator()) return
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vib.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                vib.vibrate(ms)
-            }
-        } catch (ignore: Exception) {
         }
     }
 

@@ -40,8 +40,33 @@ enum class GameCategory(
     /** 大厅里可翻页浏览的分类（最近玩过是本地数据，不参与抓取） */
     val fetchable: Boolean get() = listPath != null
 
+    /** 有原生核心（可进游戏页） */
+    val playable: Boolean get() = this == FC || this == ARCADE || this == SFC || this == GBA || this == MD
+
     companion object {
         fun fromKey(key: String?): GameCategory =
             entries.firstOrNull { it.key == key } ?: ALL
+
+        /**
+         * 卡片标签 → 分类 key。搜索结果卡片只带"标签"这一个弱信号：命中平台名时可信
+         * （站点的平台分类就叫这些名字），命中题材词（运动比赛、双子系列…）时不可信。
+         * 只用于**否定判断**：标签明确是 NDS/Java/DOS/Flash/H5 时可直接判"没核心"。
+         */
+        private val BY_LABEL: Map<String, GameCategory> = buildMap {
+            // 注意：buildMap 内部 this 是 Map，entries 必须限定为 GameCategory.entries
+            GameCategory.entries.forEach { put(it.title.lowercase(), it) }
+            put("fc", FC); put("红白机", FC); put("nes", FC)
+            put("gba", GBA)
+            put("snes", SFC); put("sfc", SFC)
+            put("md", MD); put("mdp", MD); put("genesis", MD); put("世嘉", MD)
+            put("街机", ARCADE); put("arcade", ARCADE); put("cps1", ARCADE); put("cps2", ARCADE)
+            put("h5", H5); put("h5 游戏", H5)
+        }
+
+        /** 标签里出现平台名就返回对应分类；题材词返回 null */
+        fun fromLabel(label: String?): GameCategory? {
+            val t = label?.trim()?.lowercase() ?: return null
+            return BY_LABEL[t]
+        }
     }
 }

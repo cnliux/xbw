@@ -73,7 +73,8 @@ class RetroCore {
     private var cheats: List<String> = emptyList()
 
     /**
-     * @param coreName 核心名（"fceumm"/"mgba"/"gpspx"/"fbneo"）；从 nativeLibraryDir
+     * @param coreName 核心名（"fceumm"/"fbneo"/"snes9x"/"mgba"/"genesis_plus_gx"，
+     *                 取值来自 CoreRouter）；从 nativeLibraryDir
      *                 拼绝对路径 dlopen，比裸 soname 稳（不依赖命名空间搜索顺序）
      * @param systemDir 核心读写文件目录（BIOS/系统文件放这里）
      * @param romFile 已下载好的 ROM 文件

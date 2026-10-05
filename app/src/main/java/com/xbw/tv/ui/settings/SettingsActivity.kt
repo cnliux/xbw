@@ -11,6 +11,9 @@ import com.xbw.tv.R
 import com.xbw.tv.XbwApplication
 import com.xbw.tv.data.local.AppDatabase
 import com.xbw.tv.data.search.PinyinSearchIndexer
+import com.xbw.tv.data.update.UpdateChecker
+import com.xbw.tv.data.update.UpdatePrompt
+import com.xbw.tv.data.update.UpdateSettings
 import com.xbw.tv.databinding.ActivitySettingsBinding
 import com.xbw.tv.input.GamepadManager
 import com.xbw.tv.input.KeySettings
@@ -89,6 +92,12 @@ class SettingsActivity : AppCompatActivity() {
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
+        binding.rowAutoUpdate.setOnClickListener {
+            val on = !UpdateSettings.isAutoCheck(this)
+            UpdateSettings.setAutoCheck(this, on)
+            refreshUpdateRows()
+        }
+        binding.rowCheckUpdate.setOnClickListener { UpdatePrompt.checkNow(this) }
         binding.rowAbout.setOnClickListener {
             val ver = try {
                 packageManager.getPackageInfo(packageName, 0).versionName
@@ -104,6 +113,16 @@ class SettingsActivity : AppCompatActivity() {
         refreshStatic()
         refreshGamepad()
         refreshCounters()
+        refreshUpdateRows()
+    }
+
+    /** 升级开关状态 + 当前版本号（版本号来自 BuildConfig，CI 用 buildNo 注入） */
+    private fun refreshUpdateRows() {
+        binding.valAutoUpdate.setText(
+            if (UpdateSettings.isAutoCheck(this)) R.string.settings_auto_update_on
+            else R.string.settings_auto_update_off
+        )
+        binding.valCurrentVersion.text = getString(R.string.update_version_fmt, UpdateChecker.currentVersion)
     }
 
     private fun refreshStatic() {
