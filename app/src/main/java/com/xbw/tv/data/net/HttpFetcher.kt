@@ -201,14 +201,33 @@ object HttpFetcher {
     }
 
     /**
-     * HEAD 探活：返回 Content-Length（未知的接口/镜像可能不回则给 -1），
-     * 失败（超时/404/DNS 污染）返回 -1。用于升级时"挑最快下载源"。
+     * 下载源探活：返回 Content-Length，失败（超时/404/DNS 污染）返回 -1。
+     *
+     * 升级时用它给每个 CDN 测延迟好挑最快的，所以有两个细节：
+     *  1. 优先用 `Range: bytes=0-0` 的 **GET** 而不是 HEAD——不少 GitHub 镜像对 HEAD
+     *     直接回 405（实测 ghproxy.cn 就是），GET + Range 才是各家都支持的探法；
+     *  2. 206 响应里总长在 `Content-Range` 的尾部，`Content-Length` 只有 1，不能当大小用。
+     * 两者都拿不到时回退 HEAD 再试一次。
      */
     suspend fun headContentLength(url: String): Long = withContext(Dispatchers.IO) {
         val probe = client().newBuilder()
             .connectTimeout(6, TimeUnit.SECONDS)
             .readTimeout(8, TimeUnit.SECONDS)
             .build()
+        val ranged = runCatching {
+            val req = Request.Builder().url(url).get()
+                .header("User-Agent", UA)
+                .header("Range", "bytes=0-0")
+                .build()
+            probe.newCall(req).execute().use { resp ->
+                if (!resp.isSuccessful) -1L
+                else resp.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull()
+                    ?: resp.header("Content-Length")?.toLongOrNull()?.takeIf { it > 1 }
+                    ?: -1L
+            }
+        }.getOrDefault(-1L)
+        if (ranged > 0) return@withContext ranged
+
         try {
             val req = Request.Builder().url(url).method("HEAD", null)
                 .header("User-Agent", UA).build()

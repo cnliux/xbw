@@ -15,8 +15,7 @@ import com.xbw.tv.R
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.databinding.DialogUpdateBinding
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -62,7 +61,14 @@ object UpdateChecker {
     private const val ASSET_NAME = "app-release.apk"
 
     /** 单个探活的硬超时：探源不能拖慢"检查更新"，慢的源直接出局 */
-    private const val PROBE_TIMEOUT_MS = 5_000L
+    private const val PROBE_TIMEOUT_MS = 12_000L
+
+    /**
+     * 第一个源应答后再多等这么久，看有没有更快的。
+     * 电视盒子实测：5 个源全部要 5s 以上才应答，等齐所有源等于没选；
+     * 所以"谁先应答谁当主力"，只给后来的一个短暂翻盘机会。
+     */
+    private const val PROBE_GRACE_MS = 1_500L
 
     /** 候选下载源。[prefix] 拼在 `/$OWNER/$REPO/releases/download/$tag/$ASSET_NAME` 前面 */
     data class Source(val name: String, val prefix: String) {
@@ -165,26 +171,41 @@ object UpdateChecker {
     // ------------------------------------------------------------------
 
     /**
-     * 并发 HEAD 探活所有源，返回**按实测响应时间从快到慢**的候选列表。
+     * 并发探活所有源，返回**按实测响应时间从快到慢**的候选列表。
      *
-     * 不做"直连优先"这种固定偏好：一个源只要 HEAD 通就算可用，顺序完全由当次实测决定；
-     * 探不出来的源排在最后当兜底（真下载时仍可能成功，例如不支持 HEAD 的镜像）。
+     * 不做"直连优先"这种固定偏好：一个源只要探活成功就算可用，顺序完全由当次实测决定。
+     * 实现上是"赛跑"而不是"等齐"：第一个源应答后只再等 [PROBE_GRACE_MS] 看有没有更快的，
+     * 之后就按已有数据排序；探不出来的源排在最后当兜底（真下载时仍可能成功，
+     * 例如不支持 Range/HEAD 的镜像）。
      */
     private suspend fun pickSources(tag: String): List<Source> = coroutineScope {
+        val alive = Channel<Pair<Source, Long>>(Channel.UNLIMITED)
         val probes = SOURCES.map { src ->
-            async(Dispatchers.IO) {
+            launch(Dispatchers.IO) {
                 val ms = withTimeoutOrNull(PROBE_TIMEOUT_MS) {
                     val t0 = System.currentTimeMillis()
                     val len = runCatching { HttpFetcher.headContentLength(src.url(tag)) }
                         .getOrDefault(-1L)
                     if (len < 0) null else System.currentTimeMillis() - t0
                 }
-                if (ms == null) Log.i(TAG, "source ${src.name} timeout/${PROBE_TIMEOUT_MS}ms")
-                else Log.i(TAG, "source ${src.name} ${ms}ms")
-                src to ms
+                if (ms == null) Log.i(TAG, "source ${src.name} slow/dead (>${PROBE_TIMEOUT_MS}ms)")
+                else alive.send(src to ms)
             }
         }
-        rankSources(probes.awaitAll().filter { it.second != null }.map { it.first to it.second!! }, SOURCES)
+        val collected = mutableListOf<Pair<Source, Long>>()
+        val first = withTimeoutOrNull(PROBE_TIMEOUT_MS + PROBE_GRACE_MS) { alive.receive() }
+        if (first != null) {
+            collected += first
+            // 宽限期内谁先到就收，收满或到期即止
+            withTimeoutOrNull(PROBE_GRACE_MS) {
+                while (true) collected += alive.receive()
+            }
+        }
+        probes.forEach { it.cancel() }
+        alive.close()
+        Log.i(TAG, "source order: " + (collected.sortedBy { it.second }.joinToString { "${it.first.name} ${it.second}ms" }
+            .ifEmpty { "none alive, fallback to declaration order" }))
+        rankSources(collected, SOURCES)
     }
 
     /**
