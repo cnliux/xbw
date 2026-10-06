@@ -13,8 +13,17 @@ import com.xbw.tv.ui.game.NativeGameActivity
 /** 导航与通用交互小工具 */
 object Nav {
 
-    /** 打开游戏：原生 libretro 核心。封面/链接/标签一并带上，游戏内收藏要用。 */
+    /**
+     * 打开游戏：原生 libretro 核心。封面/链接/标签一并带上，游戏内收藏要用。
+     *
+     * 第三方源（gamelist.xml 插件）的条目可能没配下载地址 —— 那种条目点进来只会
+     * 停在"游戏页抓取失败"，属于误导。改成直接提示"该源没配下载地址"就返回。
+     */
     fun openGame(activity: Activity, item: GameItem) {
+        if (item.source == GameItem.SOURCE_PLUGIN && item.playUrl.isBlank()) {
+            toast(activity, activity.getString(R.string.plugin_no_rom))
+            return
+        }
         activity.startActivity(
             Intent(activity, NativeGameActivity::class.java).apply {
                 putExtra(NativeGameActivity.EXTRA_ID, item.id)

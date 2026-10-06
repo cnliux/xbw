@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.Cache
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.CacheControl
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.MediaType.Companion.toMediaType
@@ -209,10 +210,17 @@ object HttpFetcher {
     /** 取文本（默认 UA/Referer 同抓页面），升级检查读 GitHub API 用 */
     suspend fun fetchText(
         url: String,
-        headers: Map<String, String> = emptyMap()
+        headers: Map<String, String> = emptyMap(),
+        noCache: Boolean = false
     ): String = withContext(Dispatchers.IO) {
         val rb = Request.Builder().url(url).header("User-Agent", UA)
         headers.forEach { (k, v) -> rb.header(k, v) }
+        if (noCache) {
+            // 绕开 OkHttp 磁盘缓存：JS 挑战页每轮都不一样，
+            // 缓存住挑战页会导致 cookie 反复解出同一个值、永远进不去正文
+            rb.cacheControl(CacheControl.FORCE_NETWORK)
+            rb.header("Cache-Control", "no-cache")
+        }
         client().newCall(rb.build()).execute().use { resp ->
             if (!resp.isSuccessful) throw FetchException(resp.code, null, "HTTP ${resp.code}")
             resp.body?.string() ?: throw FetchException(resp.code, null, "响应体为空")

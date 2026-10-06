@@ -84,4 +84,36 @@
     <string name="diagnose_running">诊断中…</string>
 
     <string name="desc_cover">游戏封面</string>
+    <!-- 第三方游戏源（插件） -->
+    <string name="settings_plugins">第三方游戏源</string>
+    <string name="plugins_title">第三方游戏源</string>
+    <string name="plugins_hint">支持 gamelist.xml 格式的清单（retroFE / Emby 风格）。填入 XML 地址即可添加，支持站点的 JS cookie 挑战。</string>
+    <string name="plugins_add">添加源</string>
+    <string name="plugins_builtin">内置</string>
+    <string name="plugins_edit">编辑</string>
+    <string name="plugins_del">删除</string>
+    <string name="plugins_count_fmt">%1$d 个</string>
+    <string name="plugins_none">还没有自填的源</string>
+    <string name="plugins_label_name">显示名称</string>
+    <string name="plugins_label_url">gamelist.xml 地址</string>
+    <string name="plugins_label_platform">归属平台</string>
+    <string name="plugins_label_cover_base">封面地址前缀（可选）</string>
+    <string name="plugins_label_rom_base">游戏下载前缀（可选）</string>
+    <string name="plugins_cover_base_hint">留空则不出封面</string>
+    <string name="plugins_rom_base_hint">留空则只能看列表，不能下载</string>
+    <string name="plugins_save">保存</string>
+    <string name="plugins_saved">已保存</string>
+    <string name="plugins_need_url">请填写 XML 地址</string>
+    <string name="plugins_need_name">请填写显示名称</string>
+    <string name="plugins_testing_fmt">正在读取 %1$s …</string>
+    <string name="plugins_test_ok_fmt">读取成功：%1$d 个游戏</string>
+    <string name="plugins_test_fail_fmt">读取失败：%1$s</string>
+    <string name="plugin_no_rom">该第三方源没有配置下载地址</string>
+    <string name="plugins_del_confirm">删除这个第三方源？</string>
+    <string name="plugins_cancel">取消</string>
+    <string name="plugin_platform_fc">FC / 红白机</string>
+    <string name="plugin_platform_arcade">街机</string>
+    <string name="plugin_platform_gba">GBA</string>
+    <string name="plugin_platform_sfc">SFC</string>
+    <string name="plugin_platform_md">MD</string>
 </resources>

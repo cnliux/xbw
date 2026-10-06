@@ -173,6 +173,27 @@
         </LinearLayout>
 
         <!-- ⑨ 恢复默认映射 -->
+        <!-- 第三方游戏源（插件） -->
+        <LinearLayout
+            android:id="@+id/row_plugins"
+            style="@style/SettingItem">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/settings_plugins"
+                android:textColor="@color/xbw_text_primary"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/val_plugins"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/xbw_text_secondary"
+                android:textSize="14sp" />
+        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/row_reset_map"
             style="@style/SettingItem">

@@ -62,7 +62,7 @@ class LobbyViewModel(
     private val _state = MutableLiveData<State>(State.Idle)
     val state: LiveData<State> = _state
 
-    private val _categories = MutableLiveData<List<GameCategory>>(GameCategory.entries.toList())
+    private val _categories = MutableLiveData<List<GameCategory>>(GameCategory.lobbyChips)
     val categories: LiveData<List<GameCategory>> = _categories
 
     var currentCategory: GameCategory = GameCategory.ALL

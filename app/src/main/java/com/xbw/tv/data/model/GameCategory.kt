@@ -34,6 +34,8 @@ enum class GameCategory(
     DOS("dos", "DOS", "/nes?e=6&tag="),
     FLASH("flash", "Flash", "/nes?e=9&tag="),
     H5("h5", "H5 游戏", "/nes?tag=1"),
+    /** 绑定了 platform=fc 的第三方源（gamelist.xml 插件），数据来自 [PluginRepository] */
+    FC_THIRD("fc_third", "FC第三方", null),
     FAVORITE("favorite", "我的收藏", null),
     RECENT("recent", "最近玩过", null);
 
@@ -44,6 +46,15 @@ enum class GameCategory(
     val playable: Boolean get() = this == FC || this == ARCADE || this == SFC || this == GBA || this == MD
 
     companion object {
+        /**
+         * 大厅顶部展示的分类：**屏蔽没有原生核心的** NDS / Java / DOS / Flash / H5。
+         * 这些分类点进去整页都是"暂无原生核心"，留着只是浪费一次网络往返和一次点击。
+         * 分类仍然保留在 [entries] 里 —— 老链接、缓存里的 categoryKey 还能正常解析。
+         */
+        val lobbyChips: List<GameCategory> = listOf(
+            ALL, FC, ARCADE, GBA, SFC, MD, FC_THIRD, FAVORITE, RECENT
+        )
+
         fun fromKey(key: String?): GameCategory =
             entries.firstOrNull { it.key == key } ?: ALL
 

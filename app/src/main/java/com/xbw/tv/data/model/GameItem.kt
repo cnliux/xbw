@@ -41,5 +41,7 @@ data class GameItem(
         const val SOURCE_SEARCH = "search"
         const val SOURCE_RECENT = "recent"
         const val SOURCE_FAVORITE = "favorite"
+        /** 第三方源插件（gamelist.xml 等），见 data/plugin */
+        const val SOURCE_PLUGIN = "plugin"
     }
 }

@@ -1,5 +1,6 @@
 package com.xbw.tv.data.repo
 
+import android.app.Application
 import android.util.Log
 import android.util.LruCache
 import com.xbw.tv.core.CoreRouter
@@ -16,6 +17,7 @@ import com.xbw.tv.data.net.CheatParser
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.SiteConfig
 import com.xbw.tv.data.net.YikmParser
+import com.xbw.tv.data.plugin.PluginRepository
 import com.xbw.tv.data.search.PinyinSearchIndexer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -37,7 +39,7 @@ import kotlinx.coroutines.withContext
  *
  * 内存缓存用 LruCache（5 个 key），磁盘用 Room；同一 (分类,页码) 的并发抓取用 Mutex 合并。
  */
-class GameRepository(private val db: AppDatabase) {
+class GameRepository(private val db: AppDatabase, private val app: Application? = null) {
 
     companion object {
         private const val TAG = "GameRepository"
@@ -48,8 +50,11 @@ class GameRepository(private val db: AppDatabase) {
         /** 单次搜索最多现查多少个未知的 play 页（再多是"过滤掉"不如"先显示"） */
         private const val MAX_PLATFORM_PROBE = 24
 
-        /** play 页并发探测数（站点会限流，不能一把梭） */
+/** play 页并发探测数（站点会限流，不能一把梭） */
         private const val PROBE_CONCURRENCY = 4
+
+        /** 第三方源在"伪装分页"时每页给多少条（与站点每页 20 条一致） */
+        private const val PAGE_SIZE = 20
     }
 
     private val memory = LruCache<String, List<GameItem>>(12)
@@ -113,8 +118,9 @@ class GameRepository(private val db: AppDatabase) {
         page: Int,
         force: Boolean = true
     ): LoadResult {
-        if (!category.fetchable) {
-            // FAVORITE / RECENT 分类：本地数据
+if (!category.fetchable) {
+            // FAVORITE / RECENT 分类：本地数据；FC_THIRD：第三方插件源
+            if (category == GameCategory.FC_THIRD) return loadThirdParty(page, force)
             val items = if (category == GameCategory.FAVORITE) favoriteGames() else recentGames()
             return LoadResult(items, false, 1, 1)
         }
@@ -137,6 +143,29 @@ class GameRepository(private val db: AppDatabase) {
             persist(category.key, page, items)
             if (items.size <= MEM_LIMIT) memory.put(key, items) else memory.remove(key)
             LoadResult(items, false, parsed.currentPage, parsed.maxPage, parsed.warnings, System.currentTimeMillis())
+        }
+    }
+
+    /**
+     * 第三方插件源的列表（[GameCategory.FC_THIRD]）。
+     *
+     * 第三方源是**一次性全量清单**（gamelist.xml 几百 KB、几百条），没有分页概念，
+     * 所以这里在内存里切片，把 [PluginRepository] 的结果伪装成普通的分页列表，
+     * 让大厅的翻页/下拉刷新逻辑一行都不用改。
+     */
+    private suspend fun loadThirdParty(page: Int, force: Boolean): LoadResult {
+        val ctx = app ?: throw IllegalStateException("第三方源需要 Application 上下文")
+        val key = memKey(GameCategory.FC_THIRD.key, page)
+        if (!force) memory.get(key)?.let { return LoadResult(it, true, page, page + 1) }
+        return lockFor(key).withLock {
+            if (!force) memory.get(key)?.let { return@withLock LoadResult(it, true, page, page + 1) }
+            val all = PluginRepository.loadByPlatform(ctx, GameCategory.FC.key)
+            if (all.isEmpty()) throw EmptySiteException("没有配置第三方源，去设置里添加")
+            val maxPage = (all.size + PAGE_SIZE - 1) / PAGE_SIZE
+            if (page > maxPage) throw EmptySiteException("第 $page 页超出范围")
+            val items = all.drop((page - 1) * PAGE_SIZE).take(PAGE_SIZE)
+            memory.put(key, items)
+            LoadResult(items, false, page, maxPage, emptyList(), System.currentTimeMillis())
         }
     }
 
@@ -169,9 +198,19 @@ class GameRepository(private val db: AppDatabase) {
     }
 
     /**
-     * 搜索（带本地拼音首字母索引增强 + 可玩性过滤）：纯字母查询时双路合并 ——
-     * 本地前缀命中排最前，服务器结果其次，本地包含匹配垫底，按 id 去重。
-     * 服务器挂了但本地有结果时返回本地（拼音搜索离线可用）。
+     * 搜索（本地索引增强 + 可玩性过滤）：**本地索引 + 服务器**双路合并 ——
+     * 本地前缀命中排最前，服务器结果其次，本地包含/标签命中垫底，按 id 去重。
+     * 服务器挂了但本地有结果时返回本地（离线也能搜）。
+     *
+     * 本地索引（[PinyinSearchIndexer]）是主力：站点 `/search` 不支持拼音/首字母，
+     * 搜"街机"只回 7 个合集标题，搜不到任何一个街机游戏。索引里 9500+ 条覆盖
+     * FC/街机/SFC/GBA/MD 全部分页，所以中文查询也必须查它 —— 盒子没软键盘，
+     * 用户就是打中文，纯 ASCII 才查索引等于索引形同虚设。
+     *
+     * 查询分派：
+     *   - 纯字母（`hdl`）→ initials 前缀 + initials 包含
+     *   - 含中文（`魂斗罗`/`街机`）→ 标题前缀 + 标题包含 + 标签命中
+     *   两种都再补一条标题包含，混合输入（`魂dolo`）也能命中。
      *
      * 远程搜索是**全站**检索，会带回 Java / NDS / DOS / Flash 这类本 App
      * 没有原生核心的平台，点进去只能看到"暂无原生核心"。合并后统一过一遍
@@ -180,25 +219,39 @@ class GameRepository(private val db: AppDatabase) {
     suspend fun searchEx(keyword: String): LoadResult {
         val kw = keyword.trim()
         if (kw.isEmpty()) return LoadResult(emptyList(), false, 1, 1)
-        val pinyinQuery = kw.length >= 2 && kw.all { it in 'a'..'z' || it in 'A'..'Z' }
+        val ascii = kw.all { it in 'a'..'z' || it in 'A'..'Z' }
         val prefix = mutableListOf<GameItem>()
         val contains = mutableListOf<GameItem>()
-        if (pinyinQuery) {
-            withContext(Dispatchers.IO) {
-                val dao = db.searchIndexDao()
-                val q = kw.lowercase()
+        withContext(Dispatchers.IO) {
+            val dao = db.searchIndexDao()
+            val q = kw.lowercase()
+            if (ascii) {
                 prefix += dao.queryPrefix(q).map { it.toItem() }
                 contains += dao.queryContains(q).map { it.toItem() }
+                contains += dao.queryNameContains(kw).map { it.toItem() }
+            } else {
+                prefix += dao.queryNamePrefix(kw).map { it.toItem() }
+                contains += dao.queryNameContains(kw).map { it.toItem() }
+                // 搜"街机"/"GBA"这类平台名：直接出该分类的游戏（站点卡片标签里没有平台名）
+                GameCategory.fromLabel(kw)
+                    ?.takeIf { it.playable }
+                    ?.let { cat -> contains += dao.queryByCategory(cat.key).map { it.toItem() } }
+                // 标签命中排在标题包含之后：搜"射击"应先给出标题带"射击"的
+                contains += dao.queryByTag(kw).map { it.toItem() }
             }
         }
         val server = runCatching { search(kw) }
         if (server.isFailure && prefix.isEmpty() && contains.isEmpty()) {
             throw server.exceptionOrNull() ?: IllegalStateException("search failed")
         }
-        val serverItems = server.getOrNull()?.items ?: emptyList()
+val serverItems = server.getOrNull()?.items ?: emptyList()
         val used = prefix.mapTo(HashSet()) { it.id }
+        // 第三方源放在服务器结果之后、本地包含之前：用户自己加的源不该被官方站压住，
+        // 但也不该抢走"标题精确匹配"的第一位
+        val pluginItems = pluginMatches(kw)
         val merged = prefix +
                 serverItems.filterNot { it.id in used }.onEach { used.add(it.id) } +
+                pluginItems.filterNot { it.id in used } +
                 contains.filterNot { it.id in used }
         val playable = filterPlayable(merged)
         return LoadResult(playable, false, 1, 1,
@@ -210,8 +263,12 @@ class GameRepository(private val db: AppDatabase) {
      *   1. **卡片标签**：明确写着 NDS/Java/DOS/Flash/H5 的直接淘汰（零请求，最稳）；
      *   2. 本地拼音索引 —— 索引只建 FC/街机/SFC/GBA/MD，命中即可玩；
      *   3. `game_platform` 平台缓存 —— 之前解析过 play 页，结论直接复用；
-     *   4. 现查 play 页（并发 4，单次搜索最多 [MAX_PLATFORM_PROBE] 个），结果写缓存。
-     * play 页抓不到（离线/限流/改版）时**保守放行**，宁可多显示也不误伤。
+     *   4. 现查 play 页（并发 [PROBE_CONCURRENCY]，单次搜索最多 [MAX_PLATFORM_PROBE] 个），
+     *      结果写缓存。
+     *
+     * 抓不到 play 页（离线/限流/改版）时**保守放行**，宁可多显示也不误伤 —— 但这会让
+     * "搜不出来"变成常态，所以 [MAX_PLATFORM_PROBE] 必须覆盖单次搜索的全部未知条目
+     * （实测街机等关键词会带来几十条无标签结果），否则街机这类有核心的内容会被误杀。
      */
     private suspend fun filterPlayable(items: List<GameItem>): List<GameItem> {
         if (items.isEmpty()) return items
@@ -269,6 +326,21 @@ class GameRepository(private val db: AppDatabase) {
     private fun tagSaysUnplayable(item: GameItem): Boolean {
         val cat = item.tags.firstNotNullOfOrNull { GameCategory.fromLabel(it) }
         return cat != null && !cat.playable
+    }
+
+    /**
+ * 第三方源里的匹配项：标题包含关键词，或标签命中（题材/拼音首字母）。
+     * 第三方清单没有索引表，直接在内存里线性扫几百条，成本可以忽略。
+     */
+    private suspend fun pluginMatches(kw: String): List<GameItem> {
+        val ctx = app ?: return emptyList()
+        val q = kw.lowercase()
+        return runCatching {
+            PluginRepository.loadByPlatform(ctx, GameCategory.FC.key)
+        }.getOrElse { emptyList() }.filter { item ->
+            item.name.lowercase().contains(q) ||
+                    item.tags.any { it.lowercase().contains(q) }
+        }.take(60)
     }
 
     /** 拼音索引条目数（UI 展示用） */

@@ -42,7 +42,7 @@ class XbwApplication : Application() {
 
         fun repository(app: Application): com.xbw.tv.data.repo.GameRepository =
             repo ?: synchronized(this) {
-                repo ?: com.xbw.tv.data.repo.GameRepository(AppDatabase.get(app))
+                repo ?: com.xbw.tv.data.repo.GameRepository(AppDatabase.get(app), app)
                     .also { repo = it }
             }
     }

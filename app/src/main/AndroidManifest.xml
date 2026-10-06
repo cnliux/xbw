@@ -100,6 +100,17 @@
 
         <!-- 调试页：展示站点结构诊断结果（选择器失配时第一时间看这里） -->
         <activity
+            android:name=".ui.plugin.PluginsActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.XbwTv.Lobby" />
+        <activity
+            android:name=".ui.plugin.PluginEditActivity"
+            android:exported="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.XbwTv.Lobby"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".ui.diagnose.DiagnoseActivity"
             android:exported="false"
             android:screenOrientation="landscape"

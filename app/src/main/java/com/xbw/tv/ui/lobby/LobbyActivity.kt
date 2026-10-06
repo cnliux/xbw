@@ -78,7 +78,7 @@ class LobbyActivity : AppCompatActivity() {
             // 横向列表焦点进出不要抢跑：保留焦点恢复默认行为
             descendantFocusability = android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS
         }
-        chipAdapter.submitList(GameCategory.entries.toList())
+        chipAdapter.submitList(GameCategory.lobbyChips)
     }
 
     private fun setupGrid() {

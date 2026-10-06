@@ -19,6 +19,7 @@ import com.xbw.tv.input.GamepadManager
 import com.xbw.tv.input.KeySettings
 import com.xbw.tv.input.MotionKeyBridge
 import com.xbw.tv.ui.common.Nav
+import com.xbw.tv.data.plugin.PluginRepository
 import com.xbw.tv.ui.diagnose.DiagnoseActivity
 import android.content.Intent
 import androidx.lifecycle.Lifecycle
@@ -72,6 +73,9 @@ class SettingsActivity : AppCompatActivity() {
                 Nav.toast(this@SettingsActivity, getString(R.string.toast_cleared_recent))
                 refreshCounters()
             }
+        }
+        binding.rowPlugins.setOnClickListener {
+            startActivity(Intent(this, com.xbw.tv.ui.plugin.PluginsActivity::class.java))
         }
         binding.rowResetMap.setOnClickListener {
             KeySettings.resetAll()
@@ -127,6 +131,13 @@ class SettingsActivity : AppCompatActivity() {
 
     private fun refreshStatic() {
         binding.valHotkey.text = KeySettings.describeKeyCode(KeySettings.menuHotkey)
+        // 只统计用户自填的源，内置源固定存在、显示出来没信息量
+        val userCount = PluginRepository.sources(application).count { !it.builtin }
+        binding.valPlugins.text = if (userCount == 0) {
+            getString(R.string.plugins_none)
+        } else {
+            getString(R.string.plugins_count_fmt, userCount)
+        }
     }
 
     private fun refreshGamepad() {
