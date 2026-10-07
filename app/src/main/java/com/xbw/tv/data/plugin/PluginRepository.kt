@@ -3,7 +3,12 @@ package com.xbw.tv.data.plugin
 import android.content.Context
 import android.util.Log
 import com.xbw.tv.data.model.GameItem
+import com.xbw.tv.data.model.GameCategory
+import com.xbw.tv.data.net.HttpFetcher
+import com.xbw.tv.data.usb.UsbScanner
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -23,6 +28,11 @@ import java.net.URLEncoder
  * 缓存分两级：
  *  - 磁盘：把 XML 原文存到 cacheDir，按 url 的 md5 命名，24h 内复用（源挂了也能出列表）
  *  - 内存：解析结果按源 id 缓存，切分类来回翻不重复解挑战
+ *
+ * Cookie：这类网盘源的 ROM / 图片 / 视频直链多半也要带解出的 cookie 才回 200
+ * （实测 186317 的 `.nes` 带 cookie 是 200、不带是挑战页）。所以下载资源时
+ * 统一走 [downloadAsset]，先确保当前源的 cookie 已解出，再带上 `Cookie` 头下载，
+ * 并对"下到 HTML 挑战页"的结果做一次失效重下。
  */
 object PluginRepository {
 
@@ -35,14 +45,24 @@ object PluginRepository {
     private val memCache = HashMap<String, List<GameItem>>()
     private val cookieJars = HashMap<String, MutableMap<String, String>>()
 
+    /** 目录引导源解析出的真实字节目录（src.id → 绝对目录 URL，带尾部 `/`） */
+    private val resolvedDirs = HashMap<String, String>()
+
     // ---------- 源的管理 ----------
 
     fun sources(context: Context): List<PluginSource> {
         val user = PluginSource.parseList(
             prefs(context).getString(KEY_SOURCES, "") ?: ""
         )
-        // 内置源永远在最前，且用户改不了
-        return listOf(PluginSource.BUILTIN_FC_186317) + user
+        // 不内置任何源（2026-10 决定）：第三方全部由用户自建，平台只分 FC/街机
+        return user
+    }
+
+    /** 按条目 id（plug-<源id>-…）反查所属源；找不到（源已删）返回 null */
+    fun sourceById(context: Context, itemId: String): PluginSource? {
+        val fixed = itemId.removePrefix("plug-")
+        val srcId = fixed.substringBeforeLast('-')
+        return sources(context).firstOrNull { it.id == srcId }
     }
 
     fun save(context: Context, list: List<PluginSource>) {
@@ -71,28 +91,130 @@ object PluginRepository {
 
     // ---------- 加载 ----------
 
-    /** 某个源的全部条目；失败时回落到磁盘缓存，都拿不到就抛 */
+    /**
+     * 某个源的全部条目；失败时回落到磁盘缓存，都拿不到就抛。
+     * XML 方式和目录引导方式在这里分叉，外部无感知。
+     */
     suspend fun load(context: Context, src: PluginSource): List<GameItem> =
         mutex.withLock {
             memCache[src.id]?.let { return@withLock it }
             val app = context.applicationContext
-            val xml = runCatching { readXml(app, src) }.getOrElse {
-                Log.w(TAG, "fetch ${src.id} failed: ${it.message}")
-                readCache(app, src.listUrl)
+            val items = if (src.dirBootstrap) {
+                runCatching { loadDir(app, src) }.getOrElse {
+                    Log.w(TAG, "dir bootstrap ${src.id} failed: ${it.message}")
+                    loadDirFromCache(app, src)
+                }
+            } else {
+                val xml = runCatching { readXml(app, src) }.getOrElse {
+                    Log.w(TAG, "fetch ${src.id} failed: ${it.message}")
+                    readCache(app, src.listUrl)
+                }
+                parse(src, xml)
             }
-            val items = parse(src, xml)
             if (items.isNotEmpty()) {
-                writeCache(app, src.listUrl, xml)
                 memCache[src.id] = items
-            } else if (xml.isEmpty()) {
+            } else {
                 throw IllegalStateException("第三方源没有返回任何条目")
             }
             items
         }
 
-    /** 绑到某平台的所有第三方源合并去重（大厅分类 / 搜索用） */
-    suspend fun loadByPlatform(context: Context, platformKey: String): List<GameItem> {
-        val list = forPlatform(context, platformKey)
+    /**
+     * 目录引导：抓 `game/` 索引 → 按 [PluginSource.dirMatch] 找到目标子目录
+     * （href 自带服务器真实字节）→ 抓它自己的索引 → 有 gamelist.xml 就用 XML
+     * 出名字+封面、下载 base 用真实字节目录；没有就按文件行直接出条目。
+     */
+    private suspend fun loadDir(context: Context, src: PluginSource): List<GameItem> {
+        val jar = cookieJars.getOrPut(src.id) { HashMap() }
+        val root = src.effectiveListUrl.trimEnd('/') + "/"
+        val rootHtml = AesChallenge.fetch(root, jar)
+        val rootEntries = DirectoryIndexParser.parse(rootHtml, root)
+        Log.i(TAG, "dir ${src.id}: root html=${rootHtml.length}B parsed=${rootEntries.size} dirs=" +
+            rootEntries.filter { it.isDir }.joinToString(",") { it.name })
+        val resolved = if (src.dirMatch.isNotBlank()) {
+            rootEntries.firstOrNull { it.isDir && it.name.contains(src.dirMatch, ignoreCase = true) }?.url
+                ?: rootEntries.firstOrNull { it.isDir && it.url.contains(src.dirMatch, ignoreCase = true) }?.url
+                ?: run {
+                    Log.w(TAG, "dir ${src.id}: dirMatch '${src.dirMatch}' matched nothing (${rootEntries.size} entries), fall back to baseDir")
+                    src.baseDir
+                }
+        } else src.baseDir
+        val dirBase = resolved.trimEnd('/') + "/"
+        val dirHtml = AesChallenge.fetch(dirBase, jar)
+        val dirEntries = DirectoryIndexParser.parse(dirHtml, dirBase)
+        val xmlEntry = dirEntries.firstOrNull {
+            it.name.equals("gamelist.xml", ignoreCase = true) ||
+                it.url.endsWith("gamelist.xml", ignoreCase = true)
+        }
+        Log.i(TAG, "dir ${src.id}: base=$dirBase listing=${dirEntries.size} xml=${xmlEntry?.url}")
+        val items: List<GameItem>
+        if (xmlEntry != null) {
+            val xml = runCatching { AesChallenge.fetch(xmlEntry.url, jar) }.getOrElse {
+                Log.w(TAG, "gamelist fetch failed ${src.id}: ${it.message}")
+                readCache(context, src.listUrl)
+            }
+            if (xml.isBlank()) {
+                items = fileEntriesToItems(src, dirEntries, dirBase)
+            } else {
+                writeCache(context, src.listUrl, xml)
+                items = parse(src, xml, dirBase)
+            }
+        } else {
+            items = fileEntriesToItems(src, dirEntries, dirBase)
+        }
+        resolvedDirs[src.id] = dirBase
+        return items
+    }
+
+    /** 目录引导源的离线兜底：磁盘缓存里只有最终内容（XML），按它解析 */
+    private fun loadDirFromCache(context: Context, src: PluginSource): List<GameItem> {
+        val xml = readCache(context, src.listUrl)
+        return if (xml.isBlank()) emptyList() else parse(src, xml, src.baseDir)
+    }
+
+    /** 把目录索引里的**文件行**直接变成条目（纯目录站、或没有 gamelist.xml 时） */
+    private fun fileEntriesToItems(
+        src: PluginSource,
+        entries: List<DirectoryIndexParser.Entry>,
+        base: String
+    ): List<GameItem> {
+        val out = ArrayList<GameItem>()
+        for (e in entries) {
+            if (e.isDir) continue
+            val rel = e.url.removePrefix(base.trimEnd('/') + "/")
+            if (rel.isBlank()) continue
+            val stem = e.name.substringBeforeLast('.').trim()
+            val platformKey = itemPlatformKey(src, e.name)
+            val cat = GameCategory.fromKey(platformKey)
+            out += GameItem(
+                id = src.idPrefix + uuid12(rel),
+                name = stem.ifEmpty { e.name.trim() },
+                coverUrl = null,
+                playUrl = e.url,
+                tags = listOf(
+                    if (cat.playable) cat.title
+                    else if (src.playable) src.category.title else src.title
+                ),
+                source = GameItem.SOURCE_PLUGIN,
+                rawPath = rel,
+                rawCover = "",
+                platformKey = platformKey,
+            )
+        }
+        return out
+    }
+
+    /**
+     * 绑到某平台的所有第三方源合并去重（大厅分类 / 搜索用） */
+    suspend fun loadByPlatform(context: Context, platformKey: String): List<GameItem> =
+        loadMany(context, forPlatform(context, platformKey))
+
+    /** 全部第三方源的所有条目合并去重（聚合浏览 / 搜索用） */
+    suspend fun loadAll(context: Context): List<GameItem> =
+        loadMany(context, sources(context))
+
+    /** 指定一批源的所有条目合并去重（大厅分类 / 搜索用） */
+    suspend fun loadMany(context: Context, list: List<PluginSource>): List<GameItem> {
         if (list.isEmpty()) return emptyList()
         val all = mutableListOf<GameItem>()
         val seen = HashSet<String>()
@@ -106,9 +228,20 @@ object PluginRepository {
         return all
     }
 
-    private fun parse(src: PluginSource, xml: String): List<GameItem> {
+    internal fun parse(src: PluginSource, xml: String, effectiveBase: String? = null): List<GameItem> {
         val entries = GamelistParser.parse(xml)
-        return entries.map { e ->
+        // 目录引导源下载/封面的基准目录必须是服务器给的真实字节目录；
+        // XML 源用 [PluginSource.baseDir]（清单所在目录）。
+        val base = effectiveBase ?: src.baseDir
+        return entries.mapNotNull { e ->
+            // 平台按文件扩展名派生。只有"一份文件跨全部平台"的合并清单
+            // （filterByPlatform，如街机视口）按它过滤：别的平台条目留在各自分类；
+            // 独立按自家 xml 解析的源（FC 的 game/nes/gamelist.xml、自建源）不过滤，
+            // 否则 FC 里 zip/7z 打包的 ROM 会被误丢。platformKey 始终写入条目，
+            // 进核心时选对的核心（扩展名识别不出平台的按源平台归口）。
+            val platformKey = itemPlatformKey(src, e.path)
+            val cat = GameCategory.fromKey(platformKey)
+            if (src.filterByPlatform && cat.playable && cat.key != src.platform) return@mapNotNull null
             val (title, initials) = GamelistParser.splitName(
                 e.sortname.ifEmpty { e.name }
             )
@@ -116,28 +249,241 @@ object PluginRepository {
             // 拼音首字母来自站点自己塞在 <name> 里的 [xxx]，比我们自己算准
             val tags = listOfNotNull(
                 genre.ifEmpty { null },
-                if (src.playable) src.category.title else src.title
+                if (cat.playable) cat.title
+                else if (src.playable) src.category.title else src.title
             ) + listOfNotNull(initials.takeIf { it.isNotEmpty() }?.let { "拼音:$it" })
             GameItem(
-                id = src.idPrefix + java.util.UUID.nameUUIDFromBytes(
-                    e.path.toByteArray()
-                ).toString().take(12),
+                // UUID 自带连字符，必须先剥掉再取短哈希，否则 sourceById 按
+                // "plug-<源id>-<hash>" 反解析时会把哈希里的 '-' 误当作分隔符
+                id = src.idPrefix + uuid12(e.path),
                 name = title.ifEmpty { e.path.substringAfterLast('/') },
-                coverUrl = joinBase(src.coverBase, e.image),
-                playUrl = joinBase(src.romBase, e.path).orEmpty(),
+                coverUrl = joinBase(src.coverBase.ifBlank { base }, e.image),
+                playUrl = joinBase(src.romBase.ifBlank { base }, e.path).orEmpty(),
                 tags = tags,
-                source = GameItem.SOURCE_PLUGIN
+                source = GameItem.SOURCE_PLUGIN,
+                // 视频：优先 romBase（同盘），再 coverBase，最后基准目录
+                videoUrl = e.video.ifBlank { null }
+                    ?.let { joinBase((src.romBase.ifBlank { src.coverBase }).ifBlank { base }, it) },
+                // 原始相对路径：下载时按百分比编码（GBK 站再补一条 GBK 编码候选）
+                rawPath = e.path,
+                rawCover = e.image,
+                platformKey = platformKey,
             )
         }
     }
 
-    /** 相对路径拼 base；base 为空就返回 null（没有可用直链，别造假 URL） */
+    private fun uuid12(bytesOf: String): String =
+        java.util.UUID.nameUUIDFromBytes(bytesOf.toByteArray())
+            .toString().replace("-", "").take(12)
+
+    /** 条目平台 key：
+     *  - 合并清单（filterByPlatform，仅街机视口）按文件扩展名派生——一份文件跨全部
+     *    平台，必须靠扩展名把 FC/GBA/… 的条目标出来；
+     *  - 独立清单（FC 的 game/nes/gamelist.xml、自建源）**源声明的平台就是权威**——
+     *    文件是自家平台的，FC 里用 zip/7z 打包的 ROM 不能被扩展名误导成街机。 */
+    private fun itemPlatformKey(src: PluginSource, name: String): String =
+        if (src.filterByPlatform) {
+            val file = name.substringAfterLast('/').substringBefore('?')
+            UsbScanner.platformOf(file)
+                ?: if (src.playable) src.platform else ""
+        } else if (src.playable) src.platform else ""
+
+    /** 相对路径拼 base；base 为空就返回 null（没有可解析的直链）。
+     *  [rel] 本身是绝对 http(s) 地址（xml 直接给 ROM/图片/视频直链）时原样返回，
+     *  不去拼 base、也不编码。 */
     private fun joinBase(base: String, rel: String): String? {
-        if (base.isBlank() || rel.isBlank()) return null
+        if (rel.isBlank()) return null
+        if (rel.startsWith("http://") || rel.startsWith("https://")) return rel.trim()
+        if (base.isBlank()) return null
         val encoded = rel.removePrefix("./").split('/').joinToString("/") {
             URLEncoder.encode(it, "UTF-8").replace("+", "%20")
         }
         return base.trimEnd('/') + "/" + encoded
+    }
+
+    // ---------- 下载候选地址 ----------
+
+    /**
+     * 按顺序给出一条条候选 ROM 直链，下载时逐个试到"拿到真文件"为止：
+     *  - 目录引导（[PluginSource.dirBootstrap]，如街机源）：
+     *      基准 = 服务器 href 解析出的真实字节目录；直链 = 基准 + 相对路径。
+     *  - XML 方式：
+     *      [PluginSource.gbkUris] 的站（186317：磁盘名是 GBK 保留字节）：
+     *        1. 按 GBK 百分号编码的直链（实测可用）；
+     *        2. 通用直链（[GameItem.playUrl]，UTF-8 编码，GBK 盘上是 404 兜底）。
+     *      其它源就一个通用直链。
+     * 已去掉 down.php 网关 —— 站点把 `/game/down.php` 改成了目录 `/game/`，
+     * 下载统一走目录直链。去重去空。
+     */
+    fun romCandidates(src: PluginSource, item: GameItem): List<String> {
+        if (item.rawPath.isBlank()) {
+            return listOfNotNull(item.playUrl.takeIf { it.isNotBlank() })
+        }
+        val base = if (src.dirBootstrap) resolvedDirs[src.id] ?: src.baseDir else src.baseDir
+        val direct = if (src.gbkUris) encodeGbkPath(base, item.rawPath) else joinBase(base, item.rawPath)
+        val out = LinkedHashSet<String>()
+        direct?.let { out += it }
+        item.playUrl.takeIf { it.isNotBlank() }?.let { out += it }
+        return out.toList()
+    }
+
+    /** 相对路径 → 按 GBK 逐段百分号编码的绝对 URL（本机 GBK 磁盘名的站专用）。
+     *  [rel] 是绝对 http(s) 地址时原样返回（xml 直链不需要编码）。 */
+    private fun encodeGbkPath(base: String, rel: String): String? = runCatching {
+        val t = rel.trim()
+        if (t.startsWith("http://") || t.startsWith("https://")) return t
+        val gbk = java.nio.charset.Charset.forName("GBK")
+        val encoded = rel.trim().removePrefix("./").trimStart('/').split('/').joinToString("/") { seg ->
+            val hex = StringBuilder()
+            for (b in seg.toByteArray(gbk)) {
+                hex.append('%').append(HEX[(b.toInt() ushr 4) and 0xF])
+                    .append(HEX[b.toInt() and 0xF])
+            }
+            hex.toString()
+        }
+        base.trimEnd('/') + "/" + encoded
+    }.getOrNull()
+
+    private val HEX = "0123456789ABCDEF"
+
+    // ---------- cookie 与资源下载 ----------
+
+    /**
+     * 确保源 cookie 已解出并返回它（`__test=<hex>` 头值）；没有就现场解一次。
+     * 解完存在会话级 jar 里，同一个源的所有资源请求复用。
+     */
+    suspend fun cookieFor(context: Context, src: PluginSource): String? {
+        val jar = cookieJars.getOrPut(src.id) { HashMap() }
+        return jar[AesChallenge.COOKIE] ?: runCatching {
+            AesChallenge.fetch(src.effectiveListUrl, jar)
+            jar[AesChallenge.COOKIE]
+        }.onFailure { Log.w(TAG, "cookie solve failed for ${src.id}: ${it.message}") }.getOrNull()
+    }
+
+    private fun cookieHeader(src: PluginSource, jar: MutableMap<String, String>?): Map<String, String> =
+        jar?.get(AesChallenge.COOKIE)?.let { mapOf("Cookie" to "${AesChallenge.COOKIE}=$it") } ?: emptyMap()
+
+    /**
+     * 带 cookie 下载资源（ROM / 视频 / 封面），失败原因一目了然：
+     *  - 服务端下回 HTML 挑战页 → 判定"没带对 cookie"，解一次再下
+     *  - 404 / 网络错 → 直接抛，调用方转成用户可见的提示
+     */
+    suspend fun downloadAsset(context: Context, src: PluginSource, url: String, dest: File) {
+        val app = context.applicationContext
+        var jar = cookieJars[src.id]
+        if (jar?.get(AesChallenge.COOKIE) == null) {
+            cookieFor(app, src)
+            jar = cookieJars[src.id]
+        }
+        val destForAttempt = dest
+        runCatching {
+            HttpFetcher.downloadToFile(url, destForAttempt, headers = cookieHeader(src, jar))
+        }.getOrElse { firstError ->
+            // 可能 cookie 过期/被换：重新解一次再试，再不行就把原错误抛出去
+            jar?.clear()
+            cookieJars.remove(src.id)
+            val fresh = cookieFor(app, src)
+            val headers = fresh?.let { mapOf("Cookie" to it) } ?: emptyMap()
+            HttpFetcher.downloadToFile(url, destForAttempt, headers = headers)
+        }
+        if (looksLikeHtml(destForAttempt)) {
+            destForAttempt.delete()
+            throw IllegalArgumentException("$url 返回的不是文件（可能是挑战页/登录页）")
+        }
+    }
+
+    private fun looksLikeHtml(f: File): Boolean {
+        if (!f.isFile || f.length() == 0L) return true
+        if (f.length() >= 64_000) return false
+        val head = f.inputStream().use { ins ->
+            val buf = ByteArray(128)
+            val n = ins.read(buf)
+            String(buf, 0, n.coerceAtLeast(0), Charsets.UTF_8)
+        }
+        return head.trimStart().startsWith("<") &&
+                (head.contains("<html", true) || head.contains("toNumbers") || head.contains("<!doctype", true))
+    }
+
+    // ---------- 封面预取 ----------
+
+    /** 封面下载归属目录（按源分开，避免两个源同一文件名互相顶掉） */
+    private fun coverDir(context: Context, srcId: String): File =
+        File(context.applicationContext.cacheDir, "plugins-covers/$srcId").apply { mkdirs() }
+
+    /**
+     * 把一页条目的封面预取到本地，返回 coverUrl=本地路径 的副本。
+     *
+     * 这些封面也挂在同一个 GBK 网盘上：裸 UTF-8 URL 会 404、不带 cookie 会回挑战页，
+     * Glide 无法带自定义头，所以列表页切片后由这里主动下载落盘，Glide 只读本地文件。
+     *
+     * 失败策略：**单次尝试、失败就跳过**（保持原有远程 URL → Glide 落到占位图），
+     * 不走 [downloadAsset] 的 6 次重试——一页 18 张里有一两张坏图不该拖慢整页。
+     *
+     * @param items 通常是一整页（18 条）；内部按源分组，cookie 每源只解一次
+     */
+    suspend fun prefetchCovers(context: Context, items: List<GameItem>): List<GameItem> {
+        if (items.isEmpty()) return items
+        val app = context.applicationContext
+        val result = items.toMutableList()
+        // 每个源先确认 cookie（一次），再并发下这源的封面
+        val grouped = items.mapNotNull { item ->
+            sourceById(app, item.id)?.let { src -> item to src }
+        }.groupBy { it.second }
+        for ((src, group) in grouped) {
+            val srcId = src.id
+            val list = group.toList()
+            val jar = cookieJars.getOrPut(srcId) { HashMap() }
+            if (jar[AesChallenge.COOKIE] == null) runCatching {
+                AesChallenge.fetch(src.effectiveListUrl, jar)
+            }.onFailure { Log.w(TAG, "cover cookie solve failed $srcId: ${it.message}") }
+            val cookie = jar[AesChallenge.COOKIE]
+            val headers = cookie?.let { mapOf("Cookie" to "${AesChallenge.COOKIE}=$it") } ?: emptyMap()
+
+            val tasks = coroutineScope {
+                list.map { (item, _) ->
+                    async(Dispatchers.IO) {
+                        val url = coverCandidateUrl(src, item) ?: return@async null
+                        prefetchOne(app, srcId, url, headers)?.let { local ->
+                            val i = result.indexOfFirst { it.id == item.id }
+                            if (i >= 0) result[i] = result[i].copy(coverUrl = local.absolutePath)
+                        }
+                    }
+                }
+            }
+            tasks.forEach { it.await() }
+        }
+        Log.i(TAG, "prefetched covers for ${items.size} items")
+        return result
+    }
+
+    /** 封面下载地址：GBK 站优先按 GBK 编码原始相对路径，其它源用解析出的 URL */
+    private fun coverCandidateUrl(src: PluginSource, item: GameItem): String? {
+        val base = if (src.dirBootstrap) resolvedDirs[src.id] ?: src.baseDir else src.baseDir
+        if (item.rawCover.isNotBlank()) {
+            if (src.gbkUris) encodeGbkPath(base, item.rawCover)?.let { return it }
+            joinBase(base, item.rawCover)?.let { return it }
+        }
+        return item.coverUrl?.takeIf { it.isNotBlank() }
+    }
+
+    /** 下封面到本地缓存（命中即复用，失败返回 null 保持远程 URL/占位图） */
+    private suspend fun prefetchOne(
+        app: Context,
+        srcId: String,
+        url: String,
+        headers: Map<String, String>
+    ): File? {
+        val dest = File(coverDir(app, srcId), PluginSource.deriveId(url) + ".img")
+        if (dest.isFile && dest.length() > 100) { Log.i(TAG, "cover cache-hit $url"); return dest }
+        if (dest.exists()) dest.delete()
+        val ok = HttpFetcher.tryGetFile(url, dest, headers = headers)
+        if (!ok || dest.length() <= 100 || looksLikeHtml(dest)) {
+            Log.w(TAG, "cover failed ${if (ok) "html/empty" else "http"} $url (${dest.length()}B)")
+            dest.delete()
+            return null
+        }
+        Log.i(TAG, "cover ok ${dest.length()}B $url")
+        return dest
     }
 
     // ---------- 磁盘缓存 ----------
@@ -149,7 +495,7 @@ object PluginRepository {
             return cached.readText()
         }
         val jar = cookieJars.getOrPut(src.id) { HashMap() }
-        return AesChallenge.fetch(src.listUrl, jar)
+        return AesChallenge.fetch(src.effectiveListUrl, jar)
     }
 
     private fun readCache(context: Context, url: String): String {

@@ -32,7 +32,9 @@ class PluginEditActivity : androidx.appcompat.app.AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityPluginEditBinding.inflate(layoutInflater)
         setContentView(b.root)
-        platformAdapter = PlatformAdapter(GameCategory.lobbyChips.filter { it.fetchable }) { cat ->
+        // 2026-10 起第三方只剩 FC / 街机两个选择，其余平台平台不在第三方配置里出现
+        val platforms = listOf(GameCategory.FC, GameCategory.ARCADE)
+        platformAdapter = PlatformAdapter(platforms) { cat ->
             platform = cat
             platformAdapter.selected(cat)
         }

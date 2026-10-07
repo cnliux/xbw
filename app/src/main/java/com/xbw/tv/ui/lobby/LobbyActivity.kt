@@ -2,6 +2,8 @@ package com.xbw.tv.ui.lobby
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
@@ -40,6 +42,41 @@ class LobbyActivity : AppCompatActivity() {
 
     private var pendingFocusPosition: Int? = null
 
+    private companion object {
+        const val PERM_REQUEST_USB = 1001
+    }
+
+    /** Android 6~9：扫 U盘需要读写外部存储权限，授权后立刻重扫当前分类 */
+    private fun ensureUsbAccess() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.R
+        ) return
+        val perm = if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.P) {
+            android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+        } else {
+            android.Manifest.permission.READ_EXTERNAL_STORAGE
+        }
+        if (checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(perm), PERM_REQUEST_USB)
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERM_REQUEST_USB && grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            if (viewModel.currentCategory == GameCategory.USB) {
+                pendingFocusPosition = 0
+                viewModel.enter(GameCategory.USB, forceRefresh = true)
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityLobbyBinding.inflate(layoutInflater)
@@ -61,6 +98,9 @@ class LobbyActivity : AppCompatActivity() {
         binding.btnSearch.setOnClickListener {
             startActivity(Intent(this, SearchActivity::class.java))
         }
+        binding.btnPlugins.setOnClickListener {
+            startActivity(Intent(this, com.xbw.tv.ui.plugin.PluginsActivity::class.java))
+        }
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -69,6 +109,8 @@ class LobbyActivity : AppCompatActivity() {
 
     private fun setupCategoryChips() {
         chipAdapter = CategoryChipAdapter { category ->
+            // 进 U盘分类前先把存储权限要到（Android 6~9 老盒子可直接读挂载卷）
+            if (category == GameCategory.USB) ensureUsbAccess()
             viewModel.enter(category)
             pendingFocusPosition = 0
         }

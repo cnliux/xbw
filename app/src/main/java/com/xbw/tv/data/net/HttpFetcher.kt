@@ -122,6 +122,41 @@ object HttpFetcher {
      * @param onProgress 已下载字节 / 总字节（总长未知时为 -1），在 IO 线程回调
      */
     /**
+     * 单次尝试下载到文件（**不重试**、有整体超时），成功返回 true。
+     * 给封面预取这种"失败了也无所谓、但一页几十张不能每张都等重试退避"的场景用：
+     * 404 / 超时 / 断流都直接返回 false，由调用方决定要不要放弃。
+     */
+    suspend fun tryGetFile(
+        url: String,
+        dest: File,
+        headers: Map<String, String> = emptyMap(),
+        timeoutSec: Long = 8
+    ): Boolean =
+        withContext(Dispatchers.IO) {
+            try {
+                val req = Request.Builder()
+                    .url(url)
+                    .header("User-Agent", UA)
+                    .header("Accept", "*/*")
+                    .apply { headers.forEach { (k, v) -> header(k, v) } }
+                    .build()
+                val call = client().newCall(req)
+                call.timeout().timeout(timeoutSec, TimeUnit.SECONDS)
+                call.execute().use { resp ->
+                    if (!resp.isSuccessful) return@use false
+                    val body = resp.body ?: return@use false
+                    body.byteStream().use { ins ->
+                        dest.outputStream().use { out -> ins.copyTo(out) }
+                    }
+                    dest.isFile && dest.length() > 0
+                }
+            } catch (e: Exception) {
+                runCatching { dest.delete() }
+                false
+            }
+        }
+
+    /**
      * 断点续传下载：失败重试时**接着上次的位置继续**，不从头再来。
      *
      * 电视盒子实测：38MB 的包在 GitHub 上要几分钟，中间停顿超过 [readTimeout] 就会断。
@@ -135,13 +170,14 @@ object HttpFetcher {
         url: String,
         dest: File,
         referer: String? = null,
+        headers: Map<String, String> = emptyMap(),
         onProgress: ((done: Long, total: Long) -> Unit)? = null
     ): File =
         withContext(Dispatchers.IO) {
             var lastError: Throwable? = null
             repeat(MAX_RETRY) { attempt ->
                 try {
-                    return@withContext downloadOnce(url, dest, referer, onProgress)
+                    return@withContext downloadOnce(url, dest, referer, headers, onProgress)
                 } catch (e: IOException) {
                     lastError = e
                     // 不删 dest：留给下一次 Range 续传
@@ -157,7 +193,8 @@ object HttpFetcher {
         }
 
     private fun downloadOnce(
-        url: String, dest: File, referer: String?, onProgress: ((Long, Long) -> Unit)?,
+        url: String, dest: File, referer: String?, headers: Map<String, String>,
+        onProgress: ((Long, Long) -> Unit)?,
         timeoutMs: Long = 20_000L
     ): File {
         dest.parentFile?.mkdirs()
@@ -168,6 +205,8 @@ object HttpFetcher {
             .header("Accept", "*/*")
         if (resumeFrom > 0) rb.header("Range", "bytes=$resumeFrom-")
         referer?.let { rb.header("Referer", it) }
+        // 第三方源下载（ROM/视频）要带上该源解出的 __test cookie，否则服务端回挑战页
+        headers.forEach { (k, v) -> rb.header(k, v) }
         // 大文件允许更长的读超时：盒子网络慢但连接是活的，宁可等也不要从头再来
         val call = client().newBuilder()
             .readTimeout(timeoutMs, TimeUnit.MILLISECONDS)

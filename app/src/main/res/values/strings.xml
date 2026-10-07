@@ -4,6 +4,7 @@
     <string name="app_slogan">手柄 · 电视 · 童年</string>
 
     <!-- 大厅 -->
+    <string name="lobby_plugins">插件</string>
     <string name="lobby_search">搜索</string>
     <string name="lobby_settings">设置</string>
     <string name="loading">正在抓取 yikm.net…</string>
@@ -99,8 +100,8 @@
     <string name="plugins_label_platform">归属平台</string>
     <string name="plugins_label_cover_base">封面地址前缀（可选）</string>
     <string name="plugins_label_rom_base">游戏下载前缀（可选）</string>
-    <string name="plugins_cover_base_hint">留空则不出封面</string>
-    <string name="plugins_rom_base_hint">留空则只能看列表，不能下载</string>
+    <string name="plugins_cover_base_hint">封面目录直链，留空 = 按 gamelist.xml 所在目录自动解析</string>
+    <string name="plugins_rom_base_hint">ROM 目录直链，留空 = 按清单目录自动解析；没有直链就纯浏览</string>
     <string name="plugins_save">保存</string>
     <string name="plugins_saved">已保存</string>
     <string name="plugins_need_url">请填写 XML 地址</string>
@@ -116,4 +117,5 @@
     <string name="plugin_platform_gba">GBA</string>
     <string name="plugin_platform_sfc">SFC</string>
     <string name="plugin_platform_md">MD</string>
+    <string name="video_play_error_fmt">视频播放失败：%1$s</string>
 </resources>

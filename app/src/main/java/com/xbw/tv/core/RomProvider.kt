@@ -2,6 +2,7 @@ package com.xbw.tv.core
 
 import android.content.Context
 import android.util.Log
+import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.SiteConfig
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
@@ -218,7 +219,144 @@ const val NO_ROM_PLATFORM = "网页版游戏"
     }
 
     /**
-     * 只抓 play 页判断这款游戏有没有原生核心（**不下载 ROM**）。
+     * 第三方插件源的直链 ROM：跳过 play 页，直接从 [romUrl] 下载。
+     *
+     * 插件条目在 XML 里只给相对路径 + 用户在编辑页选的平台，没有 yikm 的
+     * gameType/gromname/gsystem。核心名由 [CoreRouter.coreForPlatform] 从平台 key
+     * 直接映射（fc→fceumm 等）——"如果是 FC 就用之前的核心"，不用给插件重新编核心。
+     *
+     * 街机（fbneo）需要整套 zip 且依赖 BIOS，插件源没给 gsystem，只能尽力而为：
+     * zip 原样落盘试跑，缺 BIOS 时核心自己会报错，属于插件源该补的平台信息。
+     */
+    suspend fun prepareDirect(
+        context: Context,
+        gameId: String,
+        romUrls: List<String>,
+        platformKey: String?,
+        cookie: String?,
+        romFileName: String? = null
+    ): RomResult {
+        val dir = cacheDirOf(context, gameId)
+        evictIfNeeded(context, gameId)
+        val meta = File(dir, ".romspec")
+        if (meta.exists()) {
+            val lines = meta.readLines()
+            if (lines.size >= 3) {
+                val f = File(lines[1])
+                if (f.exists() && f.length() > 16) {
+                    dir.setLastModified(System.currentTimeMillis())
+                    return RomResult.Ready(RomSpec(lines[0], f, File(dir, "system"), true))
+                }
+            }
+            meta.delete()
+        }
+        val core = CoreRouter.coreForPlatform(platformKey)
+            ?: return RomResult.Unsupported(platformKey?.let { GameCategory.fromKey(it).title } ?: "该平台")
+        if (romUrls.isEmpty()) return RomResult.Failed("插件条目没有可用的 ROM 直链")
+
+        // 1) 候选地址逐个试：GBK 直链 → 通用直链 → down.php 网关，
+        //    直到拿到一个不是 HTML/挑战页的真文件（40x、挑战页都换下一个）
+        //    FBNeo 必须按 zip 原名落盘（DRV_NAME 依赖文件名），所以 raw 用
+        //    原始 zip 名而不是 rom.raw
+        val raw = File(dir, if (core == "fbneo" && !romFileName.isNullOrBlank()) romFileName else "rom.raw")
+        var lastError = "所有候选地址均不可用"
+        var ok = false
+        for (url in romUrls) {
+            raw.delete()
+            try {
+                val headers = cookie?.let { mapOf("Cookie" to "__test=$it") } ?: emptyMap()
+                HttpFetcher.downloadToFile(url, raw, headers = headers)
+            } catch (e: Exception) {
+                lastError = e.message ?: "网络异常"
+                Log.w(TAG, "plugin rom candidate failed: $url（$lastError）")
+                continue
+            }
+            if (raw.length() <= 16) {
+                lastError = "源返回了空/错误页（${raw.length()}B）"
+                Log.w(TAG, "plugin rom candidate empty: $url")
+                continue
+            }
+            if (looksLikeChallenge(raw)) {
+                lastError = "源返回了挑战页（cookie 可能失效）"
+                Log.w(TAG, "plugin rom candidate is challenge/html: $url")
+                continue
+            }
+            ok = true
+            break
+        }
+        if (!ok) {
+            raw.delete()
+            return RomResult.Failed("ROM 下载失败（$lastError）")
+        }
+
+        // 2) 解包：FBNeo 要整套 zip；其余拆出单个 rom
+        val zip = core == "fbneo"
+        val rom = when {
+            zip -> raw
+            is7zFile(raw) -> unwrap7z(dir, raw) ?: run {
+                raw.delete()
+                return RomResult.Failed("7z 解包失败（ROM 壳损坏或格式不支持）")
+            }
+            else -> unwrapZip(dir, raw) ?: run {
+                raw.delete()
+                return RomResult.Failed("ZIP 解包失败（ROM 壳损坏或格式不支持）")
+            }
+        }
+        if (rom.length() <= 16) {
+            rom.delete()
+            return RomResult.Failed("ROM 内容为空（下载到了 HTML 错误页？）")
+        }
+
+        // 3) 写规格缓存（没有 gsystem/兜底/BIOS，插件源不提供这些）
+        val sysDir = File(dir, "system").apply { mkdirs() }
+        meta.writeText(listOf(core, rom.absolutePath, "").joinToString("\n"))
+        Log.i(TAG, "plugin rom ready id=$gameId core=$core size=${rom.length()}")
+        return RomResult.Ready(RomSpec(core, rom, sysDir, false))
+    }
+
+    /**
+     * U盘/本地 ROM：文件已在盒子上，不下载直接喂核心。
+     *
+     * FBNeo 必须整套 zip（靠 zip 内文件名匹配机型表），原样引用 U盘文件；
+     * 其它平台里 zip/7z 是壳的，先在缓存目录解出单个 rom（**绝不删 U盘原文件**——
+     * unwrap* 会删它的输入，所以先拷进缓存再解）。
+     * 写 .romspec 缓存，二次进直接命中。缺核心时仍按“没核心”提示。
+     */
+    fun prepareLocal(
+        context: Context,
+        gameId: String,
+        localFile: File,
+        platformKey: String?
+    ): RomResult {
+        if (!localFile.exists() || localFile.length() <= 16) {
+            return RomResult.Failed("U盘 ROM 文件不可用（未挂载或文件已删除）")
+        }
+        val core = CoreRouter.coreForPlatform(platformKey)
+            ?: return RomResult.Unsupported(platformKey?.let { GameCategory.fromKey(it).title } ?: "该平台")
+        val dir = cacheDirOf(context, gameId)
+        val meta = File(dir, ".romspec")
+        val sysDir = File(dir, "system").apply { mkdirs() }
+        val isShell = localFile.name.endsWith(".zip", ignoreCase = true) || is7zFile(localFile)
+        val rom = when {
+            core == "fbneo" -> localFile                    // 整套 zip 原样给
+            !isShell -> localFile                            // 单文件直接给
+            else -> {                                        // 壳文件：缓存目录里解开
+                val copy = File(dir, "usb_copy.${localFile.extension.ifBlank { "rom" }}")
+                runCatching { localFile.copyTo(copy, overwrite = true) }.getOrNull()
+                when {
+                    copy.length() <= 16 -> localFile
+                    is7zFile(copy) -> unwrap7z(dir, copy) ?: copy
+                    else -> unwrapZip(dir, copy) ?: copy
+                }
+            }
+        }
+        if (rom.length() <= 16) return RomResult.Failed("ROM 文件为空")
+        meta.writeText(listOf(core, rom.absolutePath, "").joinToString("\n"))
+        Log.i(TAG, "usb/local rom ready id=$gameId core=$core path=${rom.absolutePath} size=${rom.length()}")
+        return RomResult.Ready(RomSpec(core, rom, sysDir, false))
+    }
+
+    /** 只抓 play 页判断这款游戏有没有原生核心（**不下载 ROM**）。
      * 搜索结果过滤用它：远程搜索会返回 Java/NDS/DOS/Flash 等没核心的平台，
      * 没有这层过滤用户点进去只会看到"暂无原生核心"。
      */
@@ -320,6 +458,22 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             }
         }
         Log.i(TAG, "cheat ini ready: ${segments.size} copy(ies), ${content.length} bytes")
+    }
+
+    /**
+     * 下到的文件到底是不是个 HTML/挑战页：站点 cookie 失效时会把 ROM 请求
+     * 重定向到去往挑战页或直接回一段 <html>，长度又远小于真 ROM，特征可判。
+     */
+    private fun looksLikeChallenge(f: File): Boolean {
+        if (f.length() >= 64_000) return false
+        val head = f.inputStream().use { ins ->
+            val buf = ByteArray(160)
+            val n = ins.read(buf)
+            String(buf, 0, n.coerceAtLeast(0), Charsets.UTF_8)
+        }
+        val t = head.trimStart()
+        return t.startsWith("<") &&
+                (t.contains("<html", true) || t.contains("toNumbers") || t.contains("<!doctype", true))
     }
 
     /** PK 头则解 zip（取最大文件——站点 zip 里就一个 rom），否则原样使用。

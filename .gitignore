@@ -19,7 +19,9 @@ vendor/
 
 # 散落产物
 *.so
-*.nes
+/*.nes
+*.srm
+build_log.txt
 
 # Node 工具链（tools/ 的本地依赖）
 node_modules/
@@ -29,3 +31,6 @@ node_modules/
 .ohmyagent/
 memory/
 MEMORY.md
+
+# 免费主机部署脚本（本机自用，不入库）
+server/

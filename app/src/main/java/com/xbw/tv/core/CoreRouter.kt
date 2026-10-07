@@ -81,6 +81,20 @@ object CoreRouter {
         else -> null
     }
 
+    /**
+     * 分类 key → libretro 核心名。官方站靠 play 页的 gromname 猜，这里反过来：
+     * 第三方插件源在 XML 里不声明格式，只有用户在编辑页选的平台（如 fc）。
+     * "如果是 FC 就用之前的核心"就是走这张表，无须为插件再编任何核心。
+     */
+    fun coreForPlatform(categoryKey: String?): String? = when (categoryKey) {
+        GameCategory.FC.key -> "fceumm"
+        GameCategory.ARCADE.key -> "fbneo"
+        GameCategory.SFC.key -> "snes9x"
+        GameCategory.GBA.key -> "mgba"
+        GameCategory.MD.key -> "genesis_plus_gx"
+        else -> null
+    }
+
     /** 有原生核心的平台（拼音索引只建这些，搜索结果也只放行这些） */
     val playableCategoryKeys: List<String> =
         listOf("fceumm", "fbneo", "snes9x", "mgba", "genesis_plus_gx")

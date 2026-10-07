@@ -6,6 +6,7 @@ import java.io.File
 import javax.crypto.Cipher
 import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import kotlinx.coroutines.delay
 
 /**
  * 能解开 JS cookie 挑战的抓取器。
@@ -29,19 +30,41 @@ object AesChallenge {
     private const val TAG = "AesChallenge"
     private const val MAX_ROUNDS = 10
 
+    /** 429 后等这麼久再重试（服务器对挑战后紧接的请求容易限流） */
+    private const val RATE_LIMIT_DELAY_MS = 1500L
+    /** 解出 cookie 后、带 cookie 重试前的小停顿，模拟浏览器 reload 节奏 */
+    private const val SOLVE_DELAY_MS = 700L
+
     /** 挑战页特征：出现 toNumbers(" 就是它 */
     fun isChallenge(body: String): Boolean = body.contains("toNumbers(")
 
     /**
      * 抓取 [url]，中途遇到挑战就解完重试。
+     * 服务端会限流挑战后紧接的请求（HTTP 429），这里解完稍等、429 再等重试。
      * @param cookieJar 已有的 cookie，回写更新后的（同一个源复用，省掉重复握手）
      */
     suspend fun fetch(url: String, cookieJar: MutableMap<String, String>? = null): String {
         var cookie = cookieJar?.get(COOKIE)?.let { "$COOKIE=$it" }
+        var rateRetries = 2
         repeat(MAX_ROUNDS) {
             val headers = buildMap<String, String> { cookie?.let { put("Cookie", it) } }
-            val body = HttpFetcher.fetchText(url, headers, noCache = true)
+            val body = try {
+                HttpFetcher.fetchText(url, headers, noCache = true)
+            } catch (e: HttpFetcher.FetchException) {
+                if (e.httpCode == 429 && rateRetries > 0) {
+                    rateRetries--
+                    Log.w(TAG, "rate-limited(429) for $url, wait ${RATE_LIMIT_DELAY_MS}ms then retry")
+                    delay(RATE_LIMIT_DELAY_MS)
+                    return@repeat
+                }
+                throw e
+            }
             if (!isChallenge(body)) {
+                if (body.isBlank()) {
+                    Log.w(TAG, "fetch $url -> EMPTY BODY (cookie=${cookie?.substringAfter("=")?.take(8)})")
+                } else {
+                    Log.i(TAG, "fetch $url -> ${body.length}B preview=${body.take(96)}")
+                }
                 return body
             }
             val solved = solve(body) ?: throw IllegalStateException("挑战页无法解析")
@@ -54,6 +77,8 @@ object AesChallenge {
             cookie = "$COOKIE=$solved"
             cookieJar?.set(COOKIE, solved)
             Log.i(TAG, "solved challenge for $url, cookie=$solved")
+            if (rateRetries < 2) rateRetries = 2   // 重新开始，429 后还能重试
+            delay(SOLVE_DELAY_MS)
         }
         throw IllegalStateException("挑战轮数超过 $MAX_ROUNDS")
     }
@@ -92,7 +117,8 @@ object AesChallenge {
         }
     }
 
-    private const val COOKIE = "__test"
+    /** 挑战后的会话 cookie 名（资源直链有时也要带它才回 200） */
+    const val COOKIE = "__test"
 }
 
 /**
@@ -100,8 +126,8 @@ object AesChallenge {
  *
  * 刻意不用 DOM/反射式 XML 框架：这类清单动辄几百 KB，用 [XmlPullParser] 流式过一遍
  * 内存占用低，而且 libxml 遇到站点里的非法实体不会像某些 DOM 实现那样直接抛异常。
- * 只需认识 `<game>` 下的 path/name/sortable/image/lang 五个字段，其余（playcount、
- * lastplayed、gametime、region）跳过。
+ * 只需认识 `<game>` 下的 path/name/sortable/image/video/lang 这几个字段，其余
+ * （playcount、lastplayed、gametime、region）跳过。
  */
 object GamelistParser {
 
@@ -113,6 +139,7 @@ object GamelistParser {
         val name: String,
         val sortname: String,
         val image: String,
+        val video: String,
         val lang: String
     )
 
@@ -123,6 +150,7 @@ object GamelistParser {
         val name = StringBuilder()
         val sort = StringBuilder()
         val image = StringBuilder()
+        val video = StringBuilder()
         val lang = StringBuilder()
         var cur = ""
         // 用 XmlPullParserFactory 而不是 android.util.Xml：后者在 JVM 单测里是
@@ -138,7 +166,7 @@ object GamelistParser {
                     if (tag.equals("game", true)) {
                         inGame = true
                         path.setLength(0); name.setLength(0); sort.setLength(0)
-                        image.setLength(0); lang.setLength(0)
+                        image.setLength(0); video.setLength(0); lang.setLength(0)
                     } else if (inGame) cur = tag.lowercase()
                 }
 
@@ -147,6 +175,7 @@ object GamelistParser {
                     "name" -> name.append(parser.text)
                     "sortname" -> sort.append(parser.text)
                     "image" -> image.append(parser.text)
+                    "video" -> video.append(parser.text)
                     "lang" -> lang.append(parser.text)
                 }
 
@@ -160,6 +189,7 @@ object GamelistParser {
                                 name = name.toString().trim(),
                                 sortname = sort.toString().trim(),
                                 image = image.toString().trim(),
+                                video = video.toString().trim(),
                                 lang = lang.toString().trim()
                             )
                         }

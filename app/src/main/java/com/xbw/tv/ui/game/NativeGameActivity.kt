@@ -51,6 +51,18 @@ class NativeGameActivity : AppCompatActivity() {
         const val EXTRA_COVER = "extra_cover"
         const val EXTRA_PLAY_URL = "extra_play_url"
         const val EXTRA_TAGS = "extra_tags"
+        /** 第三方插件源的直链 ROM（非空时跳过 play 页直接下载） */
+        const val EXTRA_ROM_URL = "extra_rom_url"
+        /** 第三方插件源的候选 ROM 直链（按优先级排，下载逐个试，兜底用） */
+        const val EXTRA_ROM_URLS = "extra_rom_urls"
+        /** 第三方插件源条目在清单里的原始文件名（FBNeo 要按 zip 原名落盘） */
+        const val EXTRA_ROM_NAME = "extra_rom_name"
+        /** 第三方插件源声明的平台（GameCategory.key） */
+        const val EXTRA_PLATFORM = "extra_platform"
+        /** 第三方插件源解出的会话 cookie 值（源是 cookie 网盘时 ROM 也要带） */
+        const val EXTRA_COOKIE = "extra_cookie"
+        /** U盘本地 ROM 的绝对路径（有值时跳过下载与 play 页，直接进核心） */
+        const val EXTRA_LOCAL_PATH = "extra_local_path"
 
         /** GameButton → libretro JOYPAD 位（键名以 retro.h 1.10 为准） */
         private val RETRO_BIT: Map<GameButton, Int> = mapOf(
@@ -80,6 +92,12 @@ class NativeGameActivity : AppCompatActivity() {
     private var coverUrl: String? = null
     private var playUrl = ""
     private var tags: List<String> = emptyList()
+    private var directRomUrl: String? = null
+    private var directRomUrls: List<String> = emptyList()
+    private var directRomName: String? = null
+    private var directPlatform: String? = null
+    private var directCookie: String? = null
+    private var localRomPath: String? = null
 
     private var toolbarVisible = false
     private var paused = false
@@ -119,12 +137,18 @@ class NativeGameActivity : AppCompatActivity() {
             .takeUnless { it.isNullOrBlank() }
             ?: "https://www.yikm.net/play?id=$gameId"
         tags = intent.getStringArrayExtra(EXTRA_TAGS)?.toList() ?: emptyList()
+        directRomUrl = intent.getStringExtra(EXTRA_ROM_URL)?.takeIf { it.isNotBlank() }
+        directRomUrls = intent.getStringArrayListExtra(EXTRA_ROM_URLS)?.filter { it.isNotBlank() }
+            ?: emptyList()
+        directRomName = intent.getStringExtra(EXTRA_ROM_NAME)?.takeIf { it.isNotBlank() }
+        directPlatform = intent.getStringExtra(EXTRA_PLATFORM)
+        directCookie = intent.getStringExtra(EXTRA_COOKIE)
+        localRomPath = intent.getStringExtra(EXTRA_LOCAL_PATH)?.takeIf { it.isNotBlank() }
 
         if (gameId.isNotEmpty()) {
             lifecycleScope.launch {
                 com.xbw.tv.XbwApplication.repository(application).markPlayed(
-                    GameItem(id = gameId, name = gameName, coverUrl = null,
-                        playUrl = "https://www.yikm.net/play?id=$gameId")
+                    GameItem(id = gameId, name = gameName, coverUrl = coverUrl, playUrl = playUrl)
                 )
             }
         }
@@ -149,7 +173,21 @@ class NativeGameActivity : AppCompatActivity() {
         lifecycleScope.launch {
             binding.loadingText.text = "正在准备 ROM…"
             val result = withContext(Dispatchers.IO) {
-                RomProvider.prepare(this@NativeGameActivity, gameId)
+                // U盘本地 ROM：直接进核心，不下载也不抓 play 页；
+                // 第三方插件源带直链 ROM：走 prepareDirect，别去抓 yikm play 页；
+                // 候选列表优先（逐个试到真文件），老的单个直链兜底
+                when {
+                    localRomPath != null -> RomProvider.prepareLocal(
+                        this@NativeGameActivity, gameId, File(localRomPath!!), directPlatform
+                    )
+                    directRomUrls.isNotEmpty() -> RomProvider.prepareDirect(
+                        this@NativeGameActivity, gameId, directRomUrls, directPlatform, directCookie, directRomName
+                    )
+                    directRomUrl != null -> RomProvider.prepareDirect(
+                        this@NativeGameActivity, gameId, listOf(directRomUrl!!), directPlatform, directCookie
+                    )
+                    else -> RomProvider.prepare(this@NativeGameActivity, gameId)
+                }
             }
             // 分三类提示：没核心 / 下载或站点失败（可重试）/ 真加载失败
             val spec = when (result) {

@@ -4,7 +4,7 @@
 
 三条铁律贯穿全部代码：
 
-1. **不内置任何游戏数据** —— 列表、封面、ROM、模拟器核心全部实时来自 yikm.net 与自编译 libretro 核心；
+1. **不内置任何游戏数据** —— 列表、封面、ROM、模拟器核心全部实时来自 yikm.net、用户自建的第三方源（gamelist.xml）与自编译 libretro 核心；
 2. **交互全部原生、引擎全原生** —— 大厅/搜索/设置/工具条是原生控件，游戏画面由 libretro 核心 C 层直出（无 WebView）；
 3. **一切皆可手柄操作** —— 方向键 + 确认走天下，遥控器与键盘作为兜底。
 
@@ -56,7 +56,15 @@ minSdk 21（覆盖 Android 5.0+ 的绝大多数盒子）。debug 包名带 `.deb
 | 按键双层映射 + 手柄直改 | 设置→按键映射 | `KeySettings` / `KeyMappingActivity` |
 | 手柄热插拔 | 设置→手柄状态 | `GamepadManager` |
 | 自动升级（进游戏静默检测 + 设置→立即检查更新；GitHub Release vN 自动挑最快下载源） | 设置→自动升级 | `UpdateChecker` / `UpdatePrompt` / `UpdateSettings` / FileProvider |
+| 第三方游戏源（插件，2026-10） | 「第三方」「第三方街机」芯片 | `PluginSource` / `PluginRepository` / `GamelistParser`（xml `path/image/video` 支持相对拼接或绝对 http 直链）/ `DirectoryIndexParser` |
 | 站点结构诊断 | 设置→诊断 | `DiagnoseActivity` |
+
+## 第三方游戏源（2026-10 重构）
+
+- **没有内置源**：第三方只剩「FC」「街机」两个平台选项（`PluginEditActivity` 平台选择器即此二项），全部由用户在「插件」页自建条目。
+- **XML 方式**：源地址填一份 retroFE/Emby 规范 `gamelist.xml` 的 URL；`<path>`（ROM）、`<image>`（封面）、`<video>`（预览）既支持相对路径（自动拼接源 base，GBK 文件名自动转码），也支持**绝对 http(s) 直链原样透传**（下载请求直接打当前 URL，不拼 base）。列表地址带 query 且勾选 GBK 编码时会让位给纯路径匹配，属已知取舍。
+- **免费主机部署**（无 autoindex、静态目录拉不出列表的主机）：把 `server/gamelist.php` 与 `server/download.php` 传上去，两者 `$root` 指向同一 ROM 目录；`gamelist.php` 扫描目录输出标准 xml 且 `<path>` 直接写成本机的 `download.php?f=…`（文件名按磁盘原始字节 URL 编码，UTF-8/GBK 下载端按字节还原），APK 只需把 `http://主机/gamelist.php` 填成源地址即可。正常主机不受影响，也可完全不用 PHP。
+- **兼容挑战**：`__test` 类 cookie 挑战由 `GamelistPlugin` 自动应答（AesChallenge），遇到站点限流按 429 自动退避重试。
 
 ## 目录结构
 
@@ -73,11 +81,13 @@ app/src/main/java/com/xbw/tv/
     GameButton · KeySettings（两层映射+菜单热键）· MotionKeyBridge（轴→方向键）· GamepadManager（热插拔）
   ui/
     lobby/ search/ settings/ game/ diagnose/ ｜ common（焦点动效/导航工具）
-  core/                     # ★ 原生引擎层（见 docs/YIKM_SITE_STRUCTURE.md §2.6）
-    CoreRouter.kt           # ★ 平台 ↔ 核心 唯一映射（play 页字段解析 + 搜索过滤判定）
-    RetroCore.kt            # JNI 宿主封装：生命周期/AudioTrack/位图输入/金手指下发
-    RomProvider.kt          # yikm id → ROM 文件（gromname 直链下载 + ZIP/7z 解包 + 缓存），失败分「无核心/下载失败」两类
+core/                     # ★ 原生引擎层（见 docs/YIKM_SITE_STRUCTURE.md §2.6）
+  CoreRouter.kt           # ★ 平台 ↔ 核心 唯一映射（play 页字段解析 + 搜索过滤判定）
+  RetroCore.kt            # JNI 宿主封装：生命周期/AudioTrack/位图输入/金手指下发
+  RomProvider.kt          # yikm id → ROM 文件（gromname 直链下载 + ZIP/7z 解包 + 缓存），失败分「无核心/下载失败」两类
 app/src/main/cpp/xbw_core.c # 通用 libretro 宿主：dlopen 核心 + 软件渲染 + SRAM + 存档 + 金手指队列
+nes/                        # FC 改版专辑数据集：rom(.nes)+封面(png)+gamelist.xml（构建/部署用，不写进 APK）
+server/                     # 免费主机 PHP：gamelist.php（扫目录生成 xml，<path> 写 download.php?f= 绝对直链）+ download.php（原字节还原文件名、防穿越）
 fceumm/                     # libretro-fceumm 上游源码编译模块 → libfceumm.so（FC）
 fbneo/                      # libretro-fbneo 编译模块 → libfbneo.so（街机；cheat 为上游空实现）
 snes9x/                     # libretro-snes9x 编译模块 → libsnes9x.so（SFC，7z ROM）

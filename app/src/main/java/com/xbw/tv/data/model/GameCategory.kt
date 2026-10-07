@@ -34,8 +34,12 @@ enum class GameCategory(
     DOS("dos", "DOS", "/nes?e=6&tag="),
     FLASH("flash", "Flash", "/nes?e=9&tag="),
     H5("h5", "H5 游戏", "/nes?tag=1"),
-    /** 绑定了 platform=fc 的第三方源（gamelist.xml 插件），数据来自 [PluginRepository] */
-    FC_THIRD("fc_third", "FC第三方", null),
+    /** 所有绑定了平台的第三方源（gamelist.xml 插件，可能有 FC 也可能有街机…），见 [PluginRepository] */
+    THIRD("third", "第三方", null),
+    /** 绑定了街机平台的第三方源（与 [THIRD] 分开成独立分类，标题要能看出来是街机） */
+    THIRD_ARCADE("third_arcade", "第三方街机", null),
+    /** U盘本地游戏（自动扫描挂载的 USB 卷里的常见 ROM 扩展名），见 data/usb/UsbScanner */
+    USB("usb", "U盘游戏", null),
     FAVORITE("favorite", "我的收藏", null),
     RECENT("recent", "最近玩过", null);
 
@@ -52,7 +56,7 @@ enum class GameCategory(
          * 分类仍然保留在 [entries] 里 —— 老链接、缓存里的 categoryKey 还能正常解析。
          */
         val lobbyChips: List<GameCategory> = listOf(
-            ALL, FC, ARCADE, GBA, SFC, MD, FC_THIRD, FAVORITE, RECENT
+            ALL, FC, ARCADE, GBA, SFC, MD, THIRD, THIRD_ARCADE, USB, FAVORITE, RECENT
         )
 
         fun fromKey(key: String?): GameCategory =

@@ -25,7 +25,19 @@ data class GameItem(
     val coverUrl: String?,
     val playUrl: String,
     val tags: List<String> = emptyList(),
-    val source: String = SOURCE_HOME
+    val source: String = SOURCE_HOME,
+    /** 第三方插件条目自带的预览/正片视频（gamelist.xml 的 <video>，可选） */
+    val videoUrl: String? = null,
+    /** 第三方插件条目在清单里的原始相对路径（如 ./06文字/x.nes），
+     *  下载时要拆目录+文件名拼站点专用网关的 query */
+    val rawPath: String = "",
+    /** 第三方插件条目在清单里的原始封面相对路径（如 ./06文字/x.png）；
+     *  预取封面时按它重新拼 GBK/UTF-8 地址，而不是用 [coverUrl] 里那个会 404 的默认编码 */
+    val rawCover: String = "",
+    /** U盘条目的平台 key（由扩展名推断，fc/arcade/gba/sfc/md）；本地游戏用它选核心 */
+    val platformKey: String = "",
+    /** U盘条目的本地文件绝对路径；有值表示这是个本地 ROM 文件，不走网络下载 */
+    val localPath: String = ""
 ) {
     /** 主分类（第一个标签），UI 角标用 */
     val primaryTag: String get() = tags.firstOrNull().orEmpty()
@@ -43,5 +55,7 @@ data class GameItem(
         const val SOURCE_FAVORITE = "favorite"
         /** 第三方源插件（gamelist.xml 等），见 data/plugin */
         const val SOURCE_PLUGIN = "plugin"
+        /** U盘本地游戏（自动扫描挂载卷），见 data/usb/UsbScanner */
+        const val SOURCE_USB = "usb"
     }
 }
