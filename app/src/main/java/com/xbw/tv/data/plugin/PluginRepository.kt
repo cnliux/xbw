@@ -51,11 +51,13 @@ object PluginRepository {
     // ---------- 源的管理 ----------
 
     fun sources(context: Context): List<PluginSource> {
+        val builtin = PluginSource.builtinSources()
+        // 内置源进不了用户配置（save 过滤 !builtin）；用户手动加的若与内置同 URL/id，
+        // 以内置为准（去重掉，避免大厅出现两个一样的芯片）
         val user = PluginSource.parseList(
             prefs(context).getString(KEY_SOURCES, "") ?: ""
-        )
-        // 不内置任何源（2026-10 决定）：第三方全部由用户自建，平台只分 FC/街机
-        return user
+        ).filter { u -> builtin.none { it.id == u.id || it.listUrl == u.listUrl } }
+        return builtin + user
     }
 
     /** 按条目 id（plug-<源id>-…）反查所属源；找不到（源已删）返回 null */
@@ -84,10 +86,6 @@ object PluginRepository {
     fun remove(context: Context, id: String) {
         save(context, sources(context).filterNot { it.id == id && !it.builtin })
     }
-
-    /** 绑定了某个平台的第三方源（大厅的"FC第三方"分类用它） */
-    fun forPlatform(context: Context, platformKey: String): List<PluginSource> =
-        sources(context).filter { it.platform == platformKey }
 
     // ---------- 加载 ----------
 
@@ -179,22 +177,19 @@ object PluginRepository {
         base: String
     ): List<GameItem> {
         val out = ArrayList<GameItem>()
+        val cat = src.category
+        val platformKey = src.platform
         for (e in entries) {
             if (e.isDir) continue
             val rel = e.url.removePrefix(base.trimEnd('/') + "/")
             if (rel.isBlank()) continue
             val stem = e.name.substringBeforeLast('.').trim()
-            val platformKey = itemPlatformKey(src, e.name)
-            val cat = GameCategory.fromKey(platformKey)
             out += GameItem(
                 id = src.idPrefix + uuid12(rel),
                 name = stem.ifEmpty { e.name.trim() },
                 coverUrl = null,
                 playUrl = e.url,
-                tags = listOf(
-                    if (cat.playable) cat.title
-                    else if (src.playable) src.category.title else src.title
-                ),
+                tags = listOf(if (cat.playable) cat.title else src.title),
                 source = GameItem.SOURCE_PLUGIN,
                 rawPath = rel,
                 rawCover = "",
@@ -204,12 +199,7 @@ object PluginRepository {
         return out
     }
 
-    /**
-     * 绑到某平台的所有第三方源合并去重（大厅分类 / 搜索用） */
-    suspend fun loadByPlatform(context: Context, platformKey: String): List<GameItem> =
-        loadMany(context, forPlatform(context, platformKey))
-
-    /** 全部第三方源的所有条目合并去重（聚合浏览 / 搜索用） */
+    /** 全部第三方源的所有条目合并去重（搜索用） */
     suspend fun loadAll(context: Context): List<GameItem> =
         loadMany(context, sources(context))
 
@@ -233,15 +223,18 @@ object PluginRepository {
         // 目录引导源下载/封面的基准目录必须是服务器给的真实字节目录；
         // XML 源用 [PluginSource.baseDir]（清单所在目录）。
         val base = effectiveBase ?: src.baseDir
+        val cat = src.category
+        val platformKey = src.platform
         return entries.mapNotNull { e ->
-            // 平台按文件扩展名派生。只有"一份文件跨全部平台"的合并清单
-            // （filterByPlatform，如街机视口）按它过滤：别的平台条目留在各自分类；
-            // 独立按自家 xml 解析的源（FC 的 game/nes/gamelist.xml、自建源）不过滤，
-            // 否则 FC 里 zip/7z 打包的 ROM 会被误丢。platformKey 始终写入条目，
-            // 进核心时选对的核心（扩展名识别不出平台的按源平台归口）。
-            val platformKey = itemPlatformKey(src, e.path)
-            val cat = GameCategory.fromKey(platformKey)
-            if (src.filterByPlatform && cat.playable && cat.key != src.platform) return@mapNotNull null
+            // 「合并清单」过滤（filterByPlatform，如 186317 的 game/gamelist.xml）：
+            // 扩展名能判出另一平台的条目直接丢（街机视口里的 .nes FC ROM 不混进来）。
+            // 独立清单不过滤 —— FC 里 zip/7z 打包的 ROM 不能被扩展名误导成街机。
+            // 注意：这只影响"留哪些条目"，条目的运行核心始终是用户在编辑页选的那个。
+            if (src.filterByPlatform && src.playable) {
+                val file = e.path.substringAfterLast('/').substringBefore('?')
+                val ext = UsbScanner.platformOf(file)
+                if (ext != null && ext != platformKey) return@mapNotNull null
+            }
             val (title, initials) = GamelistParser.splitName(
                 e.sortname.ifEmpty { e.name }
             )
@@ -249,8 +242,7 @@ object PluginRepository {
             // 拼音首字母来自站点自己塞在 <name> 里的 [xxx]，比我们自己算准
             val tags = listOfNotNull(
                 genre.ifEmpty { null },
-                if (cat.playable) cat.title
-                else if (src.playable) src.category.title else src.title
+                if (cat.playable) cat.title else src.title
             ) + listOfNotNull(initials.takeIf { it.isNotEmpty() }?.let { "拼音:$it" })
             GameItem(
                 // UUID 自带连字符，必须先剥掉再取短哈希，否则 sourceById 按
@@ -275,18 +267,6 @@ object PluginRepository {
     private fun uuid12(bytesOf: String): String =
         java.util.UUID.nameUUIDFromBytes(bytesOf.toByteArray())
             .toString().replace("-", "").take(12)
-
-    /** 条目平台 key：
-     *  - 合并清单（filterByPlatform，仅街机视口）按文件扩展名派生——一份文件跨全部
-     *    平台，必须靠扩展名把 FC/GBA/… 的条目标出来；
-     *  - 独立清单（FC 的 game/nes/gamelist.xml、自建源）**源声明的平台就是权威**——
-     *    文件是自家平台的，FC 里用 zip/7z 打包的 ROM 不能被扩展名误导成街机。 */
-    private fun itemPlatformKey(src: PluginSource, name: String): String =
-        if (src.filterByPlatform) {
-            val file = name.substringAfterLast('/').substringBefore('?')
-            UsbScanner.platformOf(file)
-                ?: if (src.playable) src.platform else ""
-        } else if (src.playable) src.platform else ""
 
     /** 相对路径拼 base；base 为空就返回 null（没有可解析的直链）。
      *  [rel] 本身是绝对 http(s) 地址（xml 直接给 ROM/图片/视频直链）时原样返回，

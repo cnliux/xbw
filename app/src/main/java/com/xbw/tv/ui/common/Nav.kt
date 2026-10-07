@@ -53,9 +53,10 @@ object Nav {
             if (candidates.isNotEmpty()) {
                 // FBNeo（街机）必须按 zip 原名落盘才能匹配 DRV_NAME，把原始文件名传下去
                 val romFileName = item.rawPath.substringAfterLast('/').takeIf { it.isNotBlank() }
-                // 平台优先用条目扩展名派生的 platformKey（防目录源里混着别的平台
-                // 文件被全塞成源平台核心），没有才回源平台
-                val platform = item.platformKey.ifBlank { src.platform }
+                // 运行核心**只用用户在编辑页给该源选的核心**（src.platform）。绝不看
+                // item.platformKey/文件扩展名：否则 FC 源里的 .zip/.7z ROM 会被当成
+                // 街机用 fbneo 跑——这正是"FC 游戏用了街机核心"的根因修法。
+                val platform = src.platform
                 nativeGame(activity, item, candidates, platform, cookie, romFileName)
             } else if (item.videoUrl != null) {
                 playPluginVideo(activity, src, item)

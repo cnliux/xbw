@@ -34,9 +34,11 @@ enum class GameCategory(
     DOS("dos", "DOS", "/nes?e=6&tag="),
     FLASH("flash", "Flash", "/nes?e=9&tag="),
     H5("h5", "H5 游戏", "/nes?tag=1"),
-    /** 所有绑定了平台的第三方源（gamelist.xml 插件，可能有 FC 也可能有街机…），见 [PluginRepository] */
+    /**
+     * 旧的第三方聚合分类，2026-10 起废弃：分类不再写死，每个用户自建源在大厅单个芯片，
+     * 标题由用户设定、核心由用户选择。条目仍保留做旧配置/缓存的 fromKey 兼容，不再展示、不再抓取。
+     */
     THIRD("third", "第三方", null),
-    /** 绑定了街机平台的第三方源（与 [THIRD] 分开成独立分类，标题要能看出来是街机） */
     THIRD_ARCADE("third_arcade", "第三方街机", null),
     /** U盘本地游戏（自动扫描挂载的 USB 卷里的常见 ROM 扩展名），见 data/usb/UsbScanner */
     USB("usb", "U盘游戏", null),
@@ -51,13 +53,16 @@ enum class GameCategory(
 
     companion object {
         /**
-         * 大厅顶部展示的分类：**屏蔽没有原生核心的** NDS / Java / DOS / Flash / H5。
-         * 这些分类点进去整页都是"暂无原生核心"，留着只是浪费一次网络往返和一次点击。
+         * 大厅顶部展示的内置分类：**屏蔽没有原生核心的** NDS / Java / DOS / Flash / H5，
+         * 也不再放死的「第三方 / 第三方街机」聚合芯片——用户自建的源由大厅动态生成独立芯片。
          * 分类仍然保留在 [entries] 里 —— 老链接、缓存里的 categoryKey 还能正常解析。
          */
         val lobbyChips: List<GameCategory> = listOf(
-            ALL, FC, ARCADE, GBA, SFC, MD, THIRD, THIRD_ARCADE, USB, FAVORITE, RECENT
+            ALL, FC, ARCADE, GBA, SFC, MD, USB, FAVORITE, RECENT
         )
+
+        /** 有原生核心、可被第三方源选为运行核心的分类（插件编辑页「运行核心」选择器用它） */
+        val playableCategories: List<GameCategory> = listOf(FC, ARCADE, SFC, GBA, MD)
 
         fun fromKey(key: String?): GameCategory =
             entries.firstOrNull { it.key == key } ?: ALL

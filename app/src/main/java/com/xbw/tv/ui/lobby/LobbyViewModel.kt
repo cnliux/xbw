@@ -11,6 +11,7 @@ import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.model.GameItem
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.YikmParser
+import com.xbw.tv.data.plugin.PluginRepository
 import com.xbw.tv.data.repo.GameRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -24,6 +25,9 @@ import kotlinx.coroutines.launch
  *     └─ 后台强制抓取 → 成功 emit 新数据 RemoteFresh
  *                        失败且无缓存 → Error（可重试）
  *                        失败有缓存  → 保留缓存 + warning
+ *
+ * 分类不是写死的：内置分类（[GameCategory.lobbyChips]）+ 每个用户自建第三方源
+ * 都是大厅顶部的独立芯片（[LobbyCategory]），源删了芯片就消失。
  */
 class LobbyViewModel(
     private val app: Application,
@@ -62,10 +66,11 @@ class LobbyViewModel(
     private val _state = MutableLiveData<State>(State.Idle)
     val state: LiveData<State> = _state
 
-    private val _categories = MutableLiveData<List<GameCategory>>(GameCategory.lobbyChips)
-    val categories: LiveData<List<GameCategory>> = _categories
+    /** 顶部芯片：内置分类 + 用户自建源（顺序：内置可玩 → 用户源 → U盘/收藏/最近） */
+    private val _categories = MutableLiveData<List<LobbyCategory>>(emptyList())
+    val categories: LiveData<List<LobbyCategory>> = _categories
 
-    var currentCategory: GameCategory = GameCategory.ALL
+    var currentCategory: LobbyCategory = LobbyCategory.BuiltIn(GameCategory.ALL)
         private set
 
     /** 当前页：进游戏退出后 onResume 会重新 enter，必须回到本页而不是第 1 页 */
@@ -78,17 +83,55 @@ class LobbyViewModel(
     private var loadJob: Job? = null
     private var pageJob: Job? = null
 
+    init {
+        reloadCategories()
+    }
+
+    /**
+     * 重新装配分类芯片（进大厅/编辑源返回后调用）：
+     * 内置分类固定 + 每个用户源一个芯片（标题=用户写的显示名，位置在 MD 后）。
+     * 当前选中是已删源的话落回「全部游戏」。
+     */
+    fun reloadCategories() {
+        val chips = GameCategory.lobbyChips
+        val mdAt = chips.indexOf(GameCategory.MD) + 1
+        val head = chips.take(mdAt).map { LobbyCategory.BuiltIn(it) }
+        val tail = chips.drop(mdAt).map { LobbyCategory.BuiltIn(it) }
+        val plugins = PluginRepository.sources(app).map { LobbyCategory.Plugin(it) }
+        val next = head + plugins + tail
+        _categories.value = next
+        val cur = currentCategory
+        if (cur is LobbyCategory.Plugin && next.none { it.key == cur.key }) {
+            currentCategory = LobbyCategory.BuiltIn(GameCategory.ALL)
+        }
+    }
+
+    private suspend fun cachedFor(category: LobbyCategory, page: Int): GameRepository.LoadResult? =
+        when (category) {
+            is LobbyCategory.BuiltIn ->
+                repo.peekCache(category.category, page)
+                    ?: runCatching { repo.cachedList(category.category, page) }.getOrNull()
+            is LobbyCategory.Plugin -> repo.peekPluginCache(category.source.id, page)
+        }
+
+    private suspend fun fetchFor(category: LobbyCategory, page: Int): GameRepository.LoadResult =
+        when (category) {
+            is LobbyCategory.BuiltIn -> repo.fetchList(category.category, page, force = true)
+            is LobbyCategory.Plugin -> repo.fetchPlugin(category.source, page, force = true)
+        }
+
     /** 首次进入分类：缓存先行 + 后台刷新 */
-    fun enter(category: GameCategory, forceRefresh: Boolean = true) {
-        if (loadJob?.isActive == true && currentCategory == category && !forceRefresh) return
-        if (currentCategory != category) currentPage = 1   // 换分类从第 1 页开始
+    fun enter(category: LobbyCategory, forceRefresh: Boolean = true) {
+        val switched = currentCategory.key != category.key
+        if (loadJob?.isActive == true && !switched && !forceRefresh) return
+        if (switched) currentPage = 1   // 换分类从第 1 页开始
         val target = currentPage
         currentCategory = category
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
             _state.value = State.Loading
             // 1) 先给内存/磁盘缓存
-            val cached = repo.peekCache(category, target) ?: runCatching { repo.cachedList(category, target) }.getOrNull()
+            val cached = cachedFor(category, target)
             if (!cached?.items.isNullOrEmpty()) {
                 _state.value = State.Content(
                     cached!!.items, true, cached.page, cached.maxPage.coerceAtLeast(cached.page),
@@ -100,7 +143,7 @@ class LobbyViewModel(
                 State.Refreshing((_state.value as State.Content).items)
             else State.Loading
 
-            runCatching { repo.fetchList(category, target, force = true) }
+            runCatching { fetchFor(category, target) }
                 .onSuccess { r ->
                     _state.value = State.Content(r.items, false, r.page, r.maxPage, r.warnings, r.fetchedAt)
                 }
@@ -137,10 +180,10 @@ class LobbyViewModel(
         val cur = _state.value as? State.Content ?: return
         if (target < 1 || target > cur.maxPage || target == cur.page) return
         if (pageJob?.isActive == true) return
+        val cat = currentCategory
         pageJob = viewModelScope.launch {
             // 1) 缓存先行：该页有缓存就先整页切换，避免翻页白屏
-            val cached = repo.peekCache(currentCategory, target)
-                ?: runCatching { repo.cachedList(currentCategory, target) }.getOrNull()
+            val cached = cachedFor(cat, target)
             val hitCache = !cached?.items.isNullOrEmpty()
             currentPage = target   // 立刻记住目标页：加载中途退到游戏再回来也回这里
             _state.value = if (hitCache) {
@@ -153,7 +196,7 @@ class LobbyViewModel(
             }
 
             // 2) 联网抓该页并整页替换
-            runCatching { repo.fetchList(currentCategory, target, force = true) }
+            runCatching { fetchFor(cat, target) }
                 .onSuccess { r ->
                     _state.value = State.Content(r.items, false, r.page, r.maxPage, r.warnings, r.fetchedAt)
                 }

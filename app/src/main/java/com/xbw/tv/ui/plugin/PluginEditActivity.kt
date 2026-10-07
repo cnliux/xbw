@@ -32,8 +32,8 @@ class PluginEditActivity : androidx.appcompat.app.AppCompatActivity() {
         super.onCreate(savedInstanceState)
         b = ActivityPluginEditBinding.inflate(layoutInflater)
         setContentView(b.root)
-        // 2026-10 起第三方只剩 FC / 街机两个选择，其余平台平台不在第三方配置里出现
-        val platforms = listOf(GameCategory.FC, GameCategory.ARCADE)
+        // 运行核心：从 5 个有原生核心的可玩平台里选（XML 不声明平台，必须用户指定）
+        val platforms = GameCategory.playableCategories
         platformAdapter = PlatformAdapter(platforms) { cat ->
             platform = cat
             platformAdapter.selected(cat)
@@ -80,13 +80,22 @@ class PluginEditActivity : androidx.appcompat.app.AppCompatActivity() {
                 status(getString(R.string.plugins_test_fail_fmt, "0 条"), true)
                 return@launch
             }
+            // 编辑已有源时保留它的高级选项（GBK 编码 / 目录引导 / 合并清单过滤），
+            // 别因为这次只改了「显示名称 / 运行核心」就把配置清成默认值
+            val base = intent.getStringExtra(EXTRA_ID)
+                ?.let { id -> PluginRepository.sources(this@PluginEditActivity).firstOrNull { it.id == id } }
+                ?: probe
             PluginRepository.upsert(
                 this@PluginEditActivity,
                 probe.copy(
                     title = name,
                     coverBase = b.etCoverBase.text.toString().trim(),
                     romBase = b.etRomBase.text.toString().trim(),
-                    builtin = false
+                    builtin = false,
+                    gbkUris = base.gbkUris,
+                    dirBootstrap = base.dirBootstrap,
+                    dirMatch = base.dirMatch,
+                    filterByPlatform = base.filterByPlatform
                 )
             )
             b.tvStatus.visibility = View.GONE
@@ -116,7 +125,7 @@ class PluginEditActivity : androidx.appcompat.app.AppCompatActivity() {
     }
 }
 
-/** 平台选择：横向一排 chip，模拟按键上下左右切换（复用 lobby chip 的观感） */
+/** 核心选择：横向一排 chip，每个是一类可玩平台的 libretro 核心（复用 lobby chip 的观感） */
 class PlatformAdapter(
     private val items: List<GameCategory>,
     private val onPick: (GameCategory) -> Unit
@@ -145,9 +154,11 @@ class PlatformAdapter(
 
     override fun onBindViewHolder(h: VH, position: Int) {
         val cat = items[position]
-        h.b.tvName.text = cat.title
         val on = cat == current
-        h.b.tvBadge.visibility = View.GONE
+        // 主标题 = 分类名；角标 = 对应 libretro 核心名（一眼看清选了哪个核心）
+        h.b.tvName.text = cat.title
+        h.b.tvBadge.visibility = View.VISIBLE
+        h.b.tvBadge.text = com.xbw.tv.core.CoreRouter.coreForPlatform(cat.key) ?: ""
         h.b.root.setBackgroundColor(
             h.itemView.context.getColor(if (on) R.color.xbw_card_pressed else R.color.xbw_surface)
         )

@@ -18,6 +18,7 @@ import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.SiteConfig
 import com.xbw.tv.data.net.YikmParser
 import com.xbw.tv.data.plugin.PluginRepository
+import com.xbw.tv.data.plugin.PluginSource
 import com.xbw.tv.data.search.PinyinSearchIndexer
 import com.xbw.tv.data.usb.UsbScanner
 import kotlinx.coroutines.Dispatchers
@@ -120,9 +121,8 @@ class GameRepository(private val db: AppDatabase, private val app: Application? 
         force: Boolean = true
     ): LoadResult {
 if (!category.fetchable) {
-            // FAVORITE / RECENT 分类：本地数据；THIRD：第三方插件源；USB：本地扫描
-            if (category == GameCategory.THIRD) return loadThirdParty(page, force, arcade = false)
-            if (category == GameCategory.THIRD_ARCADE) return loadThirdParty(page, force, arcade = true)
+            // FAVORITE / RECENT 分类：本地数据；USB：本地扫描。第三方源不在
+            // 这个分支里 —— 大厅传的是 LobbyCategory.Plugin，走 [fetchPlugin]。
             if (category == GameCategory.USB) return loadUsb(page, force)
             val items = if (category == GameCategory.FAVORITE) favoriteGames() else recentGames()
             return LoadResult(items, false, 1, 1)
@@ -150,30 +150,28 @@ if (!category.fetchable) {
     }
 
     /**
-     * 第三方插件源的列表（[GameCategory.THIRD] / [GameCategory.THIRD_ARCADE]）。
-     *
-     * 第三方源是**一次性全量清单**（gamelist.xml 几百 KB、几千条），没有分页概念，
-     * 所以这里在内存里切片，把 [PluginRepository] 的结果伪装成普通的分页列表，
+     * 单个第三方源的分页列表。清单是一次性全量（gamelist.xml 几百 KB、几千条），
+     * 这里在内存里切片，把 [PluginRepository] 的结果伪装成普通分页列表，
      * 让大厅的翻页/下拉刷新逻辑一行都不用改。
      *
-     * @param arcade false=THIRD（非街机平台的源聚合）；true=THIRD_ARCADE（仅街机源）。
-     *   街机源和 FC 源分开成独立分类，标题才能标成"第三方街机"。
+     * 每个源在大厅是**独立分类芯片**，互不聚合；条目的运行核心就是用户在该源
+     * 编辑页选的 [PluginSource.platform]，进游戏只认它。
      * 切完页后顺手把这一页的封面预取到本地（GBK 网盘封面要带 cookie 下，
      * Glide 没法带自定义头），失败静默回落占位图。
      */
-    private suspend fun loadThirdParty(page: Int, force: Boolean, arcade: Boolean): LoadResult {
+    suspend fun fetchPlugin(src: PluginSource, page: Int, force: Boolean = true): LoadResult {
         val ctx = app ?: throw IllegalStateException("第三方源需要 Application 上下文")
-        val category = if (arcade) GameCategory.THIRD_ARCADE else GameCategory.THIRD
-        val key = memKey(category.key, page)
+        val key = memKey("plugin:" + src.id, page)
         if (!force) memory.get(key)?.let { return LoadResult(it, true, page, page + 1) }
         return lockFor(key).withLock {
             if (!force) memory.get(key)?.let { return@withLock LoadResult(it, true, page, page + 1) }
-            val all = if (arcade) {
-                PluginRepository.loadByPlatform(ctx, GameCategory.ARCADE.key)
-            } else {
-                PluginRepository.loadMany(ctx, PluginRepository.sources(ctx).filter { it.platform != GameCategory.ARCADE.key })
+            // 源被删/网络挂了：PluginRepository.load 会抛可读异常向上透传
+            val all = try {
+                PluginRepository.load(ctx, src)
+            } catch (e: IllegalStateException) {
+                throw EmptySiteException(e.message ?: "该分类暂时没有可玩游戏")
             }
-            if (all.isEmpty()) throw EmptySiteException("没有配置第三方源，去设置里添加")
+            if (all.isEmpty()) throw EmptySiteException("该分类暂时没有可玩游戏")
             val maxPage = (all.size + PAGE_SIZE - 1) / PAGE_SIZE
             if (page > maxPage) throw EmptySiteException("第 $page 页超出范围")
             val items = all.drop((page - 1) * PAGE_SIZE).take(PAGE_SIZE)
@@ -185,9 +183,17 @@ if (!category.fetchable) {
         }
     }
 
+    /** 插件源的内存缓存同步读（fragment 重建瞬间防闪屏） */
+    fun peekPluginCache(srcId: String, page: Int): LoadResult? {
+        val key = memKey("plugin:$srcId", page)
+        val mem = memory.get(key)
+        if (mem != null) return LoadResult(mem, true, page, page + 1)
+        return null
+    }
+
     /**
      * U盘本地游戏（[GameCategory.USB]）：扫描出来的全量列表在内存里切片伪装分页，
-     * 和 [loadThirdParty]/普通分类同一套分页逻辑。挂载卷变更时重新扫描；
+     * 和 [fetchPlugin]/普通分类同一套分页逻辑。挂载卷变更时重新扫描；
      * 没有可用文件时按"空站点"处理，让 UI 显示可重试的错误并带排查提示。
      */
     private suspend fun loadUsb(page: Int, force: Boolean): LoadResult {

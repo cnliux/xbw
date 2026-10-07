@@ -36,12 +36,16 @@ class PluginAdapter(
         h.b.tvBadge.visibility = if (src.builtin) android.view.View.VISIBLE
         else android.view.View.GONE
         if (src.builtin) h.b.tvBadge.setText(com.xbw.tv.R.string.plugins_builtin)
-        // 内置源不提供删除：它是随包发布的默认源，删了大厅的分类就空了
+        // 内置源随包发布、配置在代码里：不提供编辑/删除（改不了、删了也白删）
+        h.b.btnEdit.visibility = if (src.builtin) android.view.View.GONE
+        else android.view.View.VISIBLE
         h.b.btnDelete.visibility = if (src.builtin) android.view.View.GONE
         else android.view.View.VISIBLE
         h.b.btnDelete.setOnClickListener { onDelete(src) }
         h.b.btnEdit.setOnClickListener { onEdit(src) }
-        h.b.root.setOnClickListener { onEdit(src) }
+        h.b.root.setOnClickListener {
+            if (!src.builtin) onEdit(src)
+        }
     }
 }
 

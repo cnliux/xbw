@@ -88,7 +88,7 @@
     <!-- 第三方游戏源（插件） -->
     <string name="settings_plugins">第三方游戏源</string>
     <string name="plugins_title">第三方游戏源</string>
-    <string name="plugins_hint">支持 gamelist.xml 格式的清单（retroFE / Emby 风格）。填入 XML 地址即可添加，支持站点的 JS cookie 挑战。</string>
+    <string name="plugins_hint">支持 gamelist.xml 格式的清单（retroFE / Emby 风格），含 JS cookie 挑战的站点也能读。显示名称 = 大厅里的分类名；运行核心决定这款源用哪个模拟器核心（每个源一个核心）。</string>
     <string name="plugins_add">添加源</string>
     <string name="plugins_builtin">内置</string>
     <string name="plugins_edit">编辑</string>
@@ -97,7 +97,7 @@
     <string name="plugins_none">还没有自填的源</string>
     <string name="plugins_label_name">显示名称</string>
     <string name="plugins_label_url">gamelist.xml 地址</string>
-    <string name="plugins_label_platform">归属平台</string>
+    <string name="plugins_label_platform">运行核心</string>
     <string name="plugins_label_cover_base">封面地址前缀（可选）</string>
     <string name="plugins_label_rom_base">游戏下载前缀（可选）</string>
     <string name="plugins_cover_base_hint">封面目录直链，留空 = 按 gamelist.xml 所在目录自动解析</string>

@@ -1,5 +1,6 @@
 package com.xbw.tv.data.plugin
 
+import com.xbw.tv.core.CoreRouter
 import com.xbw.tv.data.model.GameCategory
 import org.json.JSONArray
 import org.json.JSONObject
@@ -25,20 +26,23 @@ import org.json.JSONObject
  * down.php 网关 —— 站点已把 `/game/down.php` 改成目录 `/game/`。
  *
  * @param id         稳定 id，由 listUrl 派生哈希（同一条 URL 只能有一个源）
- * @param title      分类上显示的名字（例："FC第三方"）
- * @param platform   归属平台（GameCategory.key）。第三方只留 FC / 街机两个选项；
- *                   XML 本身不声明平台，所以由用户指定走哪个原生核心
+ * @param title      大厅分类芯片上显示的名字，由用户自定（例："我的FC"）
+ * @param platform   运行核心的归属平台（GameCategory.key）。XML 本身不声明平台，
+ *                   所以由用户指定走哪个原生核心（编辑页「运行核心」从 5 个可玩
+ *                   平台里选，进游戏只认它，绝不按文件扩展名猜）
  * @param listUrl    XML 方式 = gamelist.xml 地址；目录方式 = 目录索引页地址
  * @param coverBase  封面 base，可空。`<image>` 的相对路径拼在它后面；
  *                   留空 = 按清单所在目录自动解析（大多数源都这么放）
  * @param romBase    ROM base，可空。留空 = 按清单目录自动解析；空则条目只读不玩
- * @param builtin    兼容老配置保留；2026-10 起不再内置任何源，恒为 false
+ * @param builtin    随包内置的默认源（现只有一个「内置FC」：wget.la 镜像的
+ *                   cnliux/xbw 仓库 nes/gamelist.xml）。内置源不持久化、不可删除编辑，
+ *                   用户源的 builtin 恒 false
  * @param gbkUris    磁盘文件名是 GBK 保留字节的站（186317 这种），朴素的 UTF-8
  *                   百分号编码直链会 404，需要再补一条按 GBK 编码路径段的候选地址。
  * @param dirBootstrap 是否目录引导方式（见类注释的"方式 2"）
  * @param dirMatch   目录方式下匹配目标子目录的名字片段（如 "FBA"），不区分大小写；
  *                   匹配第一个就行，目录的真实字节由服务器 href 给出来
- * @param filterByPlatform 是否按条目扩展名派生的平台过滤（只给"一份文件跨全部平台"
+ * @param filterByPlatform 是否按条目扩展名派生平台过滤（只给"一份文件跨全部平台"
  *                   的合并清单用，如 186317 的 game/gamelist.xml 街机视口）；
  *                   独立按自家 xml 解析的源不开，否则 FC 里用 zip/7z 打包的 ROM
  *                   会被误丢。留空/关掉的自建源不启用此过滤。
@@ -60,6 +64,9 @@ data class PluginSource(
     val category: GameCategory get() = GameCategory.fromKey(platform)
 
     val playable: Boolean get() = category.playable
+
+    /** 用户选定的运行核心名（fc→fceumm、arcade→fbneo…），进游戏只认它 */
+    val coreName: String? get() = CoreRouter.coreForPlatform(platform)
 
     /** 条目 id 前缀，避免和官方站 id 撞车（官方是纯数字） */
     val idPrefix: String get() = "plug-$id-"
@@ -145,9 +152,22 @@ data class PluginSource(
     }
 
     companion object {
-        /** 不再内置任何源（2026-10 决定）：所有第三方源由用户自行添加，平台只有
-         *  FC / 街机两个选项，清单统一走 xml 解析、条目里的 path/image/video 都支持
-         *  绝对 http(s) 直链。builtin 字段保留兼容老配置，但不再有新代码创建内置源。 */
+        /** 内置 FC 清单：cnliux/xbw 仓库的 nes/gamelist.xml，走 wget.la 镜像加速
+         *  （国内直连 raw.githubusercontent.com 不稳）。内置源不进 SharedPreferences，
+         *  随包发布、不可删改，用户自己加了同一条 URL 也会被去重掉。 */
+        const val BUILTIN_FC_URL =
+            "https://wget.la/https://raw.githubusercontent.com/cnliux/xbw/master/nes/gamelist.xml"
+
+        /** 随包内置的默认源（大厅里出现名为「内置FC」的芯片）。改了它要改 [BUILTIN_FC_URL] */
+        fun builtinSources(): List<PluginSource> = listOf(
+            PluginSource(
+                id = deriveId(BUILTIN_FC_URL),
+                title = "内置FC",
+                platform = GameCategory.FC.key,
+                listUrl = BUILTIN_FC_URL,
+                builtin = true
+            )
+        )
 
         fun fromJson(o: JSONObject): PluginSource? {
             val url = o.optString("listUrl").trim()

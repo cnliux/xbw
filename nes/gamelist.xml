@@ -1,15 +1,6 @@
 <?xml version="1.0"?>
 <gameList>
 	<game>
-		<path>./06文字/魔法总动员混沌星辰汉化MS修正.nes</path>
-		<name>M-魔法总动员混沌星辰汉化MS修正[mfzdyh]</name>
-		<sortname>M-魔法总动员混沌星辰汉化MS修正</sortname>
-		<image>./06文字/魔法总动员混沌星辰汉化MS修正.png</image>
-		<playcount>1</playcount>
-		<lastplayed>20220816T074207</lastplayed>
-		<gametime>107</gametime>
-	</game>
-	<game>
 		<path>./01动作/七宝奇谋2.nes</path>
 		<name>Q-七宝奇谋2[qbqm]</name>
 		<sortname>Q-七宝奇谋2</sortname>

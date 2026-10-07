@@ -56,13 +56,16 @@ minSdk 21（覆盖 Android 5.0+ 的绝大多数盒子）。debug 包名带 `.deb
 | 按键双层映射 + 手柄直改 | 设置→按键映射 | `KeySettings` / `KeyMappingActivity` |
 | 手柄热插拔 | 设置→手柄状态 | `GamepadManager` |
 | 自动升级（进游戏静默检测 + 设置→立即检查更新；GitHub Release vN 自动挑最快下载源） | 设置→自动升级 | `UpdateChecker` / `UpdatePrompt` / `UpdateSettings` / FileProvider |
-| 第三方游戏源（插件，2026-10） | 「第三方」「第三方街机」芯片 | `PluginSource` / `PluginRepository` / `GamelistParser`（xml `path/image/video` 支持相对拼接或绝对 http 直链）/ `DirectoryIndexParser` |
+| 第三方游戏源（插件，2026-10） | 大厅动态分类芯片（一个源一个芯片，标题用户自定） | `PluginSource` / `PluginRepository` / `GamelistParser`（xml `path/image/video` 支持相对拼接或绝对 http 直链）/ `DirectoryIndexParser` |
 | 站点结构诊断 | 设置→诊断 | `DiagnoseActivity` |
 
 ## 第三方游戏源（2026-10 重构）
 
-- **没有内置源**：第三方只剩「FC」「街机」两个平台选项（`PluginEditActivity` 平台选择器即此二项），全部由用户在「插件」页自建条目。
+- **内置「内置FC」**：随包发布一个内置源——`PluginSource.BUILTIN_FC_URL`（wget.la 镜像的 cnliux/xbw `nes/gamelist.xml`，运行核心 = fceumm），大厅芯片「内置FC」，常驻不可删改、不持久化；用户若手动添加同一条 URL 会被自动去重，不会出现两个一样的芯片。
+- **分类不写死**：没有「第三方 / 第三方街机」这种死的聚合芯片。每个用户自建的源在大厅是一个**独立分类芯片**（标题 = 用户写的「显示名称」，位置在内置可玩分类之后、U盘游戏之前），删源即消失。
+- **运行核心自选**：XML 不声明平台，用户在编辑页用「运行核心」给这款源选一个 libretro 核心（FCEUmm/FBNeo/SNES9x/mGBA/Genesis-Plus-GX 五个可玩平台各一个）。该源**所有游戏**进游戏都只走这个核心 —— 绝不按文件扩展名猜平台，因此 FC 源里 `.zip/.7z` 打包的 ROM 不会再被误当成街机（修复「FC 用了街机核心」）。
 - **XML 方式**：源地址填一份 retroFE/Emby 规范 `gamelist.xml` 的 URL；`<path>`（ROM）、`<image>`（封面）、`<video>`（预览）既支持相对路径（自动拼接源 base，GBK 文件名自动转码），也支持**绝对 http(s) 直链原样透传**（下载请求直接打当前 URL，不拼 base）。列表地址带 query 且勾选 GBK 编码时会让位给纯路径匹配，属已知取舍。
+- **合并清单**（一份 XML 跨全部平台，如 186317 的 `game/gamelist.xml`）：编辑时可勾选「按扩展名过滤」，只留与所选核心同平台的条目；独立清单勿开此选项，否则 FC 里 zip 打包的 ROM 会被误丢。
 - **免费主机部署**（无 autoindex、静态目录拉不出列表的主机）：把 `server/gamelist.php` 与 `server/download.php` 传上去，两者 `$root` 指向同一 ROM 目录；`gamelist.php` 扫描目录输出标准 xml 且 `<path>` 直接写成本机的 `download.php?f=…`（文件名按磁盘原始字节 URL 编码，UTF-8/GBK 下载端按字节还原），APK 只需把 `http://主机/gamelist.php` 填成源地址即可。正常主机不受影响，也可完全不用 PHP。
 - **兼容挑战**：`__test` 类 cookie 挑战由 `GamelistPlugin` 自动应答（AesChallenge），遇到站点限流按 429 自动退避重试。
 

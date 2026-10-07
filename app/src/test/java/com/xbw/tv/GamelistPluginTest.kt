@@ -1,5 +1,6 @@
 package com.xbw.tv
 
+import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.plugin.AesChallenge
 import com.xbw.tv.data.plugin.DirectoryIndexParser
 import com.xbw.tv.data.plugin.GamelistParser
@@ -158,12 +159,23 @@ class GamelistPluginTest {
         assertTrue(a != PluginSource.deriveId("https://b/gamelist.xml"))
     }
 
-    /** 2026-10 起不再内置任何源：builtin 恒为 false，第三方一律用户自建 */
+    /** 现在有一个随包内置源「内置FC」（wget.la 镜像的 cnliux/xbw nes 清单），
+     *  用户自建源 builtin 恒 false；老配置里残留 builtin:true 也能读回来 */
     @Test
-    fun `no builtin sources anymore`() {
+    fun `builtin fc source present, user sources not builtin`() {
+        val builtins = PluginSource.builtinSources()
+        assertEquals(1, builtins.size)
+        val fc = builtins[0]
+        assertTrue("内置源标记 builtin", fc.builtin)
+        assertEquals("内置FC", fc.title)
+        assertEquals(GameCategory.FC.key, fc.platform)
+        assertEquals(PluginSource.BUILTIN_FC_URL, fc.listUrl)
+        assertEquals("内置源 id 由 URL 派生，用户添加同 URL 会被去重",
+            fc.id, PluginSource.deriveId(PluginSource.BUILTIN_FC_URL))
+
         val src = BundlePluginSource(listUrl = "https://a/gamelist.xml")
         assertFalse("新建源不是内置", src.builtin)
-        // 老配置里残留 builtin:true 也能读回来（兼容），但新代码不再创建
+        // 老配置里残留 builtin:true 也能读回来（兼容）
         val legacy = PluginSource.fromJson(
             org.json.JSONObject(
                 "{\"id\":\"old\",\"title\":\"老源\",\"listUrl\":\"https://a/g.xml\",\"builtin\":true}"
@@ -349,7 +361,7 @@ class GamelistPluginTest {
         assertTrue(items.all { it.coverUrl!!.startsWith("https://186317.22web.org/game/%34%39-FBA") })
     }
 
-    /** 合并清单按源平台过滤：街机源只见街机条目；FC 独立文件解析**不过滤**（zip 打包的 FC ROM 不丢） */
+    /** 合并清单按扩展名过滤（跨平台文件只留本核心平台的）；独立清单不过滤（zip/7z 打包的 FC ROM 不丢） */
     @Test
     fun `merged list filters arcade view but fc file parses all`() {
         val xml = """
@@ -372,8 +384,8 @@ class GamelistPluginTest {
         assertEquals(3, arcadeItems.size)
         assertTrue(arcadeItems.none { it.name == "魂斗罗" })
         assertTrue(arcadeItems.all { it.platformKey == "arcade" })
-        // FC 独立解析自家 xml：不过滤，包括 zip 打包的 FC ROM（platformKey 仍按扩展名，
-        // 但由于不过滤，条目照常出现在 FC 分类，进核心按 platformKey 选 fceumm）
+        // FC 独立解析自家 xml：不过滤，包括 zip 打包的 FC ROM。所有条目 platformKey =
+        // 用户选的源核心（"fc"），进游戏就认它 —— zip 只是存储格式，绝不按扩展名猜成街机
         val fcItems = PluginRepository.parse(
             BundlePluginSource(listUrl = "https://186317.22web.org/game/nes/gamelist.xml", platform = "fc"),
             xml

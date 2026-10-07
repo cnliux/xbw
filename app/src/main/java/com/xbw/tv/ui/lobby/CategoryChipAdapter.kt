@@ -5,23 +5,24 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.xbw.tv.R
-import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.databinding.ItemCategoryChipBinding
 import com.xbw.tv.ui.common.TvFocusAnimator
 
 /**
- * 顶部分类芯片行（FC/街机/GBA/…）。
+ * 顶部分类芯片行（全部游戏/FC/街机/GBA/… + 每个用户自建源一个芯片）。
  * 焦点进入即轻微放大高亮，A 键切换分类（方案 4.1 焦点设计）。
+ * 芯片标题：内置分类用 [com.xbw.tv.data.model.GameCategory.title]，
+ * 用户源用他自己写的「显示名称」。
  */
 class CategoryChipAdapter(
-    private val onPick: (GameCategory) -> Unit
+    private val onPick: (LobbyCategory) -> Unit
 ) : RecyclerView.Adapter<CategoryChipAdapter.VH>() {
 
     @SuppressLint("NotifyDataSetChanged")
-    private val items = mutableListOf<GameCategory>()
+    private val items = mutableListOf<LobbyCategory>()
 
     /** 当前选中的分类 key（选中的芯片高亮为品牌色） */
-    var selectedKey: String = GameCategory.ALL.key
+    var selectedId: String = ""
         set(value) {
             if (field != value) {
                 field = value
@@ -30,7 +31,7 @@ class CategoryChipAdapter(
         }
 
     @SuppressLint("NotifyDataSetChanged")
-    fun submitList(list: List<GameCategory>) {
+    fun submitList(list: List<LobbyCategory>) {
         items.clear()
         items.addAll(list)
         notifyDataSetChanged()
@@ -57,17 +58,17 @@ class CategoryChipAdapter(
             binding.root.setOnClickListener {
                 val pos = bindingAdapterPosition
                 if (pos != RecyclerView.NO_POSITION) {
-                    selectedKey = items[pos].key
+                    selectedId = items[pos].key
                     onPick(items[pos])
                 }
             }
         }
 
-        fun bind(category: GameCategory) {
+        fun bind(category: LobbyCategory) {
             binding.chip.text = category.title
             // 选中的分类：文字用品牌色（bg 由 drawable selector 控制焦点态）
             binding.chip.setTextColor(
-                if (category.key == selectedKey) 0xFFFF5A5F.toInt() else 0xFFFFFFFF.toInt()
+                if (category.key == selectedId) 0xFFFF5A5F.toInt() else 0xFFFFFFFF.toInt()
             )
         }
     }

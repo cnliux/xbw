@@ -70,9 +70,9 @@ class LobbyActivity : AppCompatActivity() {
         if (requestCode == PERM_REQUEST_USB && grantResults.isNotEmpty() &&
             grantResults[0] == PackageManager.PERMISSION_GRANTED
         ) {
-            if (viewModel.currentCategory == GameCategory.USB) {
+            if ((viewModel.currentCategory as? LobbyCategory.BuiltIn)?.category == GameCategory.USB) {
                 pendingFocusPosition = 0
-                viewModel.enter(GameCategory.USB, forceRefresh = true)
+                viewModel.enter(LobbyCategory.BuiltIn(GameCategory.USB), forceRefresh = true)
             }
         }
     }
@@ -91,7 +91,7 @@ class LobbyActivity : AppCompatActivity() {
         observe()
         observeFavorites()
 
-        viewModel.enter(GameCategory.ALL)
+        viewModel.enter(LobbyCategory.BuiltIn(GameCategory.ALL))
     }
 
     private fun setupTopBar() {
@@ -110,7 +110,9 @@ class LobbyActivity : AppCompatActivity() {
     private fun setupCategoryChips() {
         chipAdapter = CategoryChipAdapter { category ->
             // 进 U盘分类前先把存储权限要到（Android 6~9 老盒子可直接读挂载卷）
-            if (category == GameCategory.USB) ensureUsbAccess()
+            if ((category as? LobbyCategory.BuiltIn)?.category == GameCategory.USB) {
+                ensureUsbAccess()
+            }
             viewModel.enter(category)
             pendingFocusPosition = 0
         }
@@ -120,7 +122,7 @@ class LobbyActivity : AppCompatActivity() {
             // 横向列表焦点进出不要抢跑：保留焦点恢复默认行为
             descendantFocusability = android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS
         }
-        chipAdapter.submitList(GameCategory.lobbyChips)
+        // 芯片清单由 categories LiveData 驱动（viewModel.reloadCategories 动态装配）
     }
 
     private fun setupGrid() {
@@ -190,7 +192,10 @@ class LobbyActivity : AppCompatActivity() {
 
     private fun observe() {
         viewModel.state.observe(this) { state -> render(state) }
-        viewModel.categories.observe(this) { chipAdapter.submitList(it) }
+        viewModel.categories.observe(this) {
+            chipAdapter.submitList(it)
+            chipAdapter.selectedId = viewModel.currentCategory.key
+        }
     }
 
     /** 收藏：加载一次 + 订阅变更（卡片 ★ 与「我的收藏」页签共用同一份数据） */
@@ -305,6 +310,8 @@ class LobbyActivity : AppCompatActivity() {
     /** 从游戏页返回时强制后台刷新（方案 3.4：缓存只是加速，回到大厅看最新） */
     override fun onResume() {
         super.onResume()
+        // 从「第三方游戏源」编辑/删除返回时也会走到这里：重新装配芯片（新源出现/旧源消失）
+        viewModel.reloadCategories()
         if (viewModel.state.value != null &&
             viewModel.state.value !is LobbyViewModel.State.Loading
         ) {
