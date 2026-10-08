@@ -46,6 +46,11 @@ import org.json.JSONObject
  *                   的合并清单用，如 186317 的 game/gamelist.xml 街机视口）；
  *                   独立按自家 xml 解析的源不开，否则 FC 里用 zip/7z 打包的 ROM
  *                   会被误丢。留空/关掉的自建源不启用此过滤。
+ * @param phpDir 站点是 **PHP 目录浏览页**（186317 的 22web/xo.je 这类免费主机）：
+ *                   文件不能靠拼直链下载（必须经 index.php 的"下载"按钮
+ *                   `?path=<目录>&download=<文件名>`），清单本身也要从目录页上的
+ *                   gamelist.xml 下载按钮拿。由清单加载时**自动识别并写回**，
+ *                   用户不用勾选。
  */
 data class PluginSource(
     val id: String,
@@ -58,7 +63,8 @@ data class PluginSource(
     val gbkUris: Boolean = false,
     val dirBootstrap: Boolean = false,
     val dirMatch: String = "",
-    val filterByPlatform: Boolean = false
+    val filterByPlatform: Boolean = false,
+    val phpDir: Boolean = false
 ) {
     /** 归属的可玩平台分类；填了没核心的平台（java/nds…）就退化成纯元数据 */
     val category: GameCategory get() = GameCategory.fromKey(platform)
@@ -149,6 +155,7 @@ data class PluginSource(
         put("dirBootstrap", dirBootstrap)
         put("dirMatch", dirMatch)
         put("filterByPlatform", filterByPlatform)
+        put("phpDir", phpDir)
     }
 
     companion object {
@@ -158,7 +165,12 @@ data class PluginSource(
         const val BUILTIN_FC_URL =
             "https://wget.la/https://raw.githubusercontent.com/cnliux/xbw/master/nes/gamelist.xml"
 
-        /** 随包内置的默认源（大厅里出现名为「内置FC」的芯片）。改了它要改 [BUILTIN_FC_URL] */
+        /** 随包内置的默认源（大厅里的固定芯片）。改了它要改 [BUILTIN_FC_URL]。
+         *  186317 两站是 PHP 目录浏览页（phpDir=true）：文件必须走"下载按钮"
+         *  `?path=&download=`，清单也从目录页的下载按钮 href 拿；FC 清单在
+         *  `/game/nes` 子目录，所以 listUrl 带 `?path=nes`（phpPathParam 据此
+         *  拼 ROM 按钮地址）。gbkUris 不开 —— 清单路径全 ASCII，GBK 编码在
+         *  按钮 URL 构造时按条目相对路径做。 */
         fun builtinSources(): List<PluginSource> = listOf(
             PluginSource(
                 id = deriveId(BUILTIN_FC_URL),
@@ -166,6 +178,30 @@ data class PluginSource(
                 platform = GameCategory.FC.key,
                 listUrl = BUILTIN_FC_URL,
                 builtin = true
+            ),
+            PluginSource(
+                id = deriveId("https://186317.22web.org/game/"),
+                title = "186317街机",
+                platform = GameCategory.ARCADE.key,
+                listUrl = "https://186317.22web.org/game/",
+                builtin = true,
+                phpDir = true
+            ),
+            PluginSource(
+                id = deriveId("https://186317.22web.org/game/?path=nes"),
+                title = "186317FC",
+                platform = GameCategory.FC.key,
+                listUrl = "https://186317.22web.org/game/?path=nes",
+                builtin = true,
+                phpDir = true
+            ),
+            PluginSource(
+                id = deriveId("http://186317.xo.je/"),
+                title = "186317街机2",
+                platform = GameCategory.ARCADE.key,
+                listUrl = "http://186317.xo.je/",
+                builtin = true,
+                phpDir = true
             )
         )
 
@@ -183,7 +219,8 @@ data class PluginSource(
                 gbkUris = o.optBoolean("gbkUris"),
                 dirBootstrap = o.optBoolean("dirBootstrap"),
                 dirMatch = o.optString("dirMatch"),
-                filterByPlatform = o.optBoolean("filterByPlatform")
+                filterByPlatform = o.optBoolean("filterByPlatform"),
+                phpDir = o.optBoolean("phpDir")
             )
         }
 

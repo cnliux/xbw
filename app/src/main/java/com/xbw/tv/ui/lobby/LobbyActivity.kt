@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -15,13 +16,16 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.xbw.tv.R
 import com.xbw.tv.XbwApplication
+import com.xbw.tv.core.RomProvider
 import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.model.GameItem
 import com.xbw.tv.databinding.ActivityLobbyBinding
 import com.xbw.tv.ui.common.Nav
 import com.xbw.tv.ui.search.SearchActivity
 import com.xbw.tv.ui.settings.SettingsActivity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 大厅（TV 启动入口，方案第二节 UI 层 + 第六节流程 1/2）。
@@ -44,6 +48,33 @@ class LobbyActivity : AppCompatActivity() {
 
     private companion object {
         const val PERM_REQUEST_USB = 1001
+
+        /** BIOS 预热每个进程只做一次（onCreate 重建不重复提示/下载） */
+        @Volatile
+        private var biosPrewarmStarted = false
+    }
+
+    /**
+     * 启动即后台补齐街机 BIOS（多 CDN 竞速）。插件源/U盘的街机 zip 靠 zip 内
+     * 文件名反推机种，缺 BIOS 进游戏必挂；提前下好，进游戏命中缓存即秒过。
+     * 不阻塞启动，失败静默（进游戏时懒加载兜底）。
+     */
+    private fun prewarmArcadeBios() {
+        if (biosPrewarmStarted) return
+        if (RomProvider.pendingPrewarmBios(applicationContext).isEmpty()) return
+        biosPrewarmStarted = true
+        Toast.makeText(this, "正在后台准备街机 BIOS…", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            val ok = runCatching { RomProvider.prewarmBios(applicationContext) }
+                .getOrDefault(false)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(
+                    this@LobbyActivity,
+                    if (ok) "街机 BIOS 已就绪" else "BIOS 准备未完成，进入游戏时会自动重试",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
     }
 
     /** Android 6~9：扫 U盘需要读写外部存储权限，授权后立刻重扫当前分类 */
@@ -92,6 +123,7 @@ class LobbyActivity : AppCompatActivity() {
         observeFavorites()
 
         viewModel.enter(LobbyCategory.BuiltIn(GameCategory.ALL))
+        prewarmArcadeBios()
     }
 
     private fun setupTopBar() {

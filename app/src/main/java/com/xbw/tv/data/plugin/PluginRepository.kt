@@ -48,6 +48,11 @@ object PluginRepository {
     /** 目录引导源解析出的真实字节目录（src.id → 绝对目录 URL，带尾部 `/`） */
     private val resolvedDirs = HashMap<String, String>()
 
+    /** PHP 目录浏览源 gamelist.xml 所在的站点目录（src.id → **原始编码**的
+     *  `path=` 参数值，如 "nes"、"nes%2F01%B6%AF%D7%F7"，根目录是 ""）。
+     *  保留原始字节不解码，拼 ROM 下载按钮 URL 时原样回填。 */
+    private val resolvedXmlDir = HashMap<String, String>()
+
     // ---------- 源的管理 ----------
 
     fun sources(context: Context): List<PluginSource> {
@@ -285,6 +290,11 @@ object PluginRepository {
 
     /**
      * 按顺序给出一条条候选 ROM 直链，下载时逐个试到"拿到真文件"为止：
+     *  - PHP 目录浏览站（[PluginSource.phpDir]，186317 的 22web/xo.je）：
+     *      1. index.php "下载按钮"地址（?path=<GBK目录>&download=<GBK文件名>），
+     *         站点只保证这条路能下载；
+     *      2. GBK 编码直链（站点磁盘名是 GBK 字节，实测多数文件也放行）；
+     *      3. 通用直链（[GameItem.playUrl]，UTF-8 编码，兜底）。
      *  - 目录引导（[PluginSource.dirBootstrap]，如街机源）：
      *      基准 = 服务器 href 解析出的真实字节目录；直链 = 基准 + 相对路径。
      *  - XML 方式：
@@ -299,10 +309,15 @@ object PluginRepository {
         if (item.rawPath.isBlank()) {
             return listOfNotNull(item.playUrl.takeIf { it.isNotBlank() })
         }
-        val base = if (src.dirBootstrap) resolvedDirs[src.id] ?: src.baseDir else src.baseDir
-        val direct = if (src.gbkUris) encodeGbkPath(base, item.rawPath) else joinBase(base, item.rawPath)
         val out = LinkedHashSet<String>()
-        direct?.let { out += it }
+        if (src.phpDir) {
+            phpButtonUrl(src, item.rawPath)?.let { out += it }
+        } else {
+            val base = if (src.dirBootstrap) resolvedDirs[src.id] ?: src.baseDir else src.baseDir
+            val direct = if (src.gbkUris) encodeGbkPath(base, item.rawPath)
+                else joinBase(base, item.rawPath)
+            direct?.let { out += it }
+        }
         item.playUrl.takeIf { it.isNotBlank() }?.let { out += it }
         return out.toList()
     }
@@ -436,8 +451,12 @@ object PluginRepository {
         return result
     }
 
-    /** 封面下载地址：GBK 站优先按 GBK 编码原始相对路径，其它源用解析出的 URL */
+    /** 封面下载地址：PHP 目录站优先"下载按钮"地址；GBK 站优先按 GBK 编码原始
+     *  相对路径；其它源用解析出的 URL */
     private fun coverCandidateUrl(src: PluginSource, item: GameItem): String? {
+        if (src.phpDir && item.rawCover.isNotBlank()) {
+            phpButtonUrl(src, item.rawCover)?.let { return it }
+        }
         val base = if (src.dirBootstrap) resolvedDirs[src.id] ?: src.baseDir else src.baseDir
         if (item.rawCover.isNotBlank()) {
             if (src.gbkUris) encodeGbkPath(base, item.rawCover)?.let { return it }
@@ -475,7 +494,126 @@ object PluginRepository {
             return cached.readText()
         }
         val jar = cookieJars.getOrPut(src.id) { HashMap() }
-        return AesChallenge.fetch(src.effectiveListUrl, jar)
+        var body = AesChallenge.fetch(src.effectiveListUrl, jar)
+        // 免费主机有时对裸请求先回一页"JS 广告跳转"（无 toNumbers、无正文）。
+        // 浏览器走的是 ?i=1 这条路，我们也补上 i=1 再抓一次（挑战由 fetch 内部解）。
+        if (isJunkRedirect(body)) {
+            val retryUrl = src.effectiveListUrl +
+                (if (src.effectiveListUrl.contains('?')) "&" else "?") + "i=1"
+            Log.i(TAG, "php site ad page on $src.id, retry with i=1")
+            body = AesChallenge.fetch(retryUrl, jar)
+        }
+        if (looksLikeXml(body)) {
+            // 用户把"下载按钮"地址直接贴成 listUrl（…?path=nes&download=gamelist.xml）：
+            // 它本身就是 XML，但 ROM 候选仍要按 PHP 站拼按钮 URL
+            if (src.listUrl.contains("download=gamelist.xml")) {
+                resolvedXmlDir[src.id] = phpPathParam(src.listUrl)
+                markPhpDir(context, src)
+            }
+            writeCache(context, src.listUrl, body)
+            return body
+        }
+        // PHP 目录浏览页（186317 的 22web / xo.je）：清单不在直链上，只能从目录页的
+        // "下载"按钮 href 拿 —— `?path=<站点目录>&download=gamelist.xml`。
+        val href = phpGamelistHref(body) ?: return body   // 不是这类站 → 交给上层报错
+        val xmlUrl = runCatching {
+            java.net.URI(src.effectiveListUrl).resolve(href).toString()
+        }.getOrElse {
+            Log.w(TAG, "resolve gamelist href failed: ${href}")
+            return body
+        }
+        val xml = AesChallenge.fetch(xmlUrl, jar)
+        if (!looksLikeXml(xml)) return body
+        // path 参数保留原始编码字节（站点是 GBK 落盘），拼 ROM 按钮时直接回填
+        resolvedXmlDir[src.id] = phpPathParam(href)
+        markPhpDir(context, src)
+        writeCache(context, src.listUrl, xml)
+        return xml
+    }
+
+    /** 广告/纯跳转页特征：只有一段导航脚本，没有任何正文标记 */
+    private fun isJunkRedirect(html: String): Boolean =
+        html.contains("<script", ignoreCase = true) &&
+            !html.contains("toNumbers(") &&
+            !looksLikeXml(html) &&
+            !html.contains("download=gamelist.xml", ignoreCase = true) &&
+            !html.contains("<a ", ignoreCase = true)
+
+    private fun looksLikeXml(s: String): Boolean {
+        val t = s.trimStart()
+        return t.startsWith("<?xml") || t.contains("<gameList", ignoreCase = true)
+    }
+
+    /** 目录页里 gamelist.xml "下载"按钮的 href（`?path=…&download=gamelist.xml`） */
+    private fun phpGamelistHref(html: String): String? =
+        Regex("href\\s*=\\s*[\"']([^\"']*[?&]download=gamelist\\.xml[^\"']*)[\"']",
+            RegexOption.IGNORE_CASE)
+            .find(html)?.groupValues?.get(1)
+
+    /** 从 `?path=a%2Fb&download=x` 里取出**原始编码**的 path 参数值（可能为空串） */
+    private fun phpPathParam(hrefOrUrl: String): String =
+        Regex("[?&]path=([^&\"']*)").find(hrefOrUrl)?.groupValues?.get(1).orEmpty()
+
+    /** PHP 站"下载按钮"URL：`<baseDir>/?path=<GBK目录，/→%2F>&download=<GBK文件名>`。
+     *  站点磁盘名是 GBK 字节，站点自己的 href 就是这么写的，照抄格式。 */
+    private fun phpButtonUrl(src: PluginSource, rel: String): String? = runCatching {
+        val clean = rel.trim().removePrefix("./").trimStart('/')
+        if (clean.isBlank()) return null
+        val file = clean.substringAfterLast('/')
+        val dir = clean.substringBeforeLast('/', "")
+        val dirRaw = resolvedXmlDir[src.id] ?: phpPathParam(src.listUrl)
+        val segs = listOf(dirRaw, encodeGbkSegment(dir)).filter { it.isNotBlank() }
+        val base = phpBase(src)
+        "$base/?path=${segs.joinToString("%2F")}&download=${encodeGbkSegment(file)}"
+    }.getOrNull()
+
+    /** PHP 目录站的 index.php 所在目录（scheme://host + listUrl 的 path 部分，
+     *  带尾部 `/`）。不能用 [PluginSource.baseDir]：它按"最后一个斜杠"截断，
+     *  对 `…/game/` 会丢掉 `/game`，对 `…/game/?path=nes` 会把 query 里的
+     *  `%2F` 当路径分隔符算错。 */
+    private fun phpBase(src: PluginSource): String = runCatching {
+        val u = java.net.URI(src.listUrl.trim())
+        val path = u.rawPath ?: ""
+        val dir = if (path.endsWith("/")) path else path.substringBeforeLast('/', "") + "/"
+        "${u.scheme}://${u.authority}$dir".trimEnd('/')
+    }.getOrElse { src.baseDir.trimEnd('/') }
+
+    /** 非空路径段按 GBK 百分号编码；已有的 %XX 不二次编码 */
+    private fun encodeGbkSegment(seg: String): String {
+        if (seg.all { it.code < 0x80 }) return seg
+        val gbk = java.nio.charset.Charset.forName("GBK")
+        val sb = StringBuilder()
+        var i = 0
+        while (i < seg.length) {
+            val c = seg[i]
+            if (c.code < 0x80) {
+                if (c == '%' && i + 2 < seg.length &&
+                    seg[i + 1].isHexDig() && seg[i + 2].isHexDig()
+                ) {
+                    sb.append(seg, i, i + 3); i += 3
+                    continue
+                }
+                sb.append(c); i++
+            } else {
+                for (b in seg.substring(i, i + 1).toByteArray(gbk)) {
+                    sb.append('%').append(HEX[(b.toInt() ushr 4) and 0xF])
+                        .append(HEX[b.toInt() and 0xF])
+                }
+                i++
+            }
+        }
+        return sb.toString()
+    }
+
+    private fun Char.isHexDig(): Boolean =
+        this in '0'..'9' || this in 'a'..'f' || this in 'A'..'F'
+
+    /** 识别为 PHP 目录站后写回源配置（romCandidates/封面预取要按按钮方式拼 URL） */
+    private fun markPhpDir(context: Context, src: PluginSource) {
+        if (src.builtin || src.phpDir) return
+        runCatching { upsert(context, src.copy(phpDir = true)) }
+            .onFailure { Log.w(TAG, "persist phpDir failed: ${it.message}") }
+        Log.i(TAG, "source ${src.id} marked as phpDir site")
     }
 
     private fun readCache(context: Context, url: String): String {

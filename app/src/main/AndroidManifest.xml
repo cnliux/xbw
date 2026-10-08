@@ -8,7 +8,9 @@
     <!-- 自动升级：下载 APK 后拉起系统安装器（用户需在系统里授权"安装未知应用"） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- U盘本地游戏：扫描挂载卷里的 ROM 文件。Android 6~9 需要运行时读写权限
-         （WRITE 在老系统上同时覆盖读）；10+ 走 StorageVolume，读不到时分类自带排查提示 -->
+         （WRITE 在老系统上同时覆盖读）；10+ 走 StorageVolume，读不到时分类自带排查提示。
+         requestLegacyExternalStorage：Android 10 分区存储下保留旧式路径访问，
+         否则 File("/storage/USBxxxx") 直读被拒（targetSdk 34） -->
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
@@ -51,6 +53,7 @@
         android:hardwareAccelerated="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
         android:largeHeap="true"

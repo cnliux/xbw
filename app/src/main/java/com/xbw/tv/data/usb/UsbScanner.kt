@@ -63,21 +63,23 @@ object UsbScanner {
 
     /**
      * 当前可玩的 U盘条目。慢扫放 IO 线程；挂载卷变更时全量重扫，否则直接用缓存。
+     * @param force 强制重扫（授权刚拿到、用户点重试时）——否则卷没变就不重扫，
+     *              首次无权限扫出空列表会被固化，授权后依然显示"没有游戏"。
      * @return 空列表 = 没挂载卷 / 目录里没有常见 ROM 扩展名
      */
-    suspend fun items(context: Context): List<GameItem> = withContext(Dispatchers.IO) {
+    suspend fun items(context: Context, force: Boolean = false): List<GameItem> = withContext(Dispatchers.IO) {
         val vols = mountedVolumes(context)
         val sig = vols.joinToString("|") { "${it.root}@${it.mounted}" }
-        if (sig != volumesSignature || scannedAt == 0L) {
+        if (force || sig != volumesSignature || scannedAt == 0L) {
             val scanned = runCatching { vols.flatMap { scanVolume(it) }.distinctBy { it.localPath }.take(MAX_ENTRIES) }
             scanFailed = scanned.isFailure
             val list = scanned.getOrDefault(emptyList())
-            if (list.isNotEmpty()) {
-                cache = list
-            }
+            // 非 force 时保留旧列表（瞬时 IO 失败不清空）；force 时以本次结果为准
+            if (list.isNotEmpty() || force) cache = list
             volumesSignature = sig
             scannedAt = System.currentTimeMillis()
-            Log.i(TAG, "usb scan: ${list.size} roms from ${vols.size} volume(s)${if (scanFailed) " (partial/failed)" else ""}")
+            Log.i(TAG, "usb scan: ${list.size} roms from ${vols.size} volume(s)" +
+                " (force=$force)${if (scanFailed) " (partial/failed)" else ""}")
         }
         cache
     }
@@ -95,13 +97,14 @@ object UsbScanner {
         } catch (e: Throwable) {
             Log.w(TAG, "storageVolumes query failed", e)
         }
-        // 兜底：部分盒子/SD 卷不报 removable，直接看 /storage 下的挂载根目录
-        if (out.isEmpty()) {
-            runCatching {
-                File("/storage").listFiles()?.forEach { d ->
-                    if (d.isDirectory && d.name != "emulated" && d.name != "self" && d.canRead()) {
-                        out += VolumeInfo(d.absolutePath, true)
-                    }
+        // 兜底：部分盒子/SD 卷不报 removable，直接看 /storage 下的挂载根目录。
+        // 不管上面有没有结果都扫一遍 —— 若 StorageManager 报了个读不了的卷，
+        // 兜底可能找到同一路径的可读副本；若上面没报，兜底就是唯一来源。
+        runCatching {
+            File("/storage").listFiles()?.forEach { d ->
+                if (d.isDirectory && d.name != "emulated" && d.name != "self" && d.canRead()) {
+                    val path = d.absolutePath
+                    if (out.none { it.root == path }) out += VolumeInfo(path, true)
                 }
             }
         }

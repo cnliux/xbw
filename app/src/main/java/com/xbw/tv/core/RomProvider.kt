@@ -5,6 +5,10 @@ import android.util.Log
 import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.SiteConfig
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.File
@@ -27,6 +31,8 @@ import java.io.FileInputStream
  *  - 金手指 ini：https://file.1990i.com/cheat/<zip名去后缀>.ini，落
  *    <systemDir>/fbneo/cheats/<名>.ini（FBNeo 按 DRV_NAME 即 zip 名反查）；
  *    修改版名会 404，回退到 $ 分隔的基础版名，内容写到每个段名一份。
+ *    站点没有时兜底 GitHub 官方库 finalburnneo/FBNeo-cheats（约 3400 款，
+ *    同格式 ini），走 wget.la / gh-proxy 等镜像直连 raw（国内 raw 不稳）。
  *  - 多版本（kof98eck20.zip$kof98.zip）：修改版 zip 的驱动名往往不在本版
  *    FBNeo 数据表里 → 下载全部段，主段加载失败时逐段兜底（见 RetroCore
  *    .loadAlternativeRom）。
@@ -41,6 +47,22 @@ object RomProvider {
 private const val TAG = "RomProvider"
 private const val ROM_HOST = "https://file.1990i.com"
 private const val CDN_HOST = "https://file.yikm.net"
+
+/** GitHub raw 镜像前缀（wget.la 为项目实测可用；空串=直连，放最后兜底）。
+ *  金手指库与自建 BIOS 库共用 */
+private val GH_MIRROR_PREFIXES = listOf(
+    "https://wget.la/",
+    "https://gh-proxy.com/",
+    "https://ghfast.top/",
+    ""
+)
+
+/** FBNeo 官方金手指库（GitHub，master 分支 cheats/<驱动名>.ini，约 3400 款） */
+private const val GH_CHEAT_RAW = "https://raw.githubusercontent.com/finalburnneo/FBNeo-cheats/master/cheats"
+
+/** 自建 BIOS 库：cnliux/xbw 的 fbneo/ 目录（版本与打包的 FBNeo 核心匹配，
+ *  解决 file.yikm.net 旧版 BIOS 在新核心下 CRC 校验不过的问题） */
+private const val GH_BIOS_RAW = "https://raw.githubusercontent.com/cnliux/xbw/master/fbneo"
 
 /** play 页正常但没有 gromname 时的提示（NDS/DOS/Java/Flash/H5 等网页版） */
 const val NO_ROM_PLATFORM = "网页版游戏"
@@ -307,8 +329,9 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             return RomResult.Failed("ROM 内容为空（下载到了 HTML 错误页？）")
         }
 
-        // 3) 写规格缓存（没有 gsystem/兜底/BIOS，插件源不提供这些）
+        // 3) 写规格缓存（插件源没有 gsystem/兜底；BIOS 从 zip 内文件名反推补装）
         val sysDir = File(dir, "system").apply { mkdirs() }
+        if (zip) ensureBiosForZip(context, rom, sysDir)
         meta.writeText(listOf(core, rom.absolutePath, "").joinToString("\n"))
         Log.i(TAG, "plugin rom ready id=$gameId core=$core size=${rom.length()}")
         return RomResult.Ready(RomSpec(core, rom, sysDir, false))
@@ -322,7 +345,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
      * unwrap* 会删它的输入，所以先拷进缓存再解）。
      * 写 .romspec 缓存，二次进直接命中。缺核心时仍按“没核心”提示。
      */
-    fun prepareLocal(
+    suspend fun prepareLocal(
         context: Context,
         gameId: String,
         localFile: File,
@@ -351,6 +374,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             }
         }
         if (rom.length() <= 16) return RomResult.Failed("ROM 文件为空")
+        if (core == "fbneo") ensureBiosForZip(context, rom, sysDir)
         meta.writeText(listOf(core, rom.absolutePath, "").joinToString("\n"))
         Log.i(TAG, "usb/local rom ready id=$gameId core=$core path=${rom.absolutePath} size=${rom.length()}")
         return RomResult.Ready(RomSpec(core, rom, sysDir, false))
@@ -405,21 +429,11 @@ const val NO_ROM_PLATFORM = "网页版游戏"
     }
 
     /**
-     * 保证机种 BIOS 就位：全局缓存 <filesDir>/bios/<name>（多游戏共享一次下载），
+     * 保证 BIOS 就位：全局缓存 <filesDir>/bios/<name>（多游戏共享一次下载），
      * 再复制到本游戏的 systemDir 根（FBNeo 在 system 目录下找 neogeo.zip/pgm.zip）。
      */
-    private suspend fun ensureBios(context: Context, gsystem: String, sysDir: File) {
-        val bios = biosFor(gsystem) ?: return
-        val cache = File(context.filesDir, "bios/$bios")
-        if (!cache.exists() || cache.length() <= 16) {
-            try {
-                HttpFetcher.downloadToFile("$CDN_HOST/$bios", cache, referer = SiteConfig.BASE_URL + "/")
-            } catch (e: Exception) {
-                Log.w(TAG, "bios download failed $bios", e)
-                cache.delete()
-                return
-            }
-        }
+    private suspend fun ensureBiosFile(context: Context, bios: String, sysDir: File) {
+        val cache = fetchBiosToCache(context, bios) ?: return
         val dest = File(sysDir, bios)
         if (dest.exists() && dest.length() == cache.length()) return
         try {
@@ -430,25 +444,158 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         }
     }
 
+    /** 缓存里没有就竞速下载；返回全局缓存文件，全部源失败返回 null */
+    private suspend fun fetchBiosToCache(context: Context, bios: String): File? {
+        val cache = File(context.filesDir, "bios/$bios")
+        if (cache.exists() && cache.length() > 16) return cache
+        cache.parentFile?.mkdirs()
+        val got = raceDownloadTo(cache.parentFile!!, bios)
+        return if (got != null) {
+            Log.i(TAG, "bios cached: $bios (${got.length()} bytes)")
+            got
+        } else {
+            Log.w(TAG, "bios download failed from all sources: $bios")
+            null
+        }
+    }
+
+    /**
+     * 多 CDN **并发竞速**下载 BIOS：自建 GitHub 库的各镜像（wget.la / gh-proxy /
+     * ghfast / 直连）与 file.yikm.net 同时开下，谁先下完用谁，其余立刻取消。
+     * 顺序试的缺点是"最慢的源排在前面就全等它"，盒子网络对各家 CDN 快慢不一，
+     * 只有并发才能稳定拿到当前网络下的最快源（同 UpdateChecker.pickSources 思路，
+     * BIOS 只有几 MB，省去探活直接开下）。
+     */
+    private suspend fun raceDownloadTo(biosDir: File, bios: String): File? = coroutineScope {
+        val urls = GH_MIRROR_PREFIXES.map { it + "$GH_BIOS_RAW/$bios" } + "$CDN_HOST/$bios"
+        // 每次调用独立后缀，避免并发/残留的 .part 互相踩
+        val token = java.util.UUID.randomUUID().toString().take(8)
+        biosDir.listFiles()?.forEach {
+            if (it.name.startsWith("$bios.part")) runCatching { it.delete() }
+        }
+        val done = Channel<Pair<Int, Boolean>>(urls.size)
+        val jobs = urls.mapIndexed { i, url ->
+            launch(Dispatchers.IO) {
+                val tmp = File(biosDir, "$bios.part.$i.$token")
+                val ok = runCatching {
+                    HttpFetcher.tryGetFile(url, tmp, timeoutSec = 30) && tmp.length() > 16
+                }.getOrDefault(false)
+                done.send(i to ok)
+            }
+        }
+        var winner = -1
+        var settled = 0
+        while (winner < 0 && settled < urls.size) {
+            val (i, ok) = done.receive()
+            settled++
+            if (ok) winner = i
+        }
+        jobs.forEach { it.cancel() }   // 输家：中断下载（阻塞 IO 结束后自行退出）
+        val cache = File(biosDir, bios)
+        if (winner < 0) {
+            biosDir.listFiles()?.forEach {
+                if (it.name.startsWith("$bios.part")) runCatching { it.delete() }
+            }
+            return@coroutineScope null
+        }
+        val win = File(biosDir, "$bios.part.$winner.$token")
+        if (!win.renameTo(cache)) runCatching { win.copyTo(cache, overwrite = true) }
+        biosDir.listFiles()?.forEach {
+            if (it.name.startsWith("$bios.part")) runCatching { it.delete() }
+        }
+        cache.takeIf { it.exists() && it.length() > 16 }
+    }
+
+    /** 启动预热要覆盖的机种 BIOS（体积共约 3.5MB，覆盖绝大多数插件源街机） */
+    private val PREWARM_BIOS = listOf("neogeo.zip", "pgm.zip")
+
+    /** 还缺哪些预热 BIOS（UI 据此决定要不要提示；命中缓存则为空） */
+    fun pendingPrewarmBios(context: Context): List<String> =
+        PREWARM_BIOS.filter {
+            val f = File(context.filesDir, "bios/${it}")
+            !f.exists() || f.length() <= 16
+        }
+
+    /**
+     * 启动后台预热常用街机 BIOS（竞速下载）。
+     * @return true = 全部就位；false = 有失败（进游戏时懒加载会再兜底重试）
+     */
+    suspend fun prewarmBios(context: Context): Boolean {
+        var all = true
+        for (b in pendingPrewarmBios(context)) {
+            if (fetchBiosToCache(context, b) == null) all = false
+        }
+        return all
+    }
+
+    private suspend fun ensureBios(context: Context, gsystem: String, sysDir: File) {
+        ensureBiosFile(context, biosFor(gsystem) ?: return, sysDir)
+    }
+
+    /**
+     * 插件源/USB 的街机 zip 没有 gsystem，从 zip 内文件名反推机种 BIOS：
+     * PGM 基板（三国战纪/西游释厄传等）→ pgm.zip，NeoGeo → neogeo.zip。
+     * 读不出/不匹配就不装（多数 CPS/STV 基板本来也不需要 BIOS）。
+     */
+    private suspend fun ensureBiosForZip(context: Context, romZip: File, sysDir: File) {
+        val names = try {
+            java.util.zip.ZipFile(romZip).use { zip ->
+                zip.entries().toList().map { it.name.lowercase() }
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+        if (names.isEmpty()) return
+        val bios = when {
+            names.any { it.startsWith("pgm_") || it.startsWith("ddp3") || it.startsWith("u18") } -> "pgm.zip"
+            names.any { it.startsWith("neo-") || it == "sp-s3.sp1" || it == "sm1.sm1" || it == "sfix.sfix" } -> "neogeo.zip"
+            else -> null
+        } ?: return
+        ensureBiosFile(context, bios, sysDir)
+    }
+
     /**
      * 下载金手指 ini：任一段名命中即用，内容写到每个段名一份——
      * FBNeo 按 DRV_NAME（= 加载成功的 zip 名）反查 ini，命中哪个段名都要有。
      * 没有金手指的游戏 404/失败属正常，静默跳过。
+     *
+     * 两级来源：站点 1990i 优先（中文命名、和 ROM 同源），站点没有就查
+     * GitHub 官方库 finalburnneo/FBNeo-cheats（master/cheats/<名>.ini，约 3400 款，
+     * 与站点完全同格式）；国内直连 raw.githubusercontent 不稳，逐个走镜像前缀。
      */
     private suspend fun ensureCheatIni(sysDir: File, segments: List<String>) {
         if (segments.isEmpty()) return
         val cheatDir = File(sysDir, "fbneo/cheats").apply { mkdirs() }
         // 已就位就不再动（避免重复下载）
         if (segments.all { File(cheatDir, "${it.substringBeforeLast('.')}.ini").exists() }) return
-        val content = segments.firstNotNullOfOrNull { name ->
+        val encode = { stem: String ->
+            java.net.URLEncoder.encode(stem, "UTF-8").replace("+", "%20")
+        }
+        var content = segments.firstNotNullOfOrNull { name ->
             val stem = name.substringBeforeLast('.')
-            val url = "$ROM_HOST/cheat/${java.net.URLEncoder.encode(stem, "UTF-8").replace("+", "%20")}.ini"
+            val url = "$ROM_HOST/cheat/${encode(stem)}.ini"
             try {
                 HttpFetcher.fetchHtml(url, allowEmpty = false)
             } catch (e: Exception) {
                 null
             }
-        } ?: return
+        }
+        // 站点没有（或下回来的是错误页）→ GitHub 官方库
+        // 镜像前缀逐个试；fetchText 单次不重试，404/超时快失败换下一个源
+        if (content.isNullOrBlank() || !content.trimStart().startsWith("cheat")) {
+            content = segments.firstNotNullOfOrNull { name ->
+                val stem = name.substringBeforeLast('.')
+                val raw = "$GH_CHEAT_RAW/${encode(stem)}.ini"
+                GH_MIRROR_PREFIXES.firstNotNullOfOrNull { p ->
+                    try {
+                        HttpFetcher.fetchText(p + raw).takeIf { it.trimStart().startsWith("cheat") }
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+            }
+        }
+        content ?: return
         for (name in segments) {
             val stem = name.substringBeforeLast('.')
             try {

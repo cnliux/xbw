@@ -203,7 +203,7 @@ if (!category.fetchable) {
         if (!force) memory.get(key)?.let { return LoadResult(it, true, page, page + 1) }
         return lockFor(key).withLock {
             if (!force) memory.get(key)?.let { return@withLock LoadResult(it, true, page, page + 1) }
-            val all = runCatching { UsbScanner.items(ctx) }.getOrElse {
+            val all = runCatching { UsbScanner.items(ctx, force = force) }.getOrElse {
                 Log.w(TAG, "usb scan failed: ${it.message}")
                 emptyList()
             }
@@ -321,10 +321,18 @@ val serverItems = server.getOrNull()?.items ?: emptyList()
      */
     private suspend fun filterPlayable(items: List<GameItem>): List<GameItem> {
         if (items.isEmpty()) return items
+        // ⓪ 插件源 / U盘条目：id 不是 yikm 游戏 id，play 页探测必然"不存在"→ NoRom
+        //    → Unsupported → 被误杀（这正是"很多游戏搜不到"的根因）。它们的平台
+        //    由 platformKey 直接决定（进游戏也只看它），按 platformKey 放行即可。
+        val directPass = items.filter {
+            (it.source == GameItem.SOURCE_PLUGIN || it.source == GameItem.SOURCE_USB) &&
+                CoreRouter.isPlayableCategory(it.platformKey)
+        }.mapTo(HashSet()) { it.id }
+        val probed = items.filterNot { it.id in directPass }
         // ① 标签就能判死的，先摘掉，不占后面的探测名额
-        val byTag = items.filterNot { tagSaysUnplayable(it) }
-        if (byTag.size != items.size) {
-            Log.i(TAG, "search dropped ${items.size - byTag.size} game(s) by platform tag")
+        val byTag = probed.filterNot { tagSaysUnplayable(it) }
+        if (byTag.size != probed.size) {
+            Log.i(TAG, "search dropped ${probed.size - byTag.size} game(s) by platform tag")
         }
         val ids = byTag.map { it.id }.distinct()
         val playable = HashMap<String, Boolean>(ids.size)
@@ -365,7 +373,10 @@ val serverItems = server.getOrNull()?.items ?: emptyList()
         if (kept.size != byTag.size) {
             Log.i(TAG, "search filtered out ${byTag.size - kept.size} game(s) without native core")
         }
-        return kept
+        if (directPass.isEmpty()) return kept
+        // 合并回 directPass，保持 [items] 的原始顺序（拼音前缀 > 服务器 > 插件 > 包含）
+        val keptIds = kept.mapTo(HashSet()) { it.id }
+        return items.filter { it.id in keptIds || it.id in directPass }
     }
 
     /**

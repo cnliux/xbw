@@ -1,22 +1,39 @@
 pluginManagement {
     repositories {
-        // 国内镜像优先，官方源兜底。网络通畅的环境可注释掉前三行。
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/central") }
-        google()
-        mavenCentral()
-        gradlePluginPortal()
+        // CI（GitHub Actions 海外 runner）优先官方源：阿里云镜像对海外 IP 偶发 502，
+        // 会让 AGP 解析失败、构建在配置阶段就炸。本地（国内）仍优先阿里云镜像。
+        if (System.getenv("GITHUB_ACTIONS") == "true") {
+            google()
+            mavenCentral()
+            gradlePluginPortal()
+            maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+            maven { url = uri("https://maven.aliyun.com/repository/google") }
+            maven { url = uri("https://maven.aliyun.com/repository/central") }
+        } else {
+            maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
+            maven { url = uri("https://maven.aliyun.com/repository/google") }
+            maven { url = uri("https://maven.aliyun.com/repository/central") }
+            google()
+            mavenCentral()
+            gradlePluginPortal()
+        }
     }
 }
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/central") }
-        google()
-        mavenCentral()
+        if (System.getenv("GITHUB_ACTIONS") == "true") {
+            google()
+            mavenCentral()
+            maven { url = uri("https://maven.aliyun.com/repository/google") }
+            maven { url = uri("https://maven.aliyun.com/repository/central") }
+        } else {
+            maven { url = uri("https://maven.aliyun.com/repository/google") }
+            maven { url = uri("https://maven.aliyun.com/repository/central") }
+            google()
+            mavenCentral()
+        }
     }
 }
 
