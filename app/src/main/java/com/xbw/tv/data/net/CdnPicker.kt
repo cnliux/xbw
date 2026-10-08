@@ -34,6 +34,10 @@ object CdnPicker {
         "https://ghproxy.net/",
         "https://gh.llkk.cc/",
         "https://mirror.ghproxy.com/",
+        "https://ghproxy.cn/",
+        "https://github.moeyy.xyz/",
+        "https://ghproxy.cc/",
+        "https://gh.91hai.cn/",
         ""
     )
 

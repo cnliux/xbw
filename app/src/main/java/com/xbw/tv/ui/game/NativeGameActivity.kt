@@ -559,6 +559,22 @@ class NativeGameActivity : AppCompatActivity() {
             return true   // 其余按键一律吞掉，别让未映射键乱焦点
         }
 
+        // ★ 加载中被困修复：ROM 还在下载/重试（核心没跑起来、loading 层盖全屏）时，
+        //   BACK / 手柄 B / START / MENU 直接 finish。此前只有 loadFailed 才放行，
+        //   但下载重试窗口（最长 1-2 分钟）里 loadFailed=false，BACK 弹的确认框、
+        //   SELECT 开的工具条全被 loading 层挡住，USB 手柄用户出不去。
+        if (!core.running && binding.loadingOverlay.visibility == View.VISIBLE) {
+            if (event.action == KeyEvent.ACTION_UP && (
+                    event.keyCode == KeyEvent.KEYCODE_BACK ||
+                    event.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                    event.keyCode == KeyEvent.KEYCODE_BUTTON_START ||
+                    event.keyCode == KeyEvent.KEYCODE_MENU)) {
+                finish()
+                return true
+            }
+            return true   // 加载中其余按键同样吞掉，避免焦点乱跑
+        }
+
         // 金手指面板模式：焦点交给列表/按钮，只保留关闭键与 BACK
         if (cheatPanelVisible) {
             when (event.keyCode) {

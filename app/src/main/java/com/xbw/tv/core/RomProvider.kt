@@ -139,18 +139,27 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             val lines = meta.readLines()
             if (lines.size >= 3) {
                 val f = File(lines[1])
-                if (f.exists() && f.length() > 16) {
-                    val fallbacks = lines.drop(3).mapNotNull { l ->
-                        val ff = File(l)
-                        if (ff.exists() && ff.length() > 16) ff else null
-                    }
-                    dir.setLastModified(System.currentTimeMillis())   // 记录访问时间供 LRU
-                    Log.i(TAG, "rom cached id=$gameId core=${lines[0]} fallbacks=${fallbacks.size}")
-                    return RomResult.Ready(RomSpec(lines[0], f, File(dir, "system"), true, fallbacks))
-                }
+                // v0.0.8 自愈：normalizeFbneoZip 曾误把 BIOS 解成 ROM 写进 .romspec，
+                // 命中这种污染缓存直接作废重取（BIOS 名永远不是游戏）
+                if (lines[0] == "fbneo" && isBiosRomName(f.name)) meta.delete()
             }
-            // 旧格式（<3 行）或文件丢失：作废重取
-            meta.delete()
+            if (meta.exists()) {
+                val lines = meta.readLines()
+                if (lines.size >= 3) {
+                    val f = File(lines[1])
+                    if (f.exists() && f.length() > 16) {
+                        val fallbacks = lines.drop(3).mapNotNull { l ->
+                            val ff = File(l)
+                            if (ff.exists() && ff.length() > 16) ff else null
+                        }
+                        dir.setLastModified(System.currentTimeMillis())   // 记录访问时间供 LRU
+                        Log.i(TAG, "rom cached id=$gameId core=${lines[0]} fallbacks=${fallbacks.size}")
+                        return RomResult.Ready(RomSpec(lines[0], f, File(dir, "system"), true, fallbacks))
+                    }
+                }
+                // 旧格式（<3 行）或文件丢失：作废重取
+                meta.delete()
+            }
         }
 
         // 1) play 页 → gameType / gromname / gsystem（路由规则见 CoreRouter）
@@ -207,9 +216,9 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             return RomResult.Failed("ROM 下载失败（$url）")
         }
 
-        // 3) 压缩壳：FBNeo 整套留用；其余拆出单个 rom（zip 或 7z）
+        // 3) 压缩壳：FBNeo 整套留用（中文名嵌套包解内层）；其余拆出单个 rom（zip 或 7z）
         val rom = when {
-            zip -> raw
+            zip -> normalizeFbneoZip(dir, raw)
             is7zFile(raw) -> unwrap7z(dir, raw) ?: run {
                 raw.delete()
                 return RomResult.Failed("7z 解包失败（ROM 壳损坏或格式不支持）")
@@ -265,11 +274,20 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             val lines = meta.readLines()
             if (lines.size >= 3) {
                 val f = File(lines[1])
-                if (f.exists() && f.length() > 16) {
+                if (f.exists() && f.length() > 16 && !(lines[0] == "fbneo" && isBiosRomName(f.name))) {
                     dir.setLastModified(System.currentTimeMillis())
                     val sysDir = File(dir, "system")
-                    // 自愈：老缓存下载时还没有"插件源下金手指"这一步，命中时补装
+                    // 自愈：老缓存下载时还没有"插件源下金手指"这一步，命中时补装；
+                    // 中文名嵌套盗版包同样在此解出内层驱动 zip（幂等，正常包原样返回）
                     if (lines[0] == "fbneo") {
+                        val nf = normalizeFbneoZip(dir, f)
+                        if (nf != f) {
+                            meta.writeText(listOf(lines[0], nf.absolutePath, "")
+                                .plus(lines.drop(3)).joinToString("\n"))
+                            ensureBiosForZip(context, nf, sysDir)
+                            ensureCheatIni(sysDir, listOf(nf.name))
+                            return RomResult.Ready(RomSpec(lines[0], nf, sysDir, true))
+                        }
                         ensureBiosForZip(context, f, sysDir)
                         ensureCheatIni(sysDir, listOf(f.name))
                     }
@@ -317,10 +335,10 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             return RomResult.Failed("ROM 下载失败（$lastError）")
         }
 
-        // 2) 解包：FBNeo 要整套 zip；其余拆出单个 rom
+        // 2) 解包：FBNeo 要整套 zip（中文名嵌套盗版包解内层驱动 zip）；其余拆出单个 rom
         val zip = core == "fbneo"
         val rom = when {
-            zip -> raw
+            zip -> normalizeFbneoZip(dir, raw)
             is7zFile(raw) -> unwrap7z(dir, raw) ?: run {
                 raw.delete()
                 return RomResult.Failed("7z 解包失败（ROM 壳损坏或格式不支持）")
@@ -370,7 +388,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         val meta = File(dir, ".romspec")
         val sysDir = File(dir, "system").apply { mkdirs() }
         val isShell = localFile.name.endsWith(".zip", ignoreCase = true) || is7zFile(localFile)
-        val rom = when {
+        var rom = when {
             core == "fbneo" -> localFile                    // 整套 zip 原样给
             !isShell -> localFile                            // 单文件直接给
             else -> {                                        // 壳文件：缓存目录里解开
@@ -385,6 +403,8 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         }
         if (rom.length() <= 16) return RomResult.Failed("ROM 文件为空")
         if (core == "fbneo") {
+            // 中文名嵌套盗版包：解内层驱动 zip 到缓存目录（U盘原文件不动）
+            rom = normalizeFbneoZip(dir, rom)
             ensureBiosForZip(context, rom, sysDir)
             ensureCheatIni(sysDir, listOf(rom.name))
         }
@@ -584,6 +604,89 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         } ?: return
         ensureBiosFile(context, bios, sysDir)
     }
+
+    /**
+     * 盗版街机包归一化：像"拳皇十周年纪念 2005 特别版"这类非站点源（插件/U盘）
+     * 常是**中文名外层 zip 里套一个正确命名的驱动 zip**（如 kof10th.zip）。
+     * FBNeo 按 DRV_NAME（= 喂给它的 zip 文件名）反查机型表，中文名外层包必挂。
+     *
+     * 判定极保守，只在**确定是套壳**时才解内层：
+     *  - 外层里除了 zip 和纯文档（txt/nfo/图片等）外**不能有任何裸 rom 文件**——
+     *    正常整合包（如 NeoGeo set 里捆绑 neogeo.zip BIOS + 一堆 .bin/.rom）
+     *    必须原样喂核心，误解 BIOS 就是 v0.0.8 那次"进度条走完进不了游戏"的根因；
+     *  - 内层 zip 必须**恰好一个**，且文件名是 ASCII 驱动名（中文名解出来也白解）；
+     *  - 内层不能是 BIOS 包本身（neogeo.zip/pgm.zip 永远不是游戏）。
+     * U盘原文件只读不改，解出的内层落在缓存目录 [dir] 里。
+     */
+    private fun normalizeFbneoZip(dir: File, zipFile: File): File {
+        val head = ByteArray(4)
+        runCatching { FileInputStream(zipFile).use { if (it.read(head) < 4) return zipFile } }
+            .onFailure { return zipFile }
+        if (!(head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte())) return zipFile
+        try {
+            ZipArchiveInputStream(FileInputStream(zipFile), "GBK", true, false).use { zin ->
+                var innerName: String? = null
+                var innerEntrySeen = false
+                while (true) {
+                    val e = zin.nextEntry ?: break
+                    if (e.isDirectory || e.name.endsWith("/")) continue
+                    val name = e.name.substringAfterLast('/')
+                    if (name.isBlank() || name.startsWith(".") ||
+                        name.startsWith("__MACOSX")) continue
+                    val lower = name.lowercase()
+                    if (lower.endsWith(".zip")) {
+                        if (innerEntrySeen) return zipFile   // 多个内层 zip：不动
+                        innerName = name
+                        innerEntrySeen = true
+                    } else if (!isDocEntry(lower)) {
+                        return zipFile   // 有裸 rom 文件 = 正常整合包，绝不能动
+                    }
+                }
+                val inner = innerName ?: return zipFile
+                val stem = inner.substringBeforeLast('.')
+                // 内层必须是 ASCII 驱动名、且不是 BIOS 包
+                if (!stem.matches(Regex("[A-Za-z0-9][A-Za-z0-9._+-]*"))) return zipFile
+                if (stem.lowercase() in setOf("neogeo", "pgm")) return zipFile
+                val dest = File(dir, inner)
+                if (!dest.exists() || dest.length() <= 16) {
+                    // 第二遍流式解出内层
+                    ZipArchiveInputStream(FileInputStream(zipFile), "GBK", true, false).use { zin2 ->
+                        while (true) {
+                            val e = zin2.nextEntry ?: break
+                            if (e.isDirectory) continue
+                            if (e.name.substringAfterLast('/')
+                                    .equals(inner, ignoreCase = true)) {
+                                dest.outputStream().use { os -> zin2.copyTo(os, 64 * 1024) }
+                                break
+                            }
+                        }
+                    }
+                    if (!dest.exists() || dest.length() <= 16) return zipFile
+                }
+                Log.i(TAG, "fbneo nested zip unwrapped: ${zipFile.name} -> $inner")
+                return dest
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "normalizeFbneoZip failed for ${zipFile.name}", e)
+            return zipFile
+        }
+    }
+
+    /** 纯文档/说明类条目（盗版套壳里常见 README），不算裸 rom */
+    private fun isDocEntry(lowerName: String): Boolean =
+        lowerName.endsWith(".txt") || lowerName.endsWith(".nfo") ||
+            lowerName.endsWith(".md") || lowerName.endsWith(".pdf") ||
+            lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") ||
+            lowerName.endsWith(".png") || lowerName.endsWith(".gif") ||
+            lowerName.endsWith(".bmp") || lowerName.endsWith(".webp") ||
+            lowerName.endsWith(".html") || lowerName.endsWith(".htm") ||
+            lowerName.endsWith(".url") || lowerName.endsWith(".sfv") ||
+            lowerName.endsWith(".xml") || lowerName.endsWith(".log") ||
+            lowerName == "readme"
+
+    /** BIOS 包名永远不可能作为 ROM 喂核心——命中即缓存被污染，作废重取 */
+    private fun isBiosRomName(name: String): Boolean =
+        name.substringBeforeLast('.').lowercase() in setOf("neogeo", "pgm")
 
     /**
      * 多个候选 URL **并发竞速**取文本，第一个通过 [accept] 的胜出，其余取消。
