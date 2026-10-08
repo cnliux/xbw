@@ -267,7 +267,13 @@ const val NO_ROM_PLATFORM = "网页版游戏"
                 val f = File(lines[1])
                 if (f.exists() && f.length() > 16) {
                     dir.setLastModified(System.currentTimeMillis())
-                    return RomResult.Ready(RomSpec(lines[0], f, File(dir, "system"), true))
+                    val sysDir = File(dir, "system")
+                    // 自愈：老缓存下载时还没有"插件源下金手指"这一步，命中时补装
+                    if (lines[0] == "fbneo") {
+                        ensureBiosForZip(context, f, sysDir)
+                        ensureCheatIni(sysDir, listOf(f.name))
+                    }
+                    return RomResult.Ready(RomSpec(lines[0], f, sysDir, true))
                 }
             }
             meta.delete()
@@ -331,7 +337,11 @@ const val NO_ROM_PLATFORM = "网页版游戏"
 
         // 3) 写规格缓存（插件源没有 gsystem/兜底；BIOS 从 zip 内文件名反推补装）
         val sysDir = File(dir, "system").apply { mkdirs() }
-        if (zip) ensureBiosForZip(context, rom, sysDir)
+        if (zip) {
+            ensureBiosForZip(context, rom, sysDir)
+            // FBNeo 按 DRV_NAME（= zip 名）反查 ini，插件源街机同样要下金手指
+            ensureCheatIni(sysDir, listOf(rom.name))
+        }
         meta.writeText(listOf(core, rom.absolutePath, "").joinToString("\n"))
         Log.i(TAG, "plugin rom ready id=$gameId core=$core size=${rom.length()}")
         return RomResult.Ready(RomSpec(core, rom, sysDir, false))
@@ -374,7 +384,10 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             }
         }
         if (rom.length() <= 16) return RomResult.Failed("ROM 文件为空")
-        if (core == "fbneo") ensureBiosForZip(context, rom, sysDir)
+        if (core == "fbneo") {
+            ensureBiosForZip(context, rom, sysDir)
+            ensureCheatIni(sysDir, listOf(rom.name))
+        }
         meta.writeText(listOf(core, rom.absolutePath, "").joinToString("\n"))
         Log.i(TAG, "usb/local rom ready id=$gameId core=$core path=${rom.absolutePath} size=${rom.length()}")
         return RomResult.Ready(RomSpec(core, rom, sysDir, false))
@@ -533,26 +546,72 @@ const val NO_ROM_PLATFORM = "网页版游戏"
     }
 
     /**
-     * 插件源/USB 的街机 zip 没有 gsystem，从 zip 内文件名反推机种 BIOS：
-     * PGM 基板（三国战纪/西游释厄传等）→ pgm.zip，NeoGeo → neogeo.zip。
-     * 读不出/不匹配就不装（多数 CPS/STV 基板本来也不需要 BIOS）。
+     * 插件源/USB 的街机 zip 没有 gsystem，BIOS 两步补齐：
+     * ① 全局缓存（启动预热的 neogeo.zip/pgm.zip）里有什么就**无条件铺进**
+     *    system 目录——FBNeo 只会用它需要的那份，多余无害。NeoGeo 驱动名无法
+     *    枚举，靠这一步兜底；kovsh 这类 PGM 游戏 zip 内全是游戏自己的 ROM，
+     *    光看内部文件名认不出机种，同样靠这一步命中。
+     * ② 缓存里没有的（预热失败/离线）再按驱动名前缀 + zip 内文件名推断机种，
+     *    竞速下载。读不出/不匹配就不装（多数 CPS/STV 基板本来也不需要 BIOS）。
      */
     private suspend fun ensureBiosForZip(context: Context, romZip: File, sysDir: File) {
-        val names = try {
+        File(context.filesDir, "bios").listFiles()
+            ?.filter { it.isFile && it.length() > 16 }
+            ?.forEach { b ->
+                val dest = File(sysDir, b.name)
+                if (!dest.exists() || dest.length() != b.length()) {
+                    runCatching { b.copyTo(dest, overwrite = true) }
+                        .onSuccess { Log.i(TAG, "bios ready: ${dest.name} (${dest.length()} bytes)") }
+                }
+            }
+        val driver = romZip.name.substringBeforeLast('.').lowercase()
+        val inner = try {
             java.util.zip.ZipFile(romZip).use { zip ->
                 zip.entries().toList().map { it.name.lowercase() }
             }
         } catch (e: Exception) {
             emptyList()
         }
-        if (names.isEmpty()) return
         val bios = when {
-            names.any { it.startsWith("pgm_") || it.startsWith("ddp3") || it.startsWith("u18") } -> "pgm.zip"
-            names.any { it.startsWith("neo-") || it == "sp-s3.sp1" || it == "sm1.sm1" || it == "sfix.sfix" } -> "neogeo.zip"
+            // PGM 基板（IGS）：三国战纪 kov*/拳皇三国 kovqhs*/西游释厄传 ddp*/
+            // 海盗船 pirates*/kronos*/雷虎 thunderh*；zip 内文件名为旧启发式保留
+            driver.startsWith("kov") || driver.startsWith("ddp") ||
+                driver.startsWith("pirates") || driver.startsWith("kronos") ||
+                driver.startsWith("thunderh") ||
+                inner.any { it.startsWith("pgm_") || it.startsWith("ddp3") || it.startsWith("u18") } -> "pgm.zip"
+            inner.any { it.startsWith("neo-") || it == "sp-s3.sp1" || it == "sm1.sm1" || it == "sfix.sfix" } -> "neogeo.zip"
             else -> null
         } ?: return
         ensureBiosFile(context, bios, sysDir)
     }
+
+    /**
+     * 多个候选 URL **并发竞速**取文本，第一个通过 [accept] 的胜出，其余取消。
+     * 给金手指 ini 这类小文本文件用（同 [raceDownloadTo] 的思路，BIOS 是文件版）。
+     */
+    private suspend fun raceFetchText(urls: List<String>, accept: (String) -> Boolean): String? =
+        coroutineScope {
+            val done = Channel<String?>(urls.size)
+            val jobs = urls.map { url ->
+                launch(Dispatchers.IO) {
+                    val r = try {
+                        HttpFetcher.fetchText(url).takeIf(accept)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    done.send(r)
+                }
+            }
+            var winner: String? = null
+            var settled = 0
+            while (winner == null && settled < urls.size) {
+                val r = done.receive()
+                settled++
+                if (r != null) winner = r
+            }
+            jobs.forEach { it.cancel() }
+            winner
+        }
 
     /**
      * 下载金手指 ini：任一段名命中即用，内容写到每个段名一份——
@@ -561,7 +620,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
      *
      * 两级来源：站点 1990i 优先（中文命名、和 ROM 同源），站点没有就查
      * GitHub 官方库 finalburnneo/FBNeo-cheats（master/cheats/<名>.ini，约 3400 款，
-     * 与站点完全同格式）；国内直连 raw.githubusercontent 不稳，逐个走镜像前缀。
+     * 与站点完全同格式）；GitHub 各镜像**并发竞速**，谁快用谁。
      */
     private suspend fun ensureCheatIni(sysDir: File, segments: List<String>) {
         if (segments.isEmpty()) return
@@ -580,20 +639,14 @@ const val NO_ROM_PLATFORM = "网页版游戏"
                 null
             }
         }
-        // 站点没有（或下回来的是错误页）→ GitHub 官方库
-        // 镜像前缀逐个试；fetchText 单次不重试，404/超时快失败换下一个源
+        // 站点没有（或下回来的是错误页）→ GitHub 官方库：
+        // 所有 (段名 × 镜像) 组合并发竞速，第一个返回真 ini 的胜出
         if (content.isNullOrBlank() || !content.trimStart().startsWith("cheat")) {
-            content = segments.firstNotNullOfOrNull { name ->
-                val stem = name.substringBeforeLast('.')
-                val raw = "$GH_CHEAT_RAW/${encode(stem)}.ini"
-                GH_MIRROR_PREFIXES.firstNotNullOfOrNull { p ->
-                    try {
-                        HttpFetcher.fetchText(p + raw).takeIf { it.trimStart().startsWith("cheat") }
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
+            val urls = segments.flatMap { name ->
+                val raw = "$GH_CHEAT_RAW/${encode(name.substringBeforeLast('.'))}.ini"
+                GH_MIRROR_PREFIXES.map { it + raw }
             }
+            content = raceFetchText(urls) { it.trimStart().startsWith("cheat") }
         }
         content ?: return
         for (name in segments) {
