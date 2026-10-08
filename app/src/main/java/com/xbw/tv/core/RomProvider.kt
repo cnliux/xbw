@@ -48,14 +48,9 @@ private const val TAG = "RomProvider"
 private const val ROM_HOST = "https://file.1990i.com"
 private const val CDN_HOST = "https://file.yikm.net"
 
-/** GitHub raw 镜像前缀（wget.la 为项目实测可用；空串=直连，放最后兜底）。
- *  金手指库与自建 BIOS 库共用 */
-private val GH_MIRROR_PREFIXES = listOf(
-    "https://wget.la/",
-    "https://gh-proxy.com/",
-    "https://ghfast.top/",
-    ""
-)
+/** GitHub raw 镜像前缀：**启动时 CdnPicker 实测排序**，谁快谁在前
+ *  （未测速时退回默认顺序；空串=直连兜底）。金手指库与自建 BIOS 库共用 */
+private fun ghMirrors(): List<String> = com.xbw.tv.data.net.CdnPicker.ranked()
 
 /** FBNeo 官方金手指库（GitHub，master 分支 cheats/<驱动名>.ini，约 3400 款） */
 private const val GH_CHEAT_RAW = "https://raw.githubusercontent.com/finalburnneo/FBNeo-cheats/master/cheats"
@@ -131,7 +126,11 @@ const val NO_ROM_PLATFORM = "网页版游戏"
      * 下载（或命中缓存）游戏 [gameId] 的 ROM。
      * @return 成功给 [RomResult.Ready]；无核心 / 下载失败分别给对应子类，UI 提示不混淆
      */
-    suspend fun prepare(context: Context, gameId: String): RomResult {
+    suspend fun prepare(
+        context: Context,
+        gameId: String,
+        onProgress: ((done: Long, total: Long) -> Unit)? = null
+    ): RomResult {
         val dir = cacheDirOf(context, gameId)
         evictIfNeeded(context, gameId)
         // 缓存命中：.romspec 记录核心名 + ROM 文件位置 + 兜底列表
@@ -201,7 +200,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         // FBNeo 直接吃这个 zip（整套 rom 一个文件），所以按原名落盘方便排查
         val raw = if (zip) File(dir, romPath.substringAfterLast('/')) else File(dir, "rom.raw")
         try {
-            HttpFetcher.downloadToFile(url, raw, referer = SiteConfig.BASE_URL + "/")
+            HttpFetcher.downloadToFile(url, raw, referer = SiteConfig.BASE_URL + "/", onProgress = onProgress)
         } catch (e: Exception) {
             Log.w(TAG, "rom download failed $url", e)
             raw.delete()
@@ -256,7 +255,8 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         romUrls: List<String>,
         platformKey: String?,
         cookie: String?,
-        romFileName: String? = null
+        romFileName: String? = null,
+        onProgress: ((done: Long, total: Long) -> Unit)? = null
     ): RomResult {
         val dir = cacheDirOf(context, gameId)
         evictIfNeeded(context, gameId)
@@ -293,7 +293,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             raw.delete()
             try {
                 val headers = cookie?.let { mapOf("Cookie" to "__test=$it") } ?: emptyMap()
-                HttpFetcher.downloadToFile(url, raw, headers = headers)
+                HttpFetcher.downloadToFile(url, raw, headers = headers, onProgress = onProgress)
             } catch (e: Exception) {
                 lastError = e.message ?: "网络异常"
                 Log.w(TAG, "plugin rom candidate failed: $url（$lastError）")
@@ -480,7 +480,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
      * BIOS 只有几 MB，省去探活直接开下）。
      */
     private suspend fun raceDownloadTo(biosDir: File, bios: String): File? = coroutineScope {
-        val urls = GH_MIRROR_PREFIXES.map { it + "$GH_BIOS_RAW/$bios" } + "$CDN_HOST/$bios"
+        val urls = ghMirrors().map { it + "$GH_BIOS_RAW/$bios" } + "$CDN_HOST/$bios"
         // 每次调用独立后缀，避免并发/残留的 .part 互相踩
         val token = java.util.UUID.randomUUID().toString().take(8)
         biosDir.listFiles()?.forEach {
@@ -644,7 +644,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         if (content.isNullOrBlank() || !content.trimStart().startsWith("cheat")) {
             val urls = segments.flatMap { name ->
                 val raw = "$GH_CHEAT_RAW/${encode(name.substringBeforeLast('.'))}.ini"
-                GH_MIRROR_PREFIXES.map { it + raw }
+                ghMirrors().map { it + raw }
             }
             content = raceFetchText(urls) { it.trimStart().startsWith("cheat") }
         }

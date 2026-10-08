@@ -102,6 +102,8 @@ class NativeGameActivity : AppCompatActivity() {
     private var toolbarVisible = false
     private var paused = false
     private var stopped = false
+    /** ROM/核心加载失败：loading 层保持可见，此时 BACK/手柄任意退出键直接 finish（不弹确认框，避免被困） */
+    private var loadFailed = false
 
     // 金手指状态：FC（fceumm）走站点 RAM 码（retro_cheat_set），
     // 街机（fbneo）走 cheat ini 转成的 core options（retro_cheat_set 是空函数）
@@ -173,6 +175,10 @@ class NativeGameActivity : AppCompatActivity() {
         lifecycleScope.launch {
             binding.loadingText.text = "正在准备 ROM…"
             val result = withContext(Dispatchers.IO) {
+                // ROM 下载进度 → 主线程刷进度条（IO 线程回调，节流 ~100ms/次）
+                val onProgress: (Long, Long) -> Unit = { done, total ->
+                    runOnUiThread { showRomProgress(done, total) }
+                }
                 // U盘本地 ROM：直接进核心，不下载也不抓 play 页；
                 // 第三方插件源带直链 ROM：走 prepareDirect，别去抓 yikm play 页；
                 // 候选列表优先（逐个试到真文件），老的单个直链兜底
@@ -181,12 +187,12 @@ class NativeGameActivity : AppCompatActivity() {
                         this@NativeGameActivity, gameId, File(localRomPath!!), directPlatform
                     )
                     directRomUrls.isNotEmpty() -> RomProvider.prepareDirect(
-                        this@NativeGameActivity, gameId, directRomUrls, directPlatform, directCookie, directRomName
+                        this@NativeGameActivity, gameId, directRomUrls, directPlatform, directCookie, directRomName, onProgress
                     )
                     directRomUrl != null -> RomProvider.prepareDirect(
-                        this@NativeGameActivity, gameId, listOf(directRomUrl!!), directPlatform, directCookie
+                        this@NativeGameActivity, gameId, listOf(directRomUrl!!), directPlatform, directCookie, null, onProgress
                     )
-                    else -> RomProvider.prepare(this@NativeGameActivity, gameId)
+                    else -> RomProvider.prepare(this@NativeGameActivity, gameId, onProgress)
                 }
             }
             // 分三类提示：没核心 / 下载或站点失败（可重试）/ 真加载失败
@@ -202,7 +208,9 @@ class NativeGameActivity : AppCompatActivity() {
                 }
             }
             coreName = spec.coreName
-            binding.loadingText.text = "正在启动 ${spec.coreName} 核心…"
+            binding.loadingBar.visibility = View.GONE
+            binding.loadingText.text = if (spec.fromCache) "ROM 已就绪，正在启动 ${spec.coreName} 核心…"
+                else "正在启动 ${spec.coreName} 核心…"
             val ok = withContext(Dispatchers.IO) {
                 var ok = core.loadCore(this@NativeGameActivity, spec.coreName, spec.systemDir, spec.romFile)
                 // 修改版 zip 的驱动名可能不在本版 FBNeo 数据表里 → 逐段兜底基础版
@@ -231,9 +239,30 @@ class NativeGameActivity : AppCompatActivity() {
     }
 
     private fun failLoad(msg: String) {
-        // 无核心/无 ROM 时给出明确出路：BACK 会弹确认框退出（游戏模式按键路由兜底）
+        // 加载失败：loading 层保持，BACK/手柄退出键直接 finish（见 dispatchKeyEvent 的 loadFailed 分支）
+        loadFailed = true
+        binding.loadingBar.visibility = View.GONE
         binding.loadingText.text = "$msg\n按返回键退出"
         toast(msg)
+    }
+
+    /** ROM 下载进度（主线程调用）：total>0 显示百分比进度条，否则只显示已下大小 */
+    private var lastProgressAt = 0L
+    private fun showRomProgress(done: Long, total: Long) {
+        if (loadFailed) return
+        val now = System.currentTimeMillis()
+        val finished = total > 0 && done >= total
+        if (!finished && now - lastProgressAt < 100) return
+        lastProgressAt = now
+        val mb = done / 1048576.0
+        if (total > 0) {
+            val pct = ((done * 100) / total).toInt().coerceIn(0, 100)
+            binding.loadingBar.visibility = View.VISIBLE
+            binding.loadingBar.progress = pct
+            binding.loadingText.text = "正在下载 ROM… %d%%（%.1f/%.1f MB）".format(pct, mb, total / 1048576.0)
+        } else {
+            binding.loadingText.text = "正在下载 ROM… %.1f MB".format(mb)
+        }
     }
 
     // ── 工具条 ─────────────────────────────────────────────────────────
@@ -513,6 +542,22 @@ class NativeGameActivity : AppCompatActivity() {
         if (isFinishing) return super.dispatchKeyEvent(event)
         val isGamepad = event.source and (android.view.InputDevice.SOURCE_GAMEPAD or
                 android.view.InputDevice.SOURCE_JOYSTICK) != 0
+
+        // ★ 加载失败被困修复：游戏还没跑起来（ROM 下载失败/无核心），
+        //   任何退出意图（BACK / 手柄 B / START / MENU）直接 finish，
+        //   不弹确认框、不走工具条/金手指路由——loading 层全屏时这些
+        //   路由要么没焦点要么被吞，就是"退不出去"的根因
+        if (loadFailed) {
+            if (event.action == KeyEvent.ACTION_UP && (
+                    event.keyCode == KeyEvent.KEYCODE_BACK ||
+                    event.keyCode == KeyEvent.KEYCODE_BUTTON_B ||
+                    event.keyCode == KeyEvent.KEYCODE_BUTTON_START ||
+                    event.keyCode == KeyEvent.KEYCODE_MENU)) {
+                finish()
+                return true
+            }
+            return true   // 其余按键一律吞掉，别让未映射键乱焦点
+        }
 
         // 金手指面板模式：焦点交给列表/按钮，只保留关闭键与 BACK
         if (cheatPanelVisible) {

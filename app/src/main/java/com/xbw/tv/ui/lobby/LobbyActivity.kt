@@ -60,6 +60,11 @@ class LobbyActivity : AppCompatActivity() {
      * 不阻塞启动，失败静默（进游戏时懒加载兜底）。
      */
     private fun prewarmArcadeBios() {
+        // GitHub 镜像测速：BIOS/金手指竞速下载共用（无论 BIOS 是否已就位都要测，
+        // 金手指 ini 每次进新街机都可能用到）。后台跑，不阻塞启动
+        lifecycleScope.launch(Dispatchers.IO) {
+            runCatching { com.xbw.tv.data.net.CdnPicker.warmup() }
+        }
         if (biosPrewarmStarted) return
         if (RomProvider.pendingPrewarmBios(applicationContext).isEmpty()) return
         biosPrewarmStarted = true

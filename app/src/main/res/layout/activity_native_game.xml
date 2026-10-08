@@ -176,5 +176,16 @@
             android:text="正在准备 ROM…"
             android:textColor="#AAFFFFFF"
             android:textSize="15sp" />
+
+        <!-- ROM 下载进度条：拿到 Content-Length 才显示（未知大小只看文字） -->
+        <ProgressBar
+            android:id="@+id/loading_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="260dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:max="100"
+            android:progressTint="#FFFF5A5F"
+            android:visibility="gone" />
     </LinearLayout>
 </FrameLayout>
