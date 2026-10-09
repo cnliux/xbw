@@ -165,9 +165,10 @@ if (!category.fetchable) {
         if (!force) memory.get(key)?.let { return LoadResult(it, true, page, page + 1) }
         return lockFor(key).withLock {
             if (!force) memory.get(key)?.let { return@withLock LoadResult(it, true, page, page + 1) }
-            // 源被删/网络挂了：PluginRepository.load 会抛可读异常向上透传
+            // 源被删/网络挂了：PluginRepository.load 会抛可读异常向上透传。
+            // force=true：大厅每次进入/刷新都要拉最新清单（插件源不再吃 24h 缓存）
             val all = try {
-                PluginRepository.load(ctx, src)
+                PluginRepository.load(ctx, src, force)
             } catch (e: IllegalStateException) {
                 throw EmptySiteException(e.message ?: "该分类暂时没有可玩游戏")
             }

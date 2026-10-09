@@ -97,10 +97,13 @@ object PluginRepository {
     /**
      * 某个源的全部条目；失败时回落到磁盘缓存，都拿不到就抛。
      * XML 方式和目录引导方式在这里分叉，外部无感知。
+     *
+     * @param force true = **每次都要最新**：跳过内存缓存与磁盘的 24h 缓存，直接联网重下；
+     *              只有联网失败时才回落到磁盘缓存兜底（离线仍能出列表）。
      */
-    suspend fun load(context: Context, src: PluginSource): List<GameItem> =
+    suspend fun load(context: Context, src: PluginSource, force: Boolean = false): List<GameItem> =
         mutex.withLock {
-            memCache[src.id]?.let { return@withLock it }
+            if (!force) memCache[src.id]?.let { return@withLock it } else memCache.remove(src.id)
             val app = context.applicationContext
             val items = if (src.dirBootstrap) {
                 runCatching { loadDir(app, src) }.getOrElse {
@@ -108,7 +111,7 @@ object PluginRepository {
                     loadDirFromCache(app, src)
                 }
             } else {
-                val xml = runCatching { readXml(app, src) }.getOrElse {
+                val xml = runCatching { readXml(app, src, force) }.getOrElse {
                     Log.w(TAG, "fetch ${src.id} failed: ${it.message}")
                     readCache(app, src.listUrl)
                 }
@@ -487,9 +490,9 @@ object PluginRepository {
 
     // ---------- 磁盘缓存 ----------
 
-    private suspend fun readXml(context: Context, src: PluginSource): String {
+    private suspend fun readXml(context: Context, src: PluginSource, force: Boolean = false): String {
         val cached = cacheFile(context, src.listUrl)
-        if (cached.isFile && System.currentTimeMillis() - cached.lastModified() < CACHE_MS) {
+        if (!force && cached.isFile && System.currentTimeMillis() - cached.lastModified() < CACHE_MS) {
             Log.i(TAG, "hit disk cache ${src.id}")
             return cached.readText()
         }

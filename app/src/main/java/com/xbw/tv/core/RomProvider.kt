@@ -477,10 +477,21 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         }
     }
 
-    /** 缓存里没有就竞速下载；返回全局缓存文件，全部源失败返回 null */
+    /**
+     * 缓存里没有就竞速下载；返回全局缓存文件，全部源失败返回 null。
+     *
+     * **自愈**：只有真正是 ZIP 的缓存才算命中。镜像挂掉时可能回一页 HTML
+     * （实测 `gh.91hai.cn` 变域名出售页，6990B），只按长度判断会把错误页当
+     * BIOS 永久复用，核心随后报"缺 sp-s3.sp1/sm1.sm1/000-lo.lo"。命中非 ZIP
+     * 一律作废重下。
+     */
     private suspend fun fetchBiosToCache(context: Context, bios: String): File? {
         val cache = File(context.filesDir, "bios/$bios")
-        if (cache.exists() && cache.length() > 16) return cache
+        if (isZipFile(cache)) return cache
+        if (cache.exists()) {
+            Log.w(TAG, "bios cache $bios is not a zip (${cache.length()}B), refetch")
+            cache.delete()
+        }
         cache.parentFile?.mkdirs()
         val got = raceDownloadTo(cache.parentFile!!, bios)
         return if (got != null) {
@@ -510,8 +521,11 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         val jobs = urls.mapIndexed { i, url ->
             launch(Dispatchers.IO) {
                 val tmp = File(biosDir, "$bios.part.$i.$token")
+                // 必须真的是 ZIP 才算成功：镜像挂掉时回一页 HTML（域名出售页）
+                // 往往比 2MB 的真 BIOS 先下完，只看"有响应"会让错误页抢跑胜出
                 val ok = runCatching {
-                    HttpFetcher.tryGetFile(url, tmp, timeoutSec = 30) && tmp.length() > 16
+                    HttpFetcher.tryGetFile(url, tmp, timeoutSec = 30) &&
+                        tmp.length() > 16 && isZipFile(tmp)
                 }.getOrDefault(false)
                 done.send(i to ok)
             }
@@ -542,12 +556,11 @@ const val NO_ROM_PLATFORM = "网页版游戏"
     /** 启动预热要覆盖的机种 BIOS（体积共约 3.5MB，覆盖绝大多数插件源街机） */
     private val PREWARM_BIOS = listOf("neogeo.zip", "pgm.zip")
 
-    /** 还缺哪些预热 BIOS（UI 据此决定要不要提示；命中缓存则为空） */
+    /** 还缺哪些预热 BIOS（UI 据此决定要不要提示；命中缓存则为空）。
+     *  只有真正的 ZIP 才算"已有"——错误页/半截文件（被下游校验挡下的残留）
+     *  都要重下。 */
     fun pendingPrewarmBios(context: Context): List<String> =
-        PREWARM_BIOS.filter {
-            val f = File(context.filesDir, "bios/${it}")
-            !f.exists() || f.length() <= 16
-        }
+        PREWARM_BIOS.filter { !isZipFile(File(context.filesDir, "bios/$it")) }
 
     /**
      * 启动后台预热常用街机 BIOS（竞速下载）。
@@ -576,7 +589,9 @@ const val NO_ROM_PLATFORM = "网页版游戏"
      */
     private suspend fun ensureBiosForZip(context: Context, romZip: File, sysDir: File) {
         File(context.filesDir, "bios").listFiles()
-            ?.filter { it.isFile && it.length() > 16 }
+            // 只铺真正的 BIOS 文件：排除竞速下载的 .part 残留，且必须是真 ZIP
+            // （停放页/错误页即使已落盘也不能铺进游戏目录）
+            ?.filter { it.isFile && it.length() > 16 && !it.name.contains(".part") && isZipFile(it) }
             ?.forEach { b ->
                 val dest = File(sysDir, b.name)
                 if (!dest.exists() || dest.length() != b.length()) {
@@ -599,7 +614,8 @@ const val NO_ROM_PLATFORM = "网页版游戏"
                 driver.startsWith("pirates") || driver.startsWith("kronos") ||
                 driver.startsWith("thunderh") ||
                 inner.any { it.startsWith("pgm_") || it.startsWith("ddp3") || it.startsWith("u18") } -> "pgm.zip"
-            inner.any { it.startsWith("neo-") || it == "sp-s3.sp1" || it == "sm1.sm1" || it == "sfix.sfix" } -> "neogeo.zip"
+            inner.any { it.startsWith("neo-") || it == "sp-s3.sp1" || it == "sm1.sm1" || it == "sfix.sfix" } ||
+                looksLikeNeoGeoSet(inner) -> "neogeo.zip"
             else -> null
         } ?: return
         ensureBiosFile(context, bios, sysDir)
@@ -687,6 +703,22 @@ const val NO_ROM_PLATFORM = "网页版游戏"
     /** BIOS 包名永远不可能作为 ROM 喂核心——命中即缓存被污染，作废重取 */
     private fun isBiosRomName(name: String): Boolean =
         name.substringBeforeLast('.').lowercase() in setOf("neogeo", "pgm")
+
+    /**
+     * 里层全是游戏 ROM、**不含 BIOS** 的 NeoGeo 包（Hack/盗版包很常见，实测
+     * `kf10thep.zip` 里只有 kf10-c1a.bin…5008-p2.bin）。这类包光看内部文件名
+     * 认不出是 NeoGeo，会漏补 neogeo.zip，核心随即报"缺 sp-s3.sp1/sm1.sm1/
+     * sfix.sfix/000-lo.lo"（都是 BIOS 里的文件）。
+     *
+     * 靠 ROM 命名约定反推：C-ROM 固定叫 `<前缀>-c<1..8>[a-h].bin`，另配
+     * m1/s1/v1..v4。命中 ≥2 个 C-ROM 且有音频 ROM 即认定。
+     */
+    private fun looksLikeNeoGeoSet(inner: List<String>): Boolean {
+        fun base(e: String) = e.substringAfterLast('/')
+        val cRom = inner.count { base(it).matches(Regex(".*-?c[1-8][a-h]?\\.bin")) }
+        val audio = inner.any { base(it).matches(Regex(".*-?(m1|s1|v[1-4])\\.bin")) }
+        return cRom >= 2 && audio
+    }
 
     /**
      * 多个候选 URL **并发竞速**取文本，第一个通过 [accept] 的胜出，其余取消。
@@ -814,6 +846,20 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         }
         raw.delete()
         return best?.takeIf { it.length() > 16 }
+    }
+
+    /** ZIP 魔数（PK 头）：BIOS 包必须是真 zip，用来识别"下成了 HTML 错误/停放页"。
+     *  PK\x03\x04 普通条目、PK\x05\x06 空档、PK\x07\x08 分卷。 */
+    private fun isZipFile(f: File): Boolean {
+        if (!f.isFile || f.length() < 4) return false
+        val h = ByteArray(4)
+        return try {
+            FileInputStream(f).use { if (it.read(h) < 4) return false }
+            h[0] == 'P'.code.toByte() && h[1] == 'K'.code.toByte() &&
+                (h[2] == 3.toByte() || h[2] == 5.toByte() || h[2] == 7.toByte())
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /** 7z 魔数：'7' 'z' BC AF 27 1C */

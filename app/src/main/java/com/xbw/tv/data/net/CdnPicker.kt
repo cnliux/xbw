@@ -26,9 +26,20 @@ object CdnPicker {
     /** 第一个应答后的宽限期：给稍慢但可用的源一个进榜机会 */
     private const val GRACE_MS = 2_000L
 
-    /** 全部候选镜像（空串=GitHub raw 直连；国内多数场景镜像更快） */
+    /** 探活样本（自建 BIOS 库里的 pgm.zip）真实字节数下限。停放页/错误页
+     *  （实测域名出售页仅 6990B）响应也带 200，只有按大小才能把它们挡在榜外，
+     *  否则会靠"体积小下得快"抢跑，把 HTML 当成 BIOS 落盘。 */
+    private const val PROBE_MIN_BYTES = 100_000L
+
+    /** 全部候选镜像（空串=GitHub raw 直连；国内多数场景镜像更快）。
+     *  实测：wget.la / gh.idayer.com / github.boki.moe / cdn.gh-proxy.org 可用；
+     *  gh.91hai.cn 已变域名出售页，删除。 */
     val MIRRORS = listOf(
         "https://wget.la/",
+        "https://gh.idayer.com/",
+        "https://github.boki.moe/",
+        "https://cdn.gh-proxy.org/",
+        "https://gh.h233.eu.org/",
         "https://gh-proxy.com/",
         "https://ghfast.top/",
         "https://ghproxy.net/",
@@ -37,7 +48,6 @@ object CdnPicker {
         "https://ghproxy.cn/",
         "https://github.moeyy.xyz/",
         "https://ghproxy.cc/",
-        "https://gh.91hai.cn/",
         ""
     )
 
@@ -58,10 +68,10 @@ object CdnPicker {
                         val t0 = System.currentTimeMillis()
                         val len = runCatching { HttpFetcher.headContentLength(url) }
                             .getOrDefault(-1L)
-                        if (len < 0) null else System.currentTimeMillis() - t0
+                        if (len < PROBE_MIN_BYTES) null else System.currentTimeMillis() - t0
                     }
                     if (ms != null) alive.send(prefix to ms)
-                    else Log.i(TAG, "mirror dead/slow: ${prefix.ifEmpty { "direct" }}")
+                    else Log.i(TAG, "mirror dead/bad (len<${PROBE_MIN_BYTES}): ${prefix.ifEmpty { "direct" }}")
                 }
             }
             val collected = mutableListOf<Pair<String, Long>>()

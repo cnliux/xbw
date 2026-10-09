@@ -85,6 +85,11 @@ object UpdateChecker {
      */
     val SOURCES = listOf(
         Source("GitHub", ""),
+        Source("wget.la", "https://wget.la/https://github.com"),
+        Source("idayer", "https://gh.idayer.com/https://github.com"),
+        Source("boki", "https://github.boki.moe/https://github.com"),
+        Source("gh-proxy.org", "https://cdn.gh-proxy.org/https://github.com"),
+        Source("h233", "https://gh.h233.eu.org/https://github.com"),
         Source("gh-proxy", "https://gh-proxy.com/https://github.com"),
         Source("ghfast", "https://ghfast.top/https://github.com"),
         Source("ghproxy.net", "https://ghproxy.net/https://github.com"),

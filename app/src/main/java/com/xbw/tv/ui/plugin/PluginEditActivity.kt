@@ -69,7 +69,9 @@ class PluginEditActivity : androidx.appcompat.app.AppCompatActivity() {
                 id = PluginSource.deriveId(url),
                 title = name, platform = platform.key, listUrl = url
             )
-            val count = runCatching { PluginRepository.load(this@PluginEditActivity, probe).size }
+            val count = runCatching {
+                PluginRepository.load(this@PluginEditActivity, probe, force = true).size
+            }
                 .getOrElse {
                     b.btnSave.isEnabled = true
                     status(getString(R.string.plugins_test_fail_fmt, it.message ?: "?"), true)
