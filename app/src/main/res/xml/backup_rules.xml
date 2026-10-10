@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <full-backup-content>
-    <!-- 只备份按键映射（用户劳动成果）；游戏列表缓存与最近玩过不备份 -->
+    <!-- 只备份按键映射（用户劳动成果）；游戏列表缓存与最近玩过不备份。
+         include 是白名单：未被包含的（含 xbw.db）本就不会备份，无需再 exclude。 -->
     <include domain="sharedpref" path="keymap.xml" />
-    <exclude domain="database" path="xbw.db" />
 </full-backup-content>

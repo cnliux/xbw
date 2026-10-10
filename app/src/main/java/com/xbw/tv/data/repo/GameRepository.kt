@@ -10,7 +10,6 @@ import com.xbw.tv.data.local.FavoriteEntity
 import com.xbw.tv.data.local.GameEntity
 import com.xbw.tv.data.local.GamePlatformEntity
 import com.xbw.tv.data.local.RecentPlayEntity
-import com.xbw.tv.data.local.SearchIndexEntity
 import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.model.GameItem
 import com.xbw.tv.data.net.CheatParser
@@ -19,7 +18,7 @@ import com.xbw.tv.data.net.SiteConfig
 import com.xbw.tv.data.net.YikmParser
 import com.xbw.tv.data.plugin.PluginRepository
 import com.xbw.tv.data.plugin.PluginSource
-import com.xbw.tv.data.search.PinyinSearchIndexer
+import com.xbw.tv.data.search.Pinyin
 import com.xbw.tv.data.usb.UsbScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -62,6 +61,19 @@ class GameRepository(private val db: AppDatabase, private val app: Application? 
     private val memory = LruCache<String, List<GameItem>>(12)
     private val cheatMem = LruCache<String, List<CheatParser.Cheat>>(24)
     private val locks = mutableMapOf<String, Mutex>()
+
+    /** 官方缓存条目的拼音首字母映射快照（内存态，不进 Room） */
+    private data class OfficialInitial(
+        val item: GameItem,
+        val initials: String,
+        val categoryKey: String
+    )
+
+    @Volatile
+    private var officialSnapKey: Long = -1L
+
+    @Volatile
+    private var officialSnap: List<OfficialInitial> = emptyList()
 
     data class LoadResult(
         val items: List<GameItem>,
@@ -248,79 +260,106 @@ if (!category.fetchable) {
     }
 
     /**
-     * 搜索（本地索引增强 + 可玩性过滤）：**本地索引 + 服务器**双路合并 ——
-     * 本地前缀命中排最前，服务器结果其次，本地包含/标签命中垫底，按 id 去重。
-     * 服务器挂了但本地有结果时返回本地（离线也能搜）。
+     * 搜索（官方站 + 第三方源 gamelist，双路合并）：
      *
-     * 本地索引（[PinyinSearchIndexer]）是主力：站点 `/search` 不支持拼音/首字母，
-     * 搜"街机"只回 7 个合集标题，搜不到任何一个街机游戏。索引里 9500+ 条覆盖
-     * FC/街机/SFC/GBA/MD 全部分页，所以中文查询也必须查它 —— 盒子没软键盘，
-     * 用户就是打中文，纯 ASCII 才查索引等于索引形同虚设。
+     *   - **官方站**：`/search?name=` 全站检索，覆盖官方分页内容；
+     *   - **第三方源**：直接对已加载/已缓存的 gamelist 条目做子串匹配。中文、
+     *     拼音首字母（站点塞在 `<name>` 的 `[xxx]` → `拼音:xxx` 标签）都能命中，
+     *     因此**不需要单独的拼音索引库** —— 清单就在内存/磁盘里，线性扫几千条
+     *     成本可忽略，当前和未来的任何插件都自动可搜。
      *
-     * 查询分派：
-     *   - 纯字母（`hdl`）→ initials 前缀 + initials 包含
-     *   - 含中文（`魂斗罗`/`街机`）→ 标题前缀 + 标题包含 + 标签命中
-     *   两种都再补一条标题包含，混合输入（`魂dolo`）也能命中。
-     *
-     * 远程搜索是**全站**检索，会带回 Java / NDS / DOS / Flash 这类本 App
-     * 没有原生核心的平台，点进去只能看到"暂无原生核心"。合并后统一过一遍
-     * [filterPlayable]：索引命中的直接放行，其余按平台缓存/play 页判定。
+     * 两路**互不拖累**：官方站挂了/改版、或还没加载任何插件源时，只要另一路有
+     * 结果就正常返回，不再整体抛错（旧实现"服务器失败 + 索引为空"会直接报错，
+     * 连插件结果都搜不到）。合并后统一过 [filterPlayable]：插件条目按 platformKey
+     * 直接放行，官方条目按平台缓存/play 页判定。
      */
     suspend fun searchEx(keyword: String): LoadResult {
         val kw = keyword.trim()
         if (kw.isEmpty()) return LoadResult(emptyList(), false, 1, 1)
-        val ascii = kw.all { it in 'a'..'z' || it in 'A'..'Z' }
-        val prefix = mutableListOf<GameItem>()
-        val contains = mutableListOf<GameItem>()
-        withContext(Dispatchers.IO) {
-            val dao = db.searchIndexDao()
-            val q = kw.lowercase()
-            if (ascii) {
-                prefix += dao.queryPrefix(q).map { it.toItem() }
-                contains += dao.queryContains(q).map { it.toItem() }
-                contains += dao.queryNameContains(kw).map { it.toItem() }
-            } else {
-                prefix += dao.queryNamePrefix(kw).map { it.toItem() }
-                contains += dao.queryNameContains(kw).map { it.toItem() }
-                // 搜"街机"/"GBA"这类平台名：直接出该分类的游戏（站点卡片标签里没有平台名）
-                GameCategory.fromLabel(kw)
-                    ?.takeIf { it.playable }
-                    ?.let { cat -> contains += dao.queryByCategory(cat.key).map { it.toItem() } }
-                // 标签命中排在标题包含之后：搜"射击"应先给出标题带"射击"的
-                contains += dao.queryByTag(kw).map { it.toItem() }
-            }
-        }
+        val pluginItems = pluginMatches(kw)
+        // 纯 ASCII 关键词（拼音首字母）才查官方缓存的首字母映射：官方站对拼音返回 0
+        val isAscii = kw.all { it.code < 128 }
+        val (officialItems, officialCats) =
+            if (isAscii) officialInitialsMatches(kw) else emptyList<GameItem>() to emptyMap()
         val server = runCatching { search(kw) }
-        if (server.isFailure && prefix.isEmpty() && contains.isEmpty()) {
+        val serverItems = server.getOrNull()?.items ?: emptyList()
+        // 任一路有结果就成立：官方站失败时不整体抛错
+        if (server.isFailure && pluginItems.isEmpty() && officialItems.isEmpty()) {
             throw server.exceptionOrNull() ?: IllegalStateException("search failed")
         }
-val serverItems = server.getOrNull()?.items ?: emptyList()
-        val used = prefix.mapTo(HashSet()) { it.id }
-        // 第三方源放在服务器结果之后、本地包含之前：用户自己加的源不该被官方站压住，
-        // 但也不该抢走"标题精确匹配"的第一位
-        val pluginItems = pluginMatches(kw)
-        val merged = prefix +
-                serverItems.filterNot { it.id in used }.onEach { used.add(it.id) } +
-                pluginItems.filterNot { it.id in used } +
-                contains.filterNot { it.id in used }
-        val playable = filterPlayable(merged)
+        // 标题精确/前缀命中排前；同档保持"官方站 > 官方拼音 > 插件"的稳定顺序
+        val merged = (serverItems + officialItems + pluginItems).distinctBy { it.id }
+            .sortedBy { relevance(it.name, kw) }
+        val playable = filterPlayable(merged, officialCats)
+        Log.i(TAG, "searchEx '$kw': server=${serverItems.size} officialPinyin=${officialItems.size} " +
+                "plugin=${pluginItems.size} -> ${playable.size}")
         return LoadResult(playable, false, 1, 1,
             fetchedAt = System.currentTimeMillis())
+    }
+
+    /** 相关度：0 完全相等、1 前缀、2 包含、3 其它（稳定排序下同档保持原顺序） */
+    private fun relevance(name: String, kw: String): Int {
+        val n = name.lowercase()
+        val q = kw.lowercase()
+        return when {
+            n == q -> 0
+            n.startsWith(q) -> 1
+            n.contains(q) -> 2
+            else -> 3
+        }
+    }
+
+    /**
+     * 官方缓存条目的「id → 拼音首字母」快照。数据源是本地 `games` 表（用户已浏览/已
+     * 搜索过的官方分页）——官方站 `/search` 不支持拼音，卡片里也没有首字母，只能自己
+     * 从缓存的中文标题现算。**不建 Room 表、不联网**：算完常驻内存，`games` 表内容
+     * 变化（count 或最后写入时间变）才重算。没缓存到的分类自然搜不到，这是「轻量映射」
+     * 的取舍。
+     */
+    private suspend fun officialInitialsSnapshot(): List<OfficialInitial> {
+        val ctx = app ?: return emptyList()
+        return withContext(Dispatchers.IO) {
+            val count = db.gameDao().count()
+            val ts = db.gameDao().maxFetchedAt() ?: 0L
+            val key = count.toLong() * 1_000_003L + ts
+            if (key == officialSnapKey) return@withContext officialSnap
+            val built = db.gameDao().all().map { e ->
+                val item = e.toItem()
+                OfficialInitial(item, Pinyin.initials(ctx, item.name), e.categoryKey)
+            }
+            officialSnap = built
+            officialSnapKey = key
+            built
+        }
+    }
+
+    /**
+     * 拼音首字母命中官方缓存：返回命中的条目 + 各自来源分类（分类用于免联网判定可玩性）。
+     * 仅对纯 ASCII 关键词调用（中文走官方站原样检索）。
+     */
+    private suspend fun officialInitialsMatches(kw: String): Pair<List<GameItem>, Map<String, String>> {
+        val q = kw.lowercase()
+        if (q.isEmpty()) return emptyList<GameItem>() to emptyMap()
+        val hits = officialInitialsSnapshot().filter { it.initials.contains(q) }
+        if (hits.isEmpty()) return emptyList<GameItem>() to emptyMap()
+        return hits.map { it.item } to hits.associate { it.item.id to it.categoryKey }
     }
 
     /**
      * 只保留有原生核心的结果。判定顺序（命中即止，避免多余请求）：
      *   1. **卡片标签**：明确写着 NDS/Java/DOS/Flash/H5 的直接淘汰（零请求，最稳）；
-     *   2. 本地拼音索引 —— 索引只建 FC/街机/SFC/GBA/MD，命中即可玩；
-     *   3. `game_platform` 平台缓存 —— 之前解析过 play 页，结论直接复用；
-     *   4. 现查 play 页（并发 [PROBE_CONCURRENCY]，单次搜索最多 [MAX_PLATFORM_PROBE] 个），
+     *   2. `game_platform` 平台缓存 —— 之前解析过 play 页，结论直接复用；
+     *   3. 现查 play 页（并发 [PROBE_CONCURRENCY]，单次搜索最多 [MAX_PLATFORM_PROBE] 个），
      *      结果写缓存。
      *
      * 抓不到 play 页（离线/限流/改版）时**保守放行**，宁可多显示也不误伤 —— 但这会让
      * "搜不出来"变成常态，所以 [MAX_PLATFORM_PROBE] 必须覆盖单次搜索的全部未知条目
      * （实测街机等关键词会带来几十条无标签结果），否则街机这类有核心的内容会被误杀。
      */
-    private suspend fun filterPlayable(items: List<GameItem>): List<GameItem> {
+    private suspend fun filterPlayable(
+        items: List<GameItem>,
+        knownCategories: Map<String, String> = emptyMap()
+    ): List<GameItem> {
         if (items.isEmpty()) return items
         // ⓪ 插件源 / U盘条目：id 不是 yikm 游戏 id，play 页探测必然"不存在"→ NoRom
         //    → Unsupported → 被误杀（这正是"很多游戏搜不到"的根因）。它们的平台
@@ -337,10 +376,14 @@ val serverItems = server.getOrNull()?.items ?: emptyList()
         }
         val ids = byTag.map { it.id }.distinct()
         val playable = HashMap<String, Boolean>(ids.size)
+        // 官方拼音命中项：来源分类已知，直接判定，省掉 play 页探测（离线也能出结果）。
+        // 跳过"全部游戏"桶（categoryKey=all，首页"所有游戏"落库用），它不是真实平台，
+        // 交给后面的 play 页探测，否则会把可玩游戏误杀。
+        for ((id, cat) in knownCategories) {
+            if (cat == GameCategory.ALL.key) continue
+            playable[id] = CoreRouter.isPlayableCategory(cat)
+        }
         withContext(Dispatchers.IO) {
-            db.searchIndexDao().categoriesOf(ids).forEach {
-                playable[it.gameId] = CoreRouter.isPlayableCategory(it.categoryKey)
-            }
             db.gamePlatformDao().byIds(ids).forEach {
                 playable[it.gameId] = CoreRouter.isPlayableCategory(it.categoryKey)
             }
@@ -390,27 +433,25 @@ val serverItems = server.getOrNull()?.items ?: emptyList()
     }
 
     /**
- * 第三方源里的匹配项：标题包含关键词，或标签命中（题材/拼音首字母）。
-     * 第三方清单没有索引表，直接在内存里线性扫几百条，成本可以忽略。
+     * 第三方源里的匹配项：标题包含关键词，或标签命中（题材 / 拼音首字母 `拼音:xxx`）。
+     * 只扫**已加载/已缓存**的源（[PluginRepository.searchCorpus] 不联网）；未缓存的源
+     * 由 [warmPluginSources] 在后台补拉，搜索不被网络拖住，补到后下次即可命中。
      */
     private suspend fun pluginMatches(kw: String): List<GameItem> {
         val ctx = app ?: return emptyList()
         val q = kw.lowercase()
-        return runCatching {
-            PluginRepository.loadAll(ctx)
-        }.getOrElse { emptyList() }.filter { item ->
-            item.name.lowercase().contains(q) ||
-                    item.tags.any { it.lowercase().contains(q) }
-        }.take(60)
+        return runCatching { PluginRepository.searchCorpus(ctx) }
+            .getOrElse { emptyList() }
+            .filter { item ->
+                item.name.lowercase().contains(q) ||
+                        item.tags.any { it.lowercase().contains(q) }
+            }
+            .take(80)
     }
 
-    /** 拼音索引条目数（UI 展示用） */
-    suspend fun searchIndexCount(): Int =
-        withContext(Dispatchers.IO) { db.searchIndexDao().count() }
-
-    /** 索引过期/为空则后台重建（幂等，重复调用无副作用） */
-    suspend fun ensureSearchIndex(context: android.content.Context) =
-        PinyinSearchIndexer.ensureFresh(context, db)
+    /** 后台补拉未缓存的第三方源（联网）；返回是否加载了新源，供调用方决定重搜 */
+    suspend fun warmPluginSources(context: android.content.Context): Boolean =
+        PluginRepository.warmSources(context)
 
     /**
      * 抓取某游戏的金手指（站点 /cheat?id=）。
@@ -583,14 +624,5 @@ val serverItems = server.getOrNull()?.items ?: emptyList()
         source = source,
         categoryKey = categoryKey,
         page = page
-    )
-
-    private fun SearchIndexEntity.toItem() = GameItem(
-        id = gameId,
-        name = name,
-        coverUrl = coverUrl,
-        playUrl = playUrl,
-        tags = if (tags.isBlank()) emptyList() else tags.split("|"),
-        source = GameItem.SOURCE_SEARCH
     )
 }

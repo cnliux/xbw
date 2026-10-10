@@ -2,7 +2,6 @@
 <data-extraction-rules>
     <cloud-backup>
         <include domain="sharedpref" path="keymap.xml" />
-        <exclude domain="database" path="xbw.db" />
     </cloud-backup>
     <device-transfer>
         <include domain="sharedpref" path="keymap.xml" />

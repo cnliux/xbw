@@ -1,5 +1,7 @@
 package com.xbw.tv.data.net
 
+import java.util.Locale
+
 /**
  * 站点选择器与 URL 集中配置。
  *
@@ -101,14 +103,14 @@ object SiteConfig {
 
     /** 构建列表页 URL；tag/e 需 URL 编码（tag 可以是中文关键词，如 三国战纪） */
     fun listUrl(page: Int, tag: String = "", e: String = ""): String =
-        String.format(LIST_URL_TEMPLATE, page, encodeParam(tag), encodeParam(e))
+        String.format(Locale.US, LIST_URL_TEMPLATE, page, encodeParam(tag), encodeParam(e))
 
     fun searchUrl(keyword: String, page: Int = 1): String =
-        String.format(SEARCH_URL_TEMPLATE, encodeParam(keyword), page)
+        String.format(Locale.US, SEARCH_URL_TEMPLATE, encodeParam(keyword), page)
 
-    fun playUrl(id: String): String = String.format(PLAY_URL_TEMPLATE, id)
+    fun playUrl(id: String): String = String.format(Locale.US, PLAY_URL_TEMPLATE, id)
 
-    fun cheatUrl(id: String): String = String.format(CHEAT_URL_TEMPLATE, encodeParam(id))
+    fun cheatUrl(id: String): String = String.format(Locale.US, CHEAT_URL_TEMPLATE, encodeParam(id))
 
     /** 相对地址 → 绝对地址；封面图在 CDN 域名下 */
     fun absolutize(href: String): String = when {

@@ -4,14 +4,18 @@ import android.content.Context
 import android.util.Log
 import com.xbw.tv.data.model.GameItem
 import com.xbw.tv.data.model.GameCategory
+import com.xbw.tv.data.net.CdnPicker
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.usb.UsbScanner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import java.io.File
 import java.net.URLEncoder
 
@@ -39,10 +43,15 @@ object PluginRepository {
     private const val TAG = "PluginRepo"
     private const val PREFS = "xbw_prefs"
     private const val KEY_SOURCES = "plugin_sources_v1"
+
+    /** 被用户"删除"的内置源 id（内置源定义在代码里删不掉，只能记隐藏）。 */
+    private const val KEY_HIDDEN_BUILTINS = "plugin_builtin_hidden_v1"
     private const val CACHE_MS = 24 * 3600_000L
 
     private val mutex = Mutex()
-    private val memCache = HashMap<String, List<GameItem>>()
+    /** 并发容器：搜索会在**不持 [mutex]** 的情况下快照读取（加载协程持锁联网期间也要能读），
+     *  普通 HashMap 并发读写会破坏内部结构。 */
+    private val memCache = java.util.concurrent.ConcurrentHashMap<String, List<GameItem>>()
     private val cookieJars = HashMap<String, MutableMap<String, String>>()
 
     /** 目录引导源解析出的真实字节目录（src.id → 绝对目录 URL，带尾部 `/`） */
@@ -56,13 +65,36 @@ object PluginRepository {
     // ---------- 源的管理 ----------
 
     fun sources(context: Context): List<PluginSource> {
-        val builtin = PluginSource.builtinSources()
-        // 内置源进不了用户配置（save 过滤 !builtin）；用户手动加的若与内置同 URL/id，
-        // 以内置为准（去重掉，避免大厅出现两个一样的芯片）
+        val hidden = hiddenBuiltins(context)
+        // 内置源可被用户删除：删除只是记进隐藏集合，代码里的定义不动
+        val builtin = PluginSource.builtinSources().filterNot { it.id in hidden }
+        // 用户源按 id/url 与**可见**内置去重（隐藏的内置不参与，否则编辑后的
+        // 用户副本会被原内置顶掉，改出来的名字就白改了）
         val user = PluginSource.parseList(
             prefs(context).getString(KEY_SOURCES, "") ?: ""
         ).filter { u -> builtin.none { it.id == u.id || it.listUrl == u.listUrl } }
         return builtin + user
+    }
+
+    /** 用户删掉的内置源 id 集合 */
+    private fun hiddenBuiltins(context: Context): Set<String> {
+        val raw = prefs(context).getString(KEY_HIDDEN_BUILTINS, "") ?: ""
+        if (raw.isBlank()) return emptySet()
+        return runCatching {
+            val arr = JSONArray(raw)
+            (0 until arr.length())
+                .mapNotNull { arr.optString(it).takeIf { s -> s.isNotBlank() } }
+                .toSet()
+        }.getOrDefault(emptySet())
+    }
+
+    /** 把内置源记入隐藏集合（等价于用户删除） */
+    private fun hideBuiltin(context: Context, id: String) {
+        val hidden = hiddenBuiltins(context) + id
+        prefs(context).edit()
+            .putString(KEY_HIDDEN_BUILTINS, JSONArray(hidden.toList()).toString())
+            .apply()
+        memCache.remove(id)
     }
 
     /** 按条目 id（plug-<源id>-…）反查所属源；找不到（源已删）返回 null */
@@ -81,6 +113,9 @@ object PluginRepository {
 
     /** 新增或覆盖（按 id / url 去重），返回生效后的源列表 */
     fun upsert(context: Context, src: PluginSource): List<PluginSource> {
+        // 改的正好是一个内置源：把原内置隐藏，改动另存为用户副本（内置定义改不了，
+        // 不隐藏的话它会在 sources() 里把同 id/url 的用户副本去重掉）
+        if (PluginSource.builtinSources().any { it.id == src.id }) hideBuiltin(context, src.id)
         val merged = sources(context).filterNot {
             it.id == src.id || it.listUrl == src.listUrl
         } + src
@@ -89,7 +124,13 @@ object PluginRepository {
     }
 
     fun remove(context: Context, id: String) {
-        save(context, sources(context).filterNot { it.id == id && !it.builtin })
+        val src = sources(context).firstOrNull { it.id == id } ?: return
+        if (src.builtin) {
+            // 内置源删不掉：记进隐藏集合即可
+            hideBuiltin(context, id)
+        } else {
+            save(context, sources(context).filterNot { it.id == id })
+        }
     }
 
     // ---------- 加载 ----------
@@ -226,6 +267,52 @@ object PluginRepository {
         return all
     }
 
+    /**
+     * 搜索语料：内存缓存 + 磁盘缓存里的**全部**源条目，**不联网**。
+     *
+     * 插件源就是一份 gamelist.xml（几千条），直接在内存里线性扫，成本可忽略，
+     * 所以搜索不需要官方站那种拼音索引库 —— 任何当前或未来的插件，只要大厅加载过
+     * （写进内存/磁盘缓存）就自动可搜。站点把拼音首字母塞在 `<name>` 里
+     * （`[mfzdyh]`），[parse] 已把它变成 `拼音:xxx` 标签，因此中文和首字母都能命中。
+     */
+    suspend fun searchCorpus(context: Context): List<GameItem> = withContext(Dispatchers.IO) {
+        val app = context.applicationContext
+        val out = ArrayList<GameItem>()
+        val seen = HashSet<String>()
+        for (src in sources(app)) {
+            val items = memCache[src.id] ?: readCachedItems(app, src)
+            items.forEach { if (seen.add(it.id)) out += it }
+        }
+        out
+    }
+
+    /** 磁盘缓存里的源条目（与 [readCache] 同一份文件）；没有/损坏返回空 */
+    private fun readCachedItems(context: Context, src: PluginSource): List<GameItem> {
+        val f = cacheFile(context, src.listUrl)
+        if (!f.isFile || f.length() == 0L) return emptyList()
+        return runCatching { parse(src, f.readText(), src.baseDir) }.getOrDefault(emptyList())
+    }
+
+    /**
+     * 后台补拉：把既不在内存、也没有磁盘缓存的源联网加载一遍。
+     * @return 是否真的加载了新源（调用方据此决定要不要重跑一次搜索）
+     */
+    suspend fun warmSources(context: Context): Boolean {
+        val app = context.applicationContext
+        var loaded = 0
+        var failed = 0
+        for (src in sources(app)) {
+            if (memCache.containsKey(src.id)) continue
+            val f = cacheFile(app, src.listUrl)
+            if (f.isFile && f.length() > 0L) continue
+            runCatching { load(app, src) }
+                .onSuccess { loaded++ }
+                .onFailure { failed++; Log.w(TAG, "warm ${src.id} failed: ${it.message}") }
+        }
+        Log.i(TAG, "warmSources: loaded=$loaded failed=$failed")
+        return loaded > 0
+    }
+
     internal fun parse(src: PluginSource, xml: String, effectiveBase: String? = null): List<GameItem> {
         val entries = GamelistParser.parse(xml)
         // 目录引导源下载/封面的基准目录必须是服务器给的真实字节目录；
@@ -243,11 +330,15 @@ object PluginRepository {
                 val ext = UsbScanner.platformOf(file)
                 if (ext != null && ext != platformKey) return@mapNotNull null
             }
-            val (title, initials) = GamelistParser.splitName(
+            val (title, _) = GamelistParser.splitName(
                 e.sortname.ifEmpty { e.name }
             )
+            // 拼音首字母站点塞在 <name> 的 [xxx] 里，而 <sortname> 常常**不带**这个标记
+            // （例："S-三国志 II（…）[sgzsjb]" vs sortname "S-三国志 II（…）"）。
+            // 标题优先用 sortname，首字母必须从 <name> 取，否则搜 sgz 永远不中。
+            val initials = GamelistParser.initialsOf(e.name)
+                .ifEmpty { GamelistParser.initialsOf(e.sortname) }
             val genre = GamelistParser.genreOf(e.path)
-            // 拼音首字母来自站点自己塞在 <name> 里的 [xxx]，比我们自己算准
             val tags = listOfNotNull(
                 genre.ifEmpty { null },
                 if (cat.playable) cat.title else src.title
@@ -352,10 +443,19 @@ object PluginRepository {
      */
     suspend fun cookieFor(context: Context, src: PluginSource): String? {
         val jar = cookieJars.getOrPut(src.id) { HashMap() }
-        return jar[AesChallenge.COOKIE] ?: runCatching {
+        jar[AesChallenge.COOKIE]?.let { return it }
+        runCatching {
             AesChallenge.fetch(src.effectiveListUrl, jar)
-            jar[AesChallenge.COOKIE]
-        }.onFailure { Log.w(TAG, "cookie solve failed for ${src.id}: ${it.message}") }.getOrNull()
+        }.onFailure { Log.w(TAG, "cookie solve failed for ${src.id}: ${it.message}") }
+        // 清单（尤其 http 直链 xml）经常免挑战，ROM/zip 仍要 __test。
+        // 对源目录发一次探活，逼出挑战页并写入 jar；探活 404 也没关系。
+        if (jar[AesChallenge.COOKIE] == null) {
+            val probe = src.baseDir.trimEnd('/') + "/.xbw_cookie"
+            runCatching {
+                AesChallenge.fetch(probe, jar)
+            }.onFailure { Log.w(TAG, "cookie probe failed for ${src.id}: ${it.message}") }
+        }
+        return jar[AesChallenge.COOKIE]
     }
 
     private fun cookieHeader(src: PluginSource, jar: MutableMap<String, String>?): Map<String, String> =
@@ -381,11 +481,22 @@ object PluginRepository {
             jar?.clear()
             cookieJars.remove(src.id)
             val fresh = cookieFor(app, src)
-            val headers = fresh?.let { mapOf("Cookie" to it) } ?: emptyMap()
+            val headers = fresh?.let { mapOf("Cookie" to "${AesChallenge.COOKIE}=$it") } ?: emptyMap()
             HttpFetcher.downloadToFile(url, destForAttempt, headers = headers)
         }
         if (looksLikeHtml(destForAttempt)) {
+            val html = runCatching { destForAttempt.readText(Charsets.UTF_8) }.getOrNull().orEmpty()
+            val solved = if (AesChallenge.isChallenge(html)) AesChallenge.solve(html) else null
             destForAttempt.delete()
+            if (solved != null) {
+                cookieJars.getOrPut(src.id) { HashMap() }[AesChallenge.COOKIE] = solved
+                HttpFetcher.downloadToFile(
+                    url, dest,
+                    headers = mapOf("Cookie" to "${AesChallenge.COOKIE}=$solved")
+                )
+                if (!looksLikeHtml(dest)) return
+                dest.delete()
+            }
             throw IllegalArgumentException("$url 返回的不是文件（可能是挑战页/登录页）")
         }
     }
@@ -424,12 +535,11 @@ object PluginRepository {
         val app = context.applicationContext
         val result = items.toMutableList()
         // 每个源先确认 cookie（一次），再并发下这源的封面
-        val grouped = items.mapNotNull { item ->
-            sourceById(app, item.id)?.let { src -> item to src }
-        }.groupBy { it.second }
+        val grouped = items.mapIndexedNotNull { idx, item ->
+            sourceById(app, item.id)?.let { src -> Triple(idx, item, src) }
+        }.groupBy { it.third }
         for ((src, group) in grouped) {
             val srcId = src.id
-            val list = group.toList()
             val jar = cookieJars.getOrPut(srcId) { HashMap() }
             if (jar[AesChallenge.COOKIE] == null) runCatching {
                 AesChallenge.fetch(src.effectiveListUrl, jar)
@@ -437,18 +547,17 @@ object PluginRepository {
             val cookie = jar[AesChallenge.COOKIE]
             val headers = cookie?.let { mapOf("Cookie" to "${AesChallenge.COOKIE}=$it") } ?: emptyMap()
 
-            val tasks = coroutineScope {
-                list.map { (item, _) ->
+            // 并发下载，但各协程只产出 (索引, 本地路径)，全部 join 后再单线程写回 result。
+            // 原先在 IO 协程里直接 result[i]=…，是对同一个 ArrayList 的并发写，存在竞态。
+            val updates = coroutineScope {
+                group.map { (idx, item, _) ->
                     async(Dispatchers.IO) {
                         val url = coverCandidateUrl(src, item) ?: return@async null
-                        prefetchOne(app, srcId, url, headers)?.let { local ->
-                            val i = result.indexOfFirst { it.id == item.id }
-                            if (i >= 0) result[i] = result[i].copy(coverUrl = local.absolutePath)
-                        }
+                        prefetchOne(app, srcId, url, headers)?.let { local -> idx to local.absolutePath }
                     }
-                }
+                }.mapNotNull { it.await() }
             }
-            tasks.forEach { it.await() }
+            updates.forEach { (i, path) -> result[i] = result[i].copy(coverUrl = path) }
         }
         Log.i(TAG, "prefetched covers for ${items.size} items")
         return result
@@ -496,6 +605,16 @@ object PluginRepository {
             Log.i(TAG, "hit disk cache ${src.id}")
             return cached.readText()
         }
+        // GitHub raw 清单（内置 FC 等）：用启动实测的镜像顺位**并发竞速**，
+        // 谁先回真 XML 用谁（直链源如 cnliux.dpdns.org 不含 raw，不在此列）。
+        src.githubRawUrl?.let { raw ->
+            fetchGithubRaw(raw)?.let { raced ->
+                Log.i(TAG, "github raw raced ${src.id}: ${raced.length}B")
+                writeCache(context, src.listUrl, raced)
+                return raced
+            }
+            Log.w(TAG, "github raw race all failed ${src.id}, fall back")
+        }
         val jar = cookieJars.getOrPut(src.id) { HashMap() }
         var body = AesChallenge.fetch(src.effectiveListUrl, jar)
         // 免费主机有时对裸请求先回一页"JS 广告跳转"（无 toNumbers、无正文）。
@@ -532,6 +651,32 @@ object PluginRepository {
         markPhpDir(context, src)
         writeCache(context, src.listUrl, xml)
         return xml
+    }
+
+    /**
+     * GitHub raw 清单竞速：把 [raw] 拼在 [CdnPicker] 实测顺位的每个镜像前缀后
+     * （含空串直连兜底），**并发**取文本，第一个通过 [looksLikeXml] 的胜出，
+     * 其余取消。镜像挂了/回 HTML 错误页都算失败，交给下一个。
+     */
+    private suspend fun fetchGithubRaw(raw: String): String? = coroutineScope {
+        val urls = CdnPicker.ranked().map { it + raw }.distinct()
+        val done = Channel<String?>(urls.size)
+        val jobs = urls.map { url ->
+            launch(Dispatchers.IO) {
+                val body = runCatching { HttpFetcher.fetchText(url) }
+                    .getOrNull()?.takeIf { looksLikeXml(it) }
+                done.send(body)
+            }
+        }
+        var winner: String? = null
+        var settled = 0
+        while (winner == null && settled < urls.size) {
+            val r = done.receive()
+            settled++
+            if (r != null) winner = r
+        }
+        jobs.forEach { it.cancel() }
+        winner
     }
 
     /** 广告/纯跳转页特征：只有一段导航脚本，没有任何正文标记 */

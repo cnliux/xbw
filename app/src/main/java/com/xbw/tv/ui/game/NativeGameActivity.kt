@@ -190,7 +190,7 @@ class NativeGameActivity : AppCompatActivity() {
                         this@NativeGameActivity, gameId, directRomUrls, directPlatform, directCookie, directRomName, onProgress
                     )
                     directRomUrl != null -> RomProvider.prepareDirect(
-                        this@NativeGameActivity, gameId, listOf(directRomUrl!!), directPlatform, directCookie, null, onProgress
+                        this@NativeGameActivity, gameId, listOf(directRomUrl!!), directPlatform, directCookie, directRomName, onProgress
                     )
                     else -> RomProvider.prepare(this@NativeGameActivity, gameId, onProgress)
                 }

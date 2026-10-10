@@ -9,9 +9,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [GameEntity::class, RecentPlayEntity::class, PhysicalMapEntity::class,
-        LogicalKeyEntity::class, FavoriteEntity::class, SearchIndexEntity::class,
+        LogicalKeyEntity::class, FavoriteEntity::class,
         GamePlatformEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -20,7 +20,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun recentPlayDao(): RecentPlayDao
     abstract fun keyMappingDao(): KeyMappingDao
     abstract fun favoriteDao(): FavoriteDao
-    abstract fun searchIndexDao(): SearchIndexDao
     abstract fun gamePlatformDao(): GamePlatformDao
 
     companion object {
@@ -81,6 +80,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v4 → v5：移除拼音搜索索引表（搜索改用插件 gamelist 内存扫描 + 官方站，无需索引库） */
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS `search_index`")
+            }
+        }
+
         fun get(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -88,7 +94,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "xbw.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     // 数据都是可再生的缓存/偏好，无迁移路径时升级直接重建最稳
                     .fallbackToDestructiveMigration()
                     .build()

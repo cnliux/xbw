@@ -68,7 +68,8 @@ object AesChallenge {
                 return body
             }
             val solved = solve(body) ?: throw IllegalStateException("挑战页无法解析")
-            if (solved == cookie) {
+            val prev = cookie?.substringAfter('=')
+            if (solved == prev) {
                 // cookie 没变说明服务器在回同一道题（实测 PC 上第 2 轮就放行，
                 // 盒子这边偶尔会把同一道题连发好几轮），换新 cookie 只会原地打转
                 Log.w(TAG, "challenge for $url did not advance, giving up")
@@ -205,12 +206,15 @@ object GamelistParser {
 
     /** `<name>M-魔法总动员…[mfzdyh]</name>` → ("魔法总动员…", "mfzdyh") */
     fun splitName(raw: String): Pair<String, String> {
-        val initials = Regex("\\[([a-z0-9]+)]").find(raw)?.groupValues?.get(1).orEmpty()
         var title = raw.replace(Regex("\\[[a-z0-9]+]"), "").trim()
         // 站点把排序字母塞在名字前面："M-xxx" / "Q-xxx"
         title = Regex("^[A-Za-z]-(?=\\S)").replace(title, "")
-        return title to initials
+        return title to initialsOf(raw)
     }
+
+    /** 只取站点塞在 `<name>` 里的 `[拼音首字母]` 标记（`<sortname>` 通常没有这个标记） */
+    fun initialsOf(raw: String): String =
+        Regex("\\[([a-z0-9]+)]").find(raw)?.groupValues?.get(1).orEmpty()
 
     /** `./01动作/x.nes` → "动作"（去掉数字前缀，当题材标签用） */
     fun genreOf(path: String): String {

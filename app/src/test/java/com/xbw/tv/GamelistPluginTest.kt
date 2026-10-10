@@ -41,6 +41,18 @@ class GamelistPluginTest {
         assertTrue(cookie.all { it.isDigit() || it in 'a'..'f' })
     }
 
+    /** cnliux.dpdns.org 当前挑战页三元组：解出的 __test 必须和实测一致 */
+    @Test
+    fun `solve cnliux dpdns challenge`() {
+        val html = """
+            <html><body><script type="text/javascript" src="/aes.js" ></script><script>
+            var a=toNumbers("f655ba9d09a112d4968c63579db590b4"),b=toNumbers("98344c2eee86c3994890592585b49f80"),c=toNumbers("1797c10fcbd2383c3045788e0af68534");
+            document.cookie="__test="+toHex(slowAES.decrypt(c,2,a,b))+"; path=/";
+            </script></body></html>
+        """.trimIndent()
+        assertEquals("581dd4fd53100be560d6db4f746b86b0", AesChallenge.solve(html))
+    }
+
     @Test
     fun `challenge detector ignores normal xml`() {
         assertTrue(!AesChallenge.isChallenge("<?xml version=\"1.0\"?><gameList></gameList>"))
@@ -159,17 +171,24 @@ class GamelistPluginTest {
         assertTrue(a != PluginSource.deriveId("https://b/gamelist.xml"))
     }
 
-    /** 现在有一个随包内置源「内置FC」（wget.la 镜像的 cnliux/xbw nes 清单），
+    /** 随包内置源：按分类自动编号（街机1/街机2/街机3、FC1/FC2），
      *  用户自建源 builtin 恒 false；老配置里残留 builtin:true 也能读回来 */
     @Test
-    fun `builtin fc source present, user sources not builtin`() {
+    fun `builtin sources present, user sources not builtin`() {
         val builtins = PluginSource.builtinSources()
-        assertEquals(1, builtins.size)
-        val fc = builtins[0]
-        assertTrue("内置源标记 builtin", fc.builtin)
-        assertEquals("内置FC", fc.title)
+        assertEquals(4, builtins.size)
+        assertTrue("内置源全部标记 builtin", builtins.all { it.builtin })
+        // 按分类编号：2 个街机、2 个 FC
+        assertEquals(
+            listOf("街机1", "街机2"),
+            builtins.filter { it.platform == GameCategory.ARCADE.key }.map { it.title }
+        )
+        assertEquals(
+            listOf("FC1", "FC2"),
+            builtins.filter { it.platform == GameCategory.FC.key }.map { it.title }
+        )
+        val fc = builtins.first { it.listUrl == PluginSource.BUILTIN_FC_URL }
         assertEquals(GameCategory.FC.key, fc.platform)
-        assertEquals(PluginSource.BUILTIN_FC_URL, fc.listUrl)
         assertEquals("内置源 id 由 URL 派生，用户添加同 URL 会被去重",
             fc.id, PluginSource.deriveId(PluginSource.BUILTIN_FC_URL))
 

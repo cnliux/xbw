@@ -5,10 +5,14 @@ import android.util.Log
 import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.SiteConfig
+import com.xbw.tv.data.plugin.AesChallenge
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.apache.commons.compress.archivers.sevenz.SevenZFile
 import org.apache.commons.compress.archivers.zip.ZipArchiveInputStream
 import java.io.File
@@ -55,10 +59,6 @@ private fun ghMirrors(): List<String> = com.xbw.tv.data.net.CdnPicker.ranked()
 /** FBNeo 官方金手指库（GitHub，master 分支 cheats/<驱动名>.ini，约 3400 款） */
 private const val GH_CHEAT_RAW = "https://raw.githubusercontent.com/finalburnneo/FBNeo-cheats/master/cheats"
 
-/** 自建 BIOS 库：cnliux/xbw 的 fbneo/ 目录（版本与打包的 FBNeo 核心匹配，
- *  解决 file.yikm.net 旧版 BIOS 在新核心下 CRC 校验不过的问题） */
-private const val GH_BIOS_RAW = "https://raw.githubusercontent.com/cnliux/xbw/master/fbneo"
-
 /** play 页正常但没有 gromname 时的提示（NDS/DOS/Java/Flash/H5 等网页版） */
 const val NO_ROM_PLATFORM = "网页版游戏"
 
@@ -97,6 +97,40 @@ const val NO_ROM_PLATFORM = "网页版游戏"
      * <rom>.sram 存档都在游戏目录里，清掉即一并回收；BIOS 全局缓存极小不计入。 */
     private const val MAX_CACHE_BYTES = 500L * 1024 * 1024
     private const val EVICT_TARGET_BYTES = 400L * 1024 * 1024
+
+    /** 金手指 ini 预取：与 ROM 下载并行，真正 loadCore 前最多等这么久，超时放弃（下次再补） */
+    private const val CHEAT_PREFETCH_WAIT_MS = 2_000L
+
+    /** 金手指 GitHub 镜像竞速总上限：全 404/死源时不再逐条等到每家超时才收手 */
+    private const val CHEAT_RACE_TIMEOUT_MS = 5_000L
+
+    /**
+     * 并行的金手指预取：立刻返回后台 [Job]，调用方在 loadCore 前用 [awaitCheatPrefetch] 限时收尾。
+     * 金手指与 ROM 下载同为网络 IO，重叠执行后入口基本不再为它单独等待。
+     */
+    private fun startCheatPrefetch(sysDir: File, names: List<String>): Job? {
+        if (names.isEmpty()) return null
+        sysDir.mkdirs()
+        return CoroutineScope(Dispatchers.IO).launch {
+            try {
+                ensureCheatIni(sysDir, names)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.w(TAG, "cheat prefetch failed: $names", e)
+            }
+        }
+    }
+
+    /** 限时等待预取完成；超时即取消（下次进入再补），绝不把入口卡在网络上 */
+    private suspend fun awaitCheatPrefetch(job: Job?, waitMs: Long = CHEAT_PREFETCH_WAIT_MS) {
+        if (job == null) return
+        try {
+            withTimeoutOrNull(waitMs) { job.join() }
+        } finally {
+            job.cancel()
+        }
+    }
 
     /** 缓存超限清理：删除最久未访问的游戏缓存目录，直到总量回落到目标 */
     private fun evictIfNeeded(context: Context, keepGameId: String) {
@@ -200,6 +234,9 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             }
         }
         val zip = core == "fbneo"
+        val sysDir = File(dir, "system").apply { mkdirs() }
+        // 金手指与 ROM 下载并行：都在等网络，重叠后入口不再被金手指拖住
+        val cheatJob = if (zip) startCheatPrefetch(sysDir, romSegments) else null
 
         // 2) 直链下载（路径逐段转义，空格/中括号原样在 URL 里会被 nginx 拒）
         val encoded = romPath.trimStart('/').split('/').joinToString("/") { seg ->
@@ -235,10 +272,13 @@ const val NO_ROM_PLATFORM = "网页版游戏"
 
         // 街机专属：兜底 zip + BIOS + 金手指 ini
         val fallbacks = if (zip) downloadFallbacks(dir, gsystem, romSegments.drop(1)) else emptyList()
-        val sysDir = File(dir, "system").apply { mkdirs() }
         if (zip) {
             ensureBios(context, gsystem, sysDir)
-            ensureCheatIni(sysDir, romSegments)
+            // 实际驱动名与预取名不一致（嵌套包解出内层）时补一次，同样限时
+            if (rom.name !in romSegments) {
+                awaitCheatPrefetch(startCheatPrefetch(sysDir, listOf(rom.name)))
+            }
+            awaitCheatPrefetch(cheatJob)
         }
 
         // 4) 写规格缓存
@@ -281,15 +321,16 @@ const val NO_ROM_PLATFORM = "网页版游戏"
                     // 中文名嵌套盗版包同样在此解出内层驱动 zip（幂等，正常包原样返回）
                     if (lines[0] == "fbneo") {
                         val nf = normalizeFbneoZip(dir, f)
+                        val romFile = if (nf != f) nf else f
+                        ensureBiosForZip(context, romFile, sysDir)
+                        awaitCheatPrefetch(startCheatPrefetch(sysDir, listOf(romFile.name)))
                         if (nf != f) {
-                            meta.writeText(listOf(lines[0], nf.absolutePath, "")
-                                .plus(lines.drop(3)).joinToString("\n"))
-                            ensureBiosForZip(context, nf, sysDir)
-                            ensureCheatIni(sysDir, listOf(nf.name))
-                            return RomResult.Ready(RomSpec(lines[0], nf, sysDir, true))
+                            // 过滤历史 #ips= 标记行（IPS 功能已移除）
+                            meta.writeText(listOf(lines[0], romFile.absolutePath, "")
+                                .plus(lines.drop(3).filterNot { it.trimStart().startsWith("#") })
+                                .joinToString("\n"))
+                            return RomResult.Ready(RomSpec(lines[0], romFile, sysDir, true))
                         }
-                        ensureBiosForZip(context, f, sysDir)
-                        ensureCheatIni(sysDir, listOf(f.name))
                     }
                     return RomResult.Ready(RomSpec(lines[0], f, sysDir, true))
                 }
@@ -300,17 +341,25 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             ?: return RomResult.Unsupported(platformKey?.let { GameCategory.fromKey(it).title } ?: "该平台")
         if (romUrls.isEmpty()) return RomResult.Failed("插件条目没有可用的 ROM 直链")
 
+        val zip = core == "fbneo"
+        val sysDir = File(dir, "system").apply { mkdirs() }
+        // 金手指名 = 驱动名（zip 原名）：插件条目一般自带，先在后台起预取，与 ROM 下载并行，
+        // ROM 就绪后 loadCore 前限时收尾——三剑圣这类魔改名正是卡在这步 40s
+        val cheatNames = if (zip && !romFileName.isNullOrBlank()) listOf(romFileName) else emptyList()
+        val cheatJob = startCheatPrefetch(sysDir, cheatNames)
+
         // 1) 候选地址逐个试：GBK 直链 → 通用直链 → down.php 网关，
         //    直到拿到一个不是 HTML/挑战页的真文件（40x、挑战页都换下一个）
         //    FBNeo 必须按 zip 原名落盘（DRV_NAME 依赖文件名），所以 raw 用
         //    原始 zip 名而不是 rom.raw
-        val raw = File(dir, if (core == "fbneo" && !romFileName.isNullOrBlank()) romFileName else "rom.raw")
+        val raw = File(dir, if (zip && !romFileName.isNullOrBlank()) romFileName else "rom.raw")
         var lastError = "所有候选地址均不可用"
         var ok = false
+        var cookieVal = cookie
         for (url in romUrls) {
             raw.delete()
             try {
-                val headers = cookie?.let { mapOf("Cookie" to "__test=$it") } ?: emptyMap()
+                val headers = cookieVal?.let { mapOf("Cookie" to "${AesChallenge.COOKIE}=$it") } ?: emptyMap()
                 HttpFetcher.downloadToFile(url, raw, headers = headers, onProgress = onProgress)
             } catch (e: Exception) {
                 lastError = e.message ?: "网络异常"
@@ -323,6 +372,27 @@ const val NO_ROM_PLATFORM = "网页版游戏"
                 continue
             }
             if (looksLikeChallenge(raw)) {
+                val html = runCatching { raw.readText(Charsets.UTF_8) }.getOrNull().orEmpty()
+                val solved = if (AesChallenge.isChallenge(html)) AesChallenge.solve(html) else null
+                if (solved != null) {
+                    cookieVal = solved
+                    raw.delete()
+                    try {
+                        HttpFetcher.downloadToFile(
+                            url, raw,
+                            headers = mapOf("Cookie" to "${AesChallenge.COOKIE}=$solved"),
+                            onProgress = onProgress
+                        )
+                    } catch (e: Exception) {
+                        lastError = e.message ?: "网络异常"
+                        Log.w(TAG, "plugin rom retry after cookie failed: $url（$lastError）")
+                        continue
+                    }
+                    if (raw.length() > 16 && !looksLikeChallenge(raw)) {
+                        ok = true
+                        break
+                    }
+                }
                 lastError = "源返回了挑战页（cookie 可能失效）"
                 Log.w(TAG, "plugin rom candidate is challenge/html: $url")
                 continue
@@ -336,7 +406,6 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         }
 
         // 2) 解包：FBNeo 要整套 zip（中文名嵌套盗版包解内层驱动 zip）；其余拆出单个 rom
-        val zip = core == "fbneo"
         val rom = when {
             zip -> normalizeFbneoZip(dir, raw)
             is7zFile(raw) -> unwrap7z(dir, raw) ?: run {
@@ -354,11 +423,13 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         }
 
         // 3) 写规格缓存（插件源没有 gsystem/兜底；BIOS 从 zip 内文件名反推补装）
-        val sysDir = File(dir, "system").apply { mkdirs() }
         if (zip) {
             ensureBiosForZip(context, rom, sysDir)
-            // FBNeo 按 DRV_NAME（= zip 名）反查 ini，插件源街机同样要下金手指
-            ensureCheatIni(sysDir, listOf(rom.name))
+            // FBNeo 按 DRV_NAME（= zip 名）反查 ini：实际驱动名与预取名不一致（嵌套包解出内层）时补一次
+            if (rom.name !in cheatNames) {
+                awaitCheatPrefetch(startCheatPrefetch(sysDir, listOf(rom.name)))
+            }
+            awaitCheatPrefetch(cheatJob)
         }
         meta.writeText(listOf(core, rom.absolutePath, "").joinToString("\n"))
         Log.i(TAG, "plugin rom ready id=$gameId core=$core size=${rom.length()}")
@@ -406,7 +477,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             // 中文名嵌套盗版包：解内层驱动 zip 到缓存目录（U盘原文件不动）
             rom = normalizeFbneoZip(dir, rom)
             ensureBiosForZip(context, rom, sysDir)
-            ensureCheatIni(sysDir, listOf(rom.name))
+            awaitCheatPrefetch(startCheatPrefetch(sysDir, listOf(rom.name)))
         }
         meta.writeText(listOf(core, rom.absolutePath, "").joinToString("\n"))
         Log.i(TAG, "usb/local rom ready id=$gameId core=$core path=${rom.absolutePath} size=${rom.length()}")
@@ -504,14 +575,10 @@ const val NO_ROM_PLATFORM = "网页版游戏"
     }
 
     /**
-     * 多 CDN **并发竞速**下载 BIOS：自建 GitHub 库的各镜像（wget.la / gh-proxy /
-     * ghfast / 直连）与 file.yikm.net 同时开下，谁先下完用谁，其余立刻取消。
-     * 顺序试的缺点是"最慢的源排在前面就全等它"，盒子网络对各家 CDN 快慢不一，
-     * 只有并发才能稳定拿到当前网络下的最快源（同 UpdateChecker.pickSources 思路，
-     * BIOS 只有几 MB，省去探活直接开下）。
+     * 下载 BIOS：file.yikm.net 官方站（自建 cnliux BIOS 库已随街机3 一起移除）。
      */
     private suspend fun raceDownloadTo(biosDir: File, bios: String): File? = coroutineScope {
-        val urls = ghMirrors().map { it + "$GH_BIOS_RAW/$bios" } + "$CDN_HOST/$bios"
+        val urls = listOf("$CDN_HOST/$bios")
         // 每次调用独立后缀，避免并发/残留的 .part 互相踩
         val token = java.util.UUID.randomUUID().toString().take(8)
         biosDir.listFiles()?.forEach {
@@ -724,13 +791,19 @@ const val NO_ROM_PLATFORM = "网页版游戏"
      * 多个候选 URL **并发竞速**取文本，第一个通过 [accept] 的胜出，其余取消。
      * 给金手指 ini 这类小文本文件用（同 [raceDownloadTo] 的思路，BIOS 是文件版）。
      */
-    private suspend fun raceFetchText(urls: List<String>, accept: (String) -> Boolean): String? =
+    private suspend fun raceFetchText(
+        urls: List<String>,
+        timeoutMs: Long = CHEAT_RACE_TIMEOUT_MS,
+        accept: (String) -> Boolean
+    ): String? = withTimeoutOrNull(timeoutMs) {
         coroutineScope {
             val done = Channel<String?>(urls.size)
             val jobs = urls.map { url ->
                 launch(Dispatchers.IO) {
                     val r = try {
                         HttpFetcher.fetchText(url).takeIf(accept)
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         null
                     }
@@ -747,6 +820,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             jobs.forEach { it.cancel() }
             winner
         }
+    }
 
     /**
      * 下载金手指 ini：任一段名命中即用，内容写到每个段名一份——
@@ -787,7 +861,14 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         for (name in segments) {
             val stem = name.substringBeforeLast('.')
             try {
-                File(cheatDir, "$stem.ini").writeText(content)
+                // 原子落盘：先写 .tmp 再改名，避免和 loadCore 并发时核心读到半截 ini
+                val dst = File(cheatDir, "$stem.ini")
+                val tmp = File(cheatDir, "$stem.ini.tmp")
+                tmp.writeText(content)
+                if (!tmp.renameTo(dst)) {
+                    dst.writeText(content)
+                    tmp.delete()
+                }
             } catch (e: Exception) {
                 Log.w(TAG, "cheat ini write failed $stem", e)
             }

@@ -79,6 +79,15 @@ object HttpFetcher {
         repeat(MAX_RETRY) { attempt ->
             try {
                 return@withContext execute(url, allowEmpty)
+            } catch (e: FetchException) {
+                // 4xx 是确定性结果（404=资源不存在/403=无权限），重试只会白白拖慢入口；
+                // 408/429 属于"换个时间可能成功"，仍按可重试处理
+                if (e.httpCode in 400..499 && e.httpCode != 408 && e.httpCode != 429) throw e
+                lastError = e
+                if (attempt < MAX_RETRY - 1) {
+                    // 指数退避：600ms → 1.2s → 2.4s
+                    delay(600L * (1L shl attempt))
+                }
             } catch (e: IOException) {
                 lastError = e
                 if (attempt < MAX_RETRY - 1) {
@@ -178,6 +187,15 @@ object HttpFetcher {
             repeat(MAX_RETRY) { attempt ->
                 try {
                     return@withContext downloadOnce(url, dest, referer, headers, onProgress)
+                } catch (e: FetchException) {
+                    // 4xx 是确定性失败（直链 404/403 换个候选即可），重试无意义还拖时间
+                    if (e.httpCode in 400..499 && e.httpCode != 408 && e.httpCode != 429) {
+                        dest.delete()
+                        throw e
+                    }
+                    lastError = e
+                    // 不删 dest：留给下一次 Range 续传
+                    if (attempt < MAX_RETRY - 1) delay(600L * (1L shl attempt))
                 } catch (e: IOException) {
                     lastError = e
                     // 不删 dest：留给下一次 Range 续传

@@ -34,9 +34,10 @@ import org.json.JSONObject
  * @param coverBase  封面 base，可空。`<image>` 的相对路径拼在它后面；
  *                   留空 = 按清单所在目录自动解析（大多数源都这么放）
  * @param romBase    ROM base，可空。留空 = 按清单目录自动解析；空则条目只读不玩
- * @param builtin    随包内置的默认源（现只有一个「内置FC」：wget.la 镜像的
- *                   cnliux/xbw 仓库 nes/gamelist.xml）。内置源不持久化、不可删除编辑，
- *                   用户源的 builtin 恒 false
+ * @param builtin    随包内置的默认源（见 [builtinSources]：按分类自动编号的
+ *                   街机1/街机2…、FC1/FC2…）。内置源定义在代码里、不持久化，
+ *                   但用户可在插件页**删除**（记入隐藏集合）或**编辑**（隐藏原内置、
+ *                   改动另存为用户副本）。用户自建源的 builtin 恒 false
  * @param gbkUris    磁盘文件名是 GBK 保留字节的站（186317 这种），朴素的 UTF-8
  *                   百分号编码直链会 404，需要再补一条按 GBK 编码路径段的候选地址。
  * @param dirBootstrap 是否目录引导方式（见类注释的"方式 2"）
@@ -108,6 +109,16 @@ data class PluginSource(
         }.getOrElse { listUrl }
     }
 
+    /** 清单地址里若含 GitHub raw 的规范 URL（无论是否被某个镜像前缀包裹，
+     *  如 `https://wget.la/https://raw.githubusercontent.com/...`），取出那段裸
+     *  raw 地址；[PluginRepository] 据此按 CdnPicker 启动实测的镜像顺位竞速抓取。
+     *  非 GitHub raw 源返回 null（直链源如 cnliux.dpdns.org 不吃竞速）。 */
+    val githubRawUrl: String? get() {
+        val marker = "https://raw.githubusercontent.com/"
+        val i = listUrl.indexOf(marker)
+        return if (i < 0) null else listUrl.substring(i)
+    }
+
     private val HEX = "0123456789ABCDEF"
 
     /** 路径段按 GBK 编码：ASCII 原样保留，非 ASCII 逐字节 %XX（GBK）；已有的 %XX 不二次编码 */
@@ -159,51 +170,67 @@ data class PluginSource(
     }
 
     companion object {
-        /** 内置 FC 清单：cnliux/xbw 仓库的 nes/gamelist.xml，走 wget.la 镜像加速
-         *  （国内直连 raw.githubusercontent.com 不稳）。内置源不进 SharedPreferences，
-         *  随包发布、不可删改，用户自己加了同一条 URL 也会被去重掉。 */
+        /** 内置 FC 清单：cnliux/xbw 仓库的 nes/gamelist.xml。写 wget.la 只是给一个
+         *  规范/兜底形态（也保住 id 与缓存键稳定）；实际抓取时 [PluginRepository]
+         *  会认 [githubRawUrl] 并按 CdnPicker 启动实测的镜像顺位**竞速**，谁快用谁。 */
         const val BUILTIN_FC_URL =
             "https://wget.la/https://raw.githubusercontent.com/cnliux/xbw/master/nes/gamelist.xml"
 
-        /** 随包内置的默认源（大厅里的固定芯片）。改了它要改 [BUILTIN_FC_URL]。
+        /** 随包内置的默认源（大厅里的固定芯片）。内置源不再持久化进用户配置，
+         *  改由 [PluginRepository] 用隐藏集合记录用户"删除"、编辑时另存为用户副本。
+         *
+         *  命名按分类自动编号（街机1/街机2/…、FC1/FC2/…），不写死具体名：
          *  186317 两站是 PHP 目录浏览页（phpDir=true）：文件必须走"下载按钮"
          *  `?path=&download=`，清单也从目录页的下载按钮 href 拿；FC 清单在
          *  `/game/nes` 子目录，所以 listUrl 带 `?path=nes`（phpPathParam 据此
          *  拼 ROM 按钮地址）。gbkUris 不开 —— 清单路径全 ASCII，GBK 编码在
          *  按钮 URL 构造时按条目相对路径做。 */
-        fun builtinSources(): List<PluginSource> = listOf(
-            PluginSource(
-                id = deriveId(BUILTIN_FC_URL),
-                title = "内置FC",
-                platform = GameCategory.FC.key,
-                listUrl = BUILTIN_FC_URL,
-                builtin = true
-            ),
-            PluginSource(
-                id = deriveId("https://186317.22web.org/game/"),
-                title = "186317街机",
-                platform = GameCategory.ARCADE.key,
-                listUrl = "https://186317.22web.org/game/",
-                builtin = true,
-                phpDir = true
-            ),
-            PluginSource(
-                id = deriveId("https://186317.22web.org/game/?path=nes"),
-                title = "186317FC",
-                platform = GameCategory.FC.key,
-                listUrl = "https://186317.22web.org/game/?path=nes",
-                builtin = true,
-                phpDir = true
-            ),
-            PluginSource(
-                id = deriveId("http://186317.xo.je/"),
-                title = "186317街机2",
-                platform = GameCategory.ARCADE.key,
-                listUrl = "http://186317.xo.je/",
-                builtin = true,
-                phpDir = true
+        fun builtinSources(): List<PluginSource> {
+            val raw = listOf(
+                PluginSource(
+                    id = deriveId("https://186317.22web.org/game/"),
+                    title = "",
+                    platform = GameCategory.ARCADE.key,
+                    listUrl = "https://186317.22web.org/game/",
+                    builtin = true,
+                    phpDir = true
+                ),
+                PluginSource(
+                    id = deriveId("http://186317.xo.je/"),
+                    title = "",
+                    platform = GameCategory.ARCADE.key,
+                    listUrl = "http://186317.xo.je/",
+                    builtin = true,
+                    phpDir = true
+                ),
+                PluginSource(
+                    id = deriveId(BUILTIN_FC_URL),
+                    title = "",
+                    platform = GameCategory.FC.key,
+                    listUrl = BUILTIN_FC_URL,
+                    builtin = true
+                ),
+                PluginSource(
+                    id = deriveId("https://186317.22web.org/game/?path=nes"),
+                    title = "",
+                    platform = GameCategory.FC.key,
+                    listUrl = "https://186317.22web.org/game/?path=nes",
+                    builtin = true,
+                    phpDir = true
+                )
             )
-        )
+            // 按分类顺序编号：街机1、街机2…；FC1、FC2…
+            val counters = HashMap<String, Int>()
+            return raw.map { s ->
+                val n = (counters[s.platform] ?: 0) + 1
+                counters[s.platform] = n
+                s.copy(title = platformPrefix(s.platform) + n)
+            }
+        }
+
+        /** 分类名 → 芯片名前缀（FC / 红白机 → FC、街机 → 街机、SFC → SFC…） */
+        private fun platformPrefix(key: String): String =
+            GameCategory.fromKey(key).title.substringBefore(" /").trim()
 
         fun fromJson(o: JSONObject): PluginSource? {
             val url = o.optString("listUrl").trim()

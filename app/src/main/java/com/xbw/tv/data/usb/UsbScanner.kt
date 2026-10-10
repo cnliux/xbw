@@ -6,6 +6,7 @@ import android.os.Environment
 import android.os.storage.StorageManager
 import android.os.storage.StorageVolume
 import android.util.Log
+import androidx.annotation.RequiresApi
 import com.xbw.tv.core.CoreRouter
 import com.xbw.tv.data.model.GameCategory
 import com.xbw.tv.data.model.GameItem
@@ -86,16 +87,20 @@ object UsbScanner {
 
     private fun mountedVolumes(context: Context): List<VolumeInfo> {
         val out = ArrayList<VolumeInfo>()
-        try {
-            val sm = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
-            sm.storageVolumes.forEach { v ->
-                val root = volumeRoot(v)
-                if (!root.isNullOrBlank() && v.isRemovable && v.state == Environment.MEDIA_MOUNTED) {
-                    out += VolumeInfo(root, true)
+        // getStorageVolumes()/isRemovable()/getState() 都是 API 24+，老盒子上直接没有这些方法；
+        // 未加保护时靠 catch(Throwable) 兜住 NoSuchMethodError，这里显式按版本走，语义更清楚。
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            try {
+                val sm = context.getSystemService(Context.STORAGE_SERVICE) as StorageManager
+                sm.storageVolumes.forEach { v ->
+                    val root = volumeRoot(v)
+                    if (!root.isNullOrBlank() && v.isRemovable && v.state == Environment.MEDIA_MOUNTED) {
+                        out += VolumeInfo(root, true)
+                    }
                 }
+            } catch (e: Throwable) {
+                Log.w(TAG, "storageVolumes query failed", e)
             }
-        } catch (e: Throwable) {
-            Log.w(TAG, "storageVolumes query failed", e)
         }
         // 兜底：部分盒子/SD 卷不报 removable，直接看 /storage 下的挂载根目录。
         // 不管上面有没有结果都扫一遍 —— 若 StorageManager 报了个读不了的卷，
@@ -111,6 +116,7 @@ object UsbScanner {
         return out
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     private fun volumeRoot(v: StorageVolume): String? {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             runCatching { v.directory?.absolutePath }.getOrNull()

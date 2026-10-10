@@ -12,6 +12,7 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.lifecycleScope
 import com.xbw.tv.BuildConfig
 import com.xbw.tv.R
+import com.xbw.tv.data.net.CdnPicker
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.databinding.DialogUpdateBinding
 import kotlinx.coroutines.Dispatchers
@@ -80,21 +81,18 @@ object UpdateChecker {
     }
 
     /**
-     * 直连 + 常见 GitHub 镜像。顺序无所谓：真正选谁由 [pickSources] 实测决定，
-     * 这里只影响"探活全灭"时的兜底顺位。
+     * 直连 + 全部 GitHub 镜像，**统一取 [CdnPicker.MIRRORS]**（启动时那套竞速节点）：
+     * 全 App 的 GitHub 加速下载（BIOS / 金手指 / 插件清单 / 本升级包）共用同一份
+     * CDN 清单，加镜像只改 [CdnPicker.MIRRORS] 一处。顺序无所谓：真正选谁由
+     * [pickSources] 实测决定，这里只影响"探活全灭"时的兜底顺位。
+     *
+     * 镜像前缀 `"https://<cdn>/"` 直接拼 `https://github.com` 得下载基址
+     * （与插件/BIOS 用的 `前缀 + 原始 URL` 同一套代理格式）。
      */
-    val SOURCES = listOf(
-        Source("GitHub", ""),
-        Source("wget.la", "https://wget.la/https://github.com"),
-        Source("idayer", "https://gh.idayer.com/https://github.com"),
-        Source("boki", "https://github.boki.moe/https://github.com"),
-        Source("gh-proxy.org", "https://cdn.gh-proxy.org/https://github.com"),
-        Source("h233", "https://gh.h233.eu.org/https://github.com"),
-        Source("gh-proxy", "https://gh-proxy.com/https://github.com"),
-        Source("ghfast", "https://ghfast.top/https://github.com"),
-        Source("ghproxy.net", "https://ghproxy.net/https://github.com"),
-        Source("ghproxy.cn", "https://ghproxy.cn/https://github.com")
-    )
+    val SOURCES: List<Source> = CdnPicker.MIRRORS.map { mirror ->
+        if (mirror.isEmpty()) Source("GitHub", "")
+        else Source(mirror.removePrefix("https://").removePrefix("http://").trimEnd('/'), mirror + "https://github.com")
+    }
 
     val currentVersion: Int get() = BuildConfig.VERSION_CODE
 
@@ -280,7 +278,6 @@ object UpdateChecker {
                 )
                 // 换源时清掉半截文件：断点续传是按字节偏移的，
                 // 不同 CDN 的响应体长度未必一致，接着写会拼出坏包
-                dest.delete()
                 dest.delete()
                 if (index == 0) binding.updateProgress.progress = 0
             }

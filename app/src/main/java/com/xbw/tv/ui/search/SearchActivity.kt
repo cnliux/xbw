@@ -11,11 +11,13 @@ import com.xbw.tv.R
 import com.xbw.tv.XbwApplication
 import com.xbw.tv.data.net.HttpFetcher
 import com.xbw.tv.data.net.YikmParser
+import com.xbw.tv.data.repo.GameRepository
 import com.xbw.tv.databinding.ActivitySearchBinding
 import com.xbw.tv.ui.common.Nav
 import com.xbw.tv.ui.lobby.GameCardAdapter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * 搜索页：GET /search?name=关键词（实测无分页，一次返回全部结果）。
@@ -186,43 +188,55 @@ class SearchActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             val repo = XbwApplication.repository(application)
-            // 纯字母查询大概率是拼音首字母：索引为空/过期就后台静默重建，本次先用现有索引
-            val letterQuery = kw.length >= 2 && kw.all { it in 'a'..'z' || it in 'A'..'Z' }
-            if (letterQuery) {
-                launch(Dispatchers.IO) { runCatching { repo.ensureSearchIndex(application) } }
-            }
+            // 先出结果：官方站 + 本地已缓存的插件 gamelist（不联网，秒回）
             runCatching { repo.searchEx(kw) }
-                .onSuccess { r ->
-                    binding.progress.visibility = android.view.View.GONE
-                    adapter.submitList(r.items)
-                    if (r.items.isEmpty()) {
-                        binding.emptyText.visibility = android.view.View.VISIBLE
-                        binding.statusLine.text = if (letterQuery) {
-                            val n = runCatching { repo.searchIndexCount() }.getOrDefault(0)
-                            if (n == 0) "拼音索引构建中，稍后再试" else ""
-                        } else ""
-                    } else {
-                        // 出结果就让位给结果网格，点搜索框可再调出键盘
-                        binding.keyboardPanel.visibility = android.view.View.GONE
-                        binding.statusLine.text =
-                            getString(R.string.search_result_fmt, r.items.size, kw)
-                        // 结果出来后焦点进列表第一项
-                        binding.rvResults.post {
-                            binding.rvResults.layoutManager?.findViewByPosition(0)?.requestFocus()
+                .onSuccess { render(it, kw) }
+                .onFailure { e -> renderError(e) }
+            // 后台补拉还没缓存过的第三方源（联网，不阻塞本次结果）；补到了就静默重搜一次，
+            // 这样"新加的源 / 从没进过的分类"在第一次搜索后也能被搜到
+            launch(Dispatchers.IO) {
+                val warmed = runCatching { repo.warmPluginSources(application) }.getOrDefault(false)
+                if (!warmed) return@launch
+                // 用户已经改了关键词就别覆盖当前结果
+                val stillSame = withContext(Dispatchers.Main) {
+                    binding.etKeyword.text.toString().trim() == kw
+                }
+                if (stillSame) {
+                    runCatching { repo.searchEx(kw) }
+                        .onSuccess { r ->
+                            if (r.items.isNotEmpty()) withContext(Dispatchers.Main) { render(r, kw) }
                         }
-                    }
                 }
-                .onFailure { e ->
-                    binding.progress.visibility = android.view.View.GONE
-                    val msg = when (e) {
-                        is HttpFetcher.FetchException -> getString(R.string.error_network) + "：" + e.message
-                        is YikmParser.ParseException -> getString(R.string.error_site_changed) + "：" + e.message
-                        else -> e.message ?: getString(R.string.error_network)
-                    }
-                    binding.statusLine.text = msg
-                    binding.emptyText.visibility = android.view.View.VISIBLE
-                }
+            }
         }
+    }
+
+    private fun render(r: GameRepository.LoadResult, kw: String) {
+        binding.progress.visibility = android.view.View.GONE
+        adapter.submitList(r.items)
+        if (r.items.isEmpty()) {
+            binding.emptyText.visibility = android.view.View.VISIBLE
+            binding.statusLine.text = ""
+        } else {
+            // 出结果就让位给结果网格，点搜索框可再调出键盘
+            binding.keyboardPanel.visibility = android.view.View.GONE
+            binding.statusLine.text = getString(R.string.search_result_fmt, r.items.size, kw)
+            // 结果出来后焦点进列表第一项
+            binding.rvResults.post {
+                binding.rvResults.layoutManager?.findViewByPosition(0)?.requestFocus()
+            }
+        }
+    }
+
+    private fun renderError(e: Throwable) {
+        binding.progress.visibility = android.view.View.GONE
+        val msg = when (e) {
+            is HttpFetcher.FetchException -> getString(R.string.error_network) + "：" + e.message
+            is YikmParser.ParseException -> getString(R.string.error_site_changed) + "：" + e.message
+            else -> e.message ?: getString(R.string.error_network)
+        }
+        binding.statusLine.text = msg
+        binding.emptyText.visibility = android.view.View.VISIBLE
     }
 
     @Deprecated("Deprecated in Java")

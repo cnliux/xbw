@@ -32,22 +32,20 @@ object CdnPicker {
     private const val PROBE_MIN_BYTES = 100_000L
 
     /** 全部候选镜像（空串=GitHub raw 直连；国内多数场景镜像更快）。
-     *  实测：wget.la / gh.idayer.com / github.boki.moe / cdn.gh-proxy.org 可用；
-     *  gh.91hai.cn 已变域名出售页，删除。 */
+     *  2026-10 对探活样本 pgm.zip 与 nes/gamelist.xml 逐个实测（Range 探活 + 裸 GET
+     *  两条路都过才算可用），以下 7 个镜像 + 直连可用；坏源已清：
+     *  boki/h233/ghps/homeboyc 回 403，ghproxy.cn 回 6990B 停放页，
+     *  mirror.ghproxy.com/1888866.xyz 超时，moeyy/ghproxy.cc/gitmirror/xxooo/bugdey
+     *  连不上，gh.ddlc.top 429 限流，gh-proxy.net/gh.con.sh 回 HTML/停用页。
+     *  死源以后也不用手动剔：启动探活按 [PROBE_MIN_BYTES] 自动挡在榜外。 */
     val MIRRORS = listOf(
         "https://wget.la/",
         "https://gh.idayer.com/",
-        "https://github.boki.moe/",
         "https://cdn.gh-proxy.org/",
-        "https://gh.h233.eu.org/",
         "https://gh-proxy.com/",
         "https://ghfast.top/",
         "https://ghproxy.net/",
         "https://gh.llkk.cc/",
-        "https://mirror.ghproxy.com/",
-        "https://ghproxy.cn/",
-        "https://github.moeyy.xyz/",
-        "https://ghproxy.cc/",
         ""
     )
 

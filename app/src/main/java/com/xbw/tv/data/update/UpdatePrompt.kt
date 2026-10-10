@@ -6,6 +6,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import com.xbw.tv.R
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 /**
  * 升级提示的 UI 入口。设置页"立即检查"与进游戏时的静默检查共用同一套弹窗，
@@ -88,8 +89,8 @@ object UpdatePrompt {
     }
 
     private fun formatSize(bytes: Long): String = when {
-        bytes >= 1024 * 1024 -> String.format("%.1f MB", bytes / 1024.0 / 1024.0)
-        bytes >= 1024 -> String.format("%.0f KB", bytes / 1024.0)
+        bytes >= 1024 * 1024 -> String.format(Locale.US, "%.1f MB", bytes / 1024.0 / 1024.0)
+        bytes >= 1024 -> String.format(Locale.US, "%.0f KB", bytes / 1024.0)
         else -> "$bytes B"
     }
 }

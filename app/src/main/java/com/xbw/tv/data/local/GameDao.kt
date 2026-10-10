@@ -29,6 +29,14 @@ interface GameDao {
     @Query("SELECT COUNT(*) FROM games")
     suspend fun count(): Int
 
+    /** 全量官方缓存条目（拼音首字母映射从它现算，不入库） */
+    @Query("SELECT * FROM games")
+    suspend fun all(): List<GameEntity>
+
+    /** 缓存最后写入时间（首字母映射的失效水位） */
+    @Query("SELECT MAX(fetchedAt) FROM games")
+    suspend fun maxFetchedAt(): Long?
+
     @Query("SELECT MAX(fetchedAt) FROM games WHERE categoryKey = :categoryKey AND page = :page")
     suspend fun lastFetchedAt(categoryKey: String, page: Int): Long?
 }

@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.xbw.tv.R
 import com.xbw.tv.data.model.GameCategory
@@ -87,6 +88,9 @@ class PluginEditActivity : androidx.appcompat.app.AppCompatActivity() {
             val base = intent.getStringExtra(EXTRA_ID)
                 ?.let { id -> PluginRepository.sources(this@PluginEditActivity).firstOrNull { it.id == id } }
                 ?: probe
+            // 编辑的是内置源：先隐藏原内置（改了地址 → id 变了，upsert 认不出来，
+            // 不隐藏的话大厅里会同时留着旧内置芯片和新副本）
+            if (base.builtin) PluginRepository.remove(this@PluginEditActivity, base.id)
             PluginRepository.upsert(
                 this@PluginEditActivity,
                 probe.copy(
@@ -97,7 +101,8 @@ class PluginEditActivity : androidx.appcompat.app.AppCompatActivity() {
                     gbkUris = base.gbkUris,
                     dirBootstrap = base.dirBootstrap,
                     dirMatch = base.dirMatch,
-                    filterByPlatform = base.filterByPlatform
+                    filterByPlatform = base.filterByPlatform,
+                    phpDir = base.phpDir
                 )
             )
             b.tvStatus.visibility = View.GONE
@@ -113,7 +118,7 @@ class PluginEditActivity : androidx.appcompat.app.AppCompatActivity() {
         b.tvStatus.visibility = View.VISIBLE
         b.tvStatus.text = text
         b.tvStatus.setTextColor(
-            getColor(if (isError) R.color.xbw_error else R.color.xbw_text_secondary)
+            ContextCompat.getColor(this, if (isError) R.color.xbw_error else R.color.xbw_text_secondary)
         )
     }
 
@@ -162,7 +167,7 @@ class PlatformAdapter(
         h.b.tvBadge.visibility = View.VISIBLE
         h.b.tvBadge.text = com.xbw.tv.core.CoreRouter.coreForPlatform(cat.key) ?: ""
         h.b.root.setBackgroundColor(
-            h.itemView.context.getColor(if (on) R.color.xbw_card_pressed else R.color.xbw_surface)
+            ContextCompat.getColor(h.itemView.context, if (on) R.color.xbw_card_pressed else R.color.xbw_surface)
         )
         h.b.root.setOnClickListener { onPick(cat) }
     }
