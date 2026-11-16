@@ -49,7 +49,8 @@ class RetroCore {
     private external fun nativeLoadCore(coreLib: String, systemDir: String, romPath: String): Boolean
     private external fun nativeSetAudioTrack(track: Any?)
     private external fun nativeSetSurface(surface: Surface?)
-    private external fun nativeSetInput(bits: Int)
+    // ========== 修改这里：增加player参数 ==========
+    private external fun nativeSetInput(player: Int, bits: Int)
     private external fun nativeStart(): Boolean
     private external fun nativeSetPaused(paused: Boolean)
     private external fun nativeReset()
@@ -135,7 +136,8 @@ class RetroCore {
     }
 
     fun setSurface(surface: Surface?) = nativeSetSurface(surface)
-    fun setInput(bits: Int) = nativeSetInput(bits)
+    // ========== 修改这里：对外接口增加player参数 ==========
+    fun setInput(player: Int, bits: Int) = nativeSetInput(player, bits)
     fun setPaused(p: Boolean) = nativeSetPaused(p)
     fun reset() = nativeReset()
 
@@ -218,6 +220,5 @@ class RetroCore {
             audioTrack?.let { it.stop(); it.release() }
         } catch (ignore: Exception) {
         }
-        audioTrack = null
     }
 }
