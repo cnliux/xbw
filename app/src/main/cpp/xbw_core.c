@@ -914,34 +914,96 @@ Java_com_xbw_tv_core_RetroCore_nativeGetCoreOptions(JNIEnv *env, jclass cls) {
 }
 
 /* UI 环切某个选项的取值：改 current 并标 dirty，下一帧核心自己重读应用 */
-JNIEXPORT void JNICALL Java_com_xbw_tv_core_RetroCore_nativeSetCoreOption(JNIEnv *env, jclass cls, jstring key, jint index)
-{
+JNIEXPORT void JNICALL Java_com_xbw_tv_core_RetroCore_nativeSetCoreOption(JNIEnv *env, jclass cls, jstring key, jint index) {
     (void)cls;
     const char *k = (*env)->GetStringUTFChars(env, key, NULL);
-    if (k == NULL)
-    {
-        return;
-    }
-
+    if (!k) return;
     pthread_mutex_lock(&g_opt_lock);
-    // 遍历全局选项链表/数组，找到匹配 key 的选项
-    struct core_option *o = g_option_list;
-    while (o)
-    {
-        if (strcmp(o->key, k) == 0)
-        {
-            // 边界保护：index 不能超出取值范围
-            if (index >= 0 && index < o->n_values)
-            {
-                o->current = index;
-                g_option_dirty = true; // 打上脏标记，主循环下一帧刷新
-            }
-            break;
-        }
-        o = o->next;
+    core_option *o = find_opt_locked(k);
+    if (o && index >= 0 && index < o->n_values && index != o->current) {
+        o->current = index;
+        g_opt_dirty = 1;
     }
     pthread_mutex_unlock(&g_opt_lock);
-
     (*env)->ReleaseStringUTFChars(env, key, k);
+}
+
+/* 修改版 zip 的驱动名可能不在本版 FBNeo 数据表里 → loadCore 失败；
+ * 此时核心已 init（dlopen/init/set_environment 都完成了），在同一实例上
+ * 卸载后换装基础版 zip 重载，省掉整套核心重建。仅在仿真线程启动前调用。 */
+JNIEXPORT jboolean JNICALL
+Java_com_xbw_tv_core_RetroCore_nativeLoadAlternativeRom(JNIEnv *env, jclass cls, jstring romPath) {
+    (void)cls;
+    if (!core.handle || !core.unload_game || !core.load_game) return JNI_FALSE;
+    if (g_running) return JNI_FALSE;
+    core.unload_game();   /* 上次 load 失败时是幂等的（nBurnDrvActive 守卫） */
+    const char *rp = (*env)->GetStringUTFChars(env, romPath, NULL);
+    snprintf(g_rom_path, sizeof(g_rom_path), "%s", rp);
+    (*env)->ReleaseStringUTFChars(env, romPath, rp);
+    pthread_mutex_lock(&g_opt_lock);
+    clear_options_locked();   /* 旧驱动的金手指选项全部作废 */
+    pthread_mutex_unlock(&g_opt_lock);
+    if (!try_load_rom()) {
+        LOGE("alternative rom load failed: %s", g_rom_path);
+        return JNI_FALSE;
+    }
+    /* 分辨率/帧率可能随驱动变化，重读一遍 */
+    struct retro_system_av_info av;
+    memset(&av, 0, sizeof(av));
+    core.get_av_info(&av);
+    g_base_w = av.geometry.base_width;
+    g_base_h = av.geometry.base_height;
+    g_aspect = av.geometry.aspect_ratio;
+    g_fps = av.timing.fps;
+    g_sample_rate = av.timing.sample_rate;
+    LOGI("alternative rom loaded: %s base=%ux%u fps=%.3f", g_rom_path, g_base_w, g_base_h, g_fps);
+    return JNI_TRUE;
+}
+
+JNIEXPORT jintArray JNICALL Java_com_xbw_tv_core_RetroCore_nativeAvInfo(JNIEnv *env, jclass cls) {
+    (void)cls;
+    jintArray a = (*env)->NewIntArray(env, 4);
+    jint v[4] = {(jint)g_base_w, (jint)g_base_h, (jint)(g_fps * 100), (jint)g_sample_rate};
+    (*env)->SetIntArrayRegion(env, a, 0, 4, v);
+    return a;
+}
+
+JNIEXPORT void JNICALL Java_com_xbw_tv_core_RetroCore_nativeStop(JNIEnv *env, jclass cls) {
+    (void)cls;
+    if (!g_running && !core.handle) return;
+    save_sram_to_disk();
+    g_running = 0;
+    struct timespec s = {0, 150 * 1000 * 1000};   /* 等仿真线程收尾 */
+    nanosleep(&s, NULL);
+    g_render_run = 0;
+    pthread_join(g_render_thread, NULL);
+    vpool_free();
+    if (core.unload_game) core.unload_game();
+    if (core.deinit) core.deinit();
+    if (g_audio_track) { (*env)->DeleteGlobalRef(env, g_audio_track); g_audio_track = NULL; }
+    if (g_audio_jbuf) { (*env)->DeleteGlobalRef(env, g_audio_jbuf); g_audio_jbuf = NULL; }
+    g_write_mid = NULL;
+    pthread_mutex_lock(&g_surf_lock);
+    if (g_window) { ANativeWindow_release(g_window); g_window = NULL; }
+    pthread_mutex_unlock(&g_surf_lock);
+    free(g_audio_ring);
+    g_audio_ring = NULL;
+    free(g_rom_data_keep);
+    g_rom_data_keep = NULL;
+    pthread_mutex_lock(&g_cheat_lock);
+    if (g_cheat_codes) {
+        for (int i = 0; i < g_cheat_count; i++) free(g_cheat_codes[i]);
+        free(g_cheat_codes);
+        g_cheat_codes = NULL;
+    }
+    g_cheat_count = 0;
+    g_cheat_dirty = 0;
+    pthread_mutex_unlock(&g_cheat_lock);
+    pthread_mutex_lock(&g_opt_lock);
+    clear_options_locked();
+    pthread_mutex_unlock(&g_opt_lock);
+    if (core.handle) { dlclose(core.handle); core.handle = NULL; }
+    memset(&core, 0, sizeof(core));
+    (void)env;
 }
 
