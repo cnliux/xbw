@@ -194,9 +194,9 @@ class SearchActivity : AppCompatActivity() {
                 .onFailure { e -> renderError(e) }
             // 后台补拉还没缓存过的第三方源（联网，不阻塞本次结果）；补到了就静默重搜一次，
             // 这样"新加的源 / 从没进过的分类"在第一次搜索后也能被搜到
-            launch(Dispatchers.IO) {
+            launch(Dispatchers.IO) warm@ {
                 val warmed = runCatching { repo.warmPluginSources(application) }.getOrDefault(false)
-                if (!warmed) return@launch
+                if (!warmed) return@warm
                 // 用户已经改了关键词就别覆盖当前结果
                 val stillSame = withContext(Dispatchers.Main) {
                     binding.etKeyword.text.toString().trim() == kw

@@ -178,17 +178,17 @@ const val NO_ROM_PLATFORM = "网页版游戏"
                 if (lines[0] == "fbneo" && isBiosRomName(f.name)) meta.delete()
             }
             if (meta.exists()) {
-                val lines = meta.readLines()
-                if (lines.size >= 3) {
-                    val f = File(lines[1])
+                val specLines = meta.readLines()
+                if (specLines.size >= 3) {
+                    val f = File(specLines[1])
                     if (f.exists() && f.length() > 16) {
-                        val fallbacks = lines.drop(3).mapNotNull { l ->
+                        val fallbacks = specLines.drop(3).mapNotNull { l ->
                             val ff = File(l)
                             if (ff.exists() && ff.length() > 16) ff else null
                         }
                         dir.setLastModified(System.currentTimeMillis())   // 记录访问时间供 LRU
-                        Log.i(TAG, "rom cached id=$gameId core=${lines[0]} fallbacks=${fallbacks.size}")
-                        return RomResult.Ready(RomSpec(lines[0], f, File(dir, "system"), true, fallbacks))
+                        Log.i(TAG, "rom cached id=$gameId core=${specLines[0]} fallbacks=${fallbacks.size}")
+                        return RomResult.Ready(RomSpec(specLines[0], f, File(dir, "system"), true, fallbacks))
                     }
                 }
                 // 旧格式（<3 行）或文件丢失：作废重取

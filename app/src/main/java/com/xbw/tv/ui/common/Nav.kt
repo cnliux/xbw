@@ -45,7 +45,7 @@ object Nav {
                 toast(activity, activity.getString(R.string.plugin_no_rom))
                 return@launch
             }
-            val cookie = PluginRepository.cookieFor(activity.applicationContext, src)
+            val cookie = PluginRepository.cookieFor(src)
             android.util.Log.i("Nav", "plugin id=${item.id} cookie=${cookie != null}")
             // 下载候选地址（GBK 直链 → 通用直链 → down.php 网关）逐个试
             val candidates = PluginRepository.romCandidates(src, item)
@@ -143,7 +143,7 @@ object Nav {
         val dest = File(dir, stem)
         if (!dest.isFile || dest.length() <= 16) {
             try {
-                PluginRepository.downloadAsset(activity, src, videoUrl, dest)
+                PluginRepository.downloadAsset(src, videoUrl, dest)
             } catch (e: Exception) {
                 toast(activity, "视频获取失败：${e.message ?: "网络异常"}")
                 return

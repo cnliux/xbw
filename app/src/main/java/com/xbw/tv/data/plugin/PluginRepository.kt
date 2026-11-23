@@ -441,7 +441,7 @@ object PluginRepository {
      * 确保源 cookie 已解出并返回它（`__test=<hex>` 头值）；没有就现场解一次。
      * 解完存在会话级 jar 里，同一个源的所有资源请求复用。
      */
-    suspend fun cookieFor(context: Context, src: PluginSource): String? {
+    suspend fun cookieFor(src: PluginSource): String? {
         val jar = cookieJars.getOrPut(src.id) { HashMap() }
         jar[AesChallenge.COOKIE]?.let { return it }
         runCatching {
@@ -458,7 +458,7 @@ object PluginRepository {
         return jar[AesChallenge.COOKIE]
     }
 
-    private fun cookieHeader(src: PluginSource, jar: MutableMap<String, String>?): Map<String, String> =
+    private fun cookieHeader(jar: MutableMap<String, String>?): Map<String, String> =
         jar?.get(AesChallenge.COOKIE)?.let { mapOf("Cookie" to "${AesChallenge.COOKIE}=$it") } ?: emptyMap()
 
     /**
@@ -466,21 +466,20 @@ object PluginRepository {
      *  - 服务端下回 HTML 挑战页 → 判定"没带对 cookie"，解一次再下
      *  - 404 / 网络错 → 直接抛，调用方转成用户可见的提示
      */
-    suspend fun downloadAsset(context: Context, src: PluginSource, url: String, dest: File) {
-        val app = context.applicationContext
+    suspend fun downloadAsset(src: PluginSource, url: String, dest: File) {
         var jar = cookieJars[src.id]
         if (jar?.get(AesChallenge.COOKIE) == null) {
-            cookieFor(app, src)
+            cookieFor(src)
             jar = cookieJars[src.id]
         }
         val destForAttempt = dest
         runCatching {
-            HttpFetcher.downloadToFile(url, destForAttempt, headers = cookieHeader(src, jar))
-        }.getOrElse { firstError ->
+            HttpFetcher.downloadToFile(url, destForAttempt, headers = cookieHeader(jar))
+        }.getOrElse { _ ->
             // 可能 cookie 过期/被换：重新解一次再试，再不行就把原错误抛出去
             jar?.clear()
             cookieJars.remove(src.id)
-            val fresh = cookieFor(app, src)
+            val fresh = cookieFor(src)
             val headers = fresh?.let { mapOf("Cookie" to "${AesChallenge.COOKIE}=$it") } ?: emptyMap()
             HttpFetcher.downloadToFile(url, destForAttempt, headers = headers)
         }

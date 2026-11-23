@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.KeyEvent
 import android.view.View
 import android.widget.MediaController
-import android.widget.VideoView
 import androidx.appcompat.app.AppCompatActivity
 import com.xbw.tv.R
 import com.xbw.tv.databinding.ActivityVideoGameBinding
@@ -68,7 +67,7 @@ class VideoGameActivity : AppCompatActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        val vw = b.video as VideoView
+        val vw = b.video
         if (vw.isPlaying) when (keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT -> { vw.seekTo((vw.currentPosition - SEEK_STEP_MS).coerceAtLeast(0)); return true }
             KeyEvent.KEYCODE_DPAD_RIGHT -> { vw.seekTo(vw.currentPosition + SEEK_STEP_MS); return true }
