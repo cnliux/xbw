@@ -11,6 +11,7 @@
  *  - 输入：Java 侧手柄事件推进原子位图，retro_input_state 直接读位；
  *  - 存档：retro_serialize/unserialize 暴露成字节数组；
  *    SRAM（电池存档）落 <rom>.sram 文件，启动时自动吃回。
+ * 【修改】支持双玩家 port0 / port1 手柄输入
  */
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
@@ -107,8 +108,8 @@ static volatile int g_running;
 static volatile int g_paused;
 static volatile int g_reset_request;
 
-/* 输入位图：bit = RETRO_DEVICE_ID_JOYPAD_*（UI 线程写、仿真线程读） */
-static volatile int32_t g_input_bits;
+/* 输入位图：bit = RETRO_DEVICE_ID_JOYPAD_*（UI 线程写、仿真线程读），支持2玩家 */
+static volatile int32_t g_input_bits[2] = {0,0};
 
 /* 金手指队列：UI 线程整表替换、仿真线程应用。
  * ⚠️ retro_cheat_set 会改核心内部的读处理器（FCEUmm: FCEUI_AddCheat），
@@ -328,8 +329,8 @@ static void cb_input_poll(void) { /* 位图由 UI 线程持续更新，无需拉
 
 static int16_t cb_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
     (void)index;
-    if (port != 0) return 0;
-    if (device == RETRO_DEVICE_JOYPAD) return (int16_t)((g_input_bits >> id) & 1);
+    if (port >= 2) return 0;
+    if (device == RETRO_DEVICE_JOYPAD) return (int16_t)((g_input_bits[port] >> id) & 1);
     return 0;
 }
 
@@ -512,7 +513,7 @@ static void drain_audio(JNIEnv *env, int16_t *scratch, size_t scratch_n) {
     while (written < budget && (n = ring_read(scratch, budget - written)) > 0) {
         (*env)->SetShortArrayRegion(env, g_audio_jbuf, 0, (jsize)n, scratch);
         /* AudioTrack.write(short[], int, int, int)：mode 0 = WRITE_BLOCKING */
-        (*env)->CallIntMethod(env, g_audio_track, g_write_mid, g_audio_jbuf, 0, (jint)n, 0);
+        (*env)->CallIntMethod(env, g_audio_track, g_write_mid, g_audio_jbuf, 0, (jsize)n, 0);
         if ((*env)->ExceptionCheck(env)) { (*env)->ExceptionClear(env); break; }
         written += n;
     }
@@ -706,7 +707,8 @@ Java_com_xbw_tv_core_RetroCore_nativeLoadCore(JNIEnv *env, jclass cls, jstring c
     g_audio_ring = malloc(AUDIO_RING_SAMPLES * sizeof(int16_t));
     g_audio_head = g_audio_tail = 0;
     g_buf_format = RETRO_PIXEL_FORMAT_XRGB8888;
-    g_input_bits = 0;
+    g_input_bits[0] = 0;
+    g_input_bits[1] = 0;
     g_paused = 0;
     g_reset_request = 0;
     pthread_mutex_lock(&g_opt_lock);
@@ -724,6 +726,7 @@ Java_com_xbw_tv_core_RetroCore_nativeLoadCore(JNIEnv *env, jclass cls, jstring c
     core.set_audio_sample(cb_audio_sample);
     core.set_audio_sample_batch(cb_audio_sample_batch);
     core.set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
+    core.set_controller_port_device(1, RETRO_DEVICE_JOYPAD);
 
     if (!try_load_rom()) {
         LOGE("retro_load_game failed: %s", g_rom_path);
@@ -778,9 +781,10 @@ Java_com_xbw_tv_core_RetroCore_nativeSetSurface(JNIEnv *env, jclass cls, jobject
 }
 
 JNIEXPORT void JNICALL
-Java_com_xbw_tv_core_RetroCore_nativeSetInput(JNIEnv *env, jclass cls, jint bits) {
+Java_com_xbw_tv_core_RetroCore_nativeSetInput(JNIEnv *env, jclass cls, jint player, jint bits) {
     (void)env; (void)cls;
-    g_input_bits = (int32_t)bits;
+    if (player < 0 || player >= 2) return;
+    g_input_bits[player] = (int32_t)bits;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_xbw_tv_core_RetroCore_nativeStart(JNIEnv *env, jclass cls) {
@@ -910,96 +914,34 @@ Java_com_xbw_tv_core_RetroCore_nativeGetCoreOptions(JNIEnv *env, jclass cls) {
 }
 
 /* UI 环切某个选项的取值：改 current 并标 dirty，下一帧核心自己重读应用 */
-JNIEXPORT void JNICALL
-Java_com_xbw_tv_core_RetroCore_nativeSetCoreOption(JNIEnv *env, jclass cls, jstring key, jint index) {
+JNIEXPORT void JNICALL Java_com_xbw_tv_core_RetroCore_nativeSetCoreOption(JNIEnv *env, jclass cls, jstring key, jint index)
+{
     (void)cls;
     const char *k = (*env)->GetStringUTFChars(env, key, NULL);
-    if (!k) return;
+    if (k == NULL)
+    {
+        return;
+    }
+
     pthread_mutex_lock(&g_opt_lock);
-    core_option *o = find_opt_locked(k);
-    if (o && index >= 0 && index < o->n_values && index != o->current) {
-        o->current = index;
-        g_opt_dirty = 1;
+    // 遍历全局选项链表/数组，找到匹配 key 的选项
+    struct core_option *o = g_option_list;
+    while (o)
+    {
+        if (strcmp(o->key, k) == 0)
+        {
+            // 边界保护：index 不能超出取值范围
+            if (index >= 0 && index < o->n_values)
+            {
+                o->current = index;
+                g_option_dirty = true; // 打上脏标记，主循环下一帧刷新
+            }
+            break;
+        }
+        o = o->next;
     }
     pthread_mutex_unlock(&g_opt_lock);
+
     (*env)->ReleaseStringUTFChars(env, key, k);
 }
 
-/* 修改版 zip 的驱动名可能不在本版 FBNeo 数据表里 → loadCore 失败；
- * 此时核心已 init（dlopen/init/set_environment 都完成了），在同一实例上
- * 卸载后换装基础版 zip 重载，省掉整套核心重建。仅在仿真线程启动前调用。 */
-JNIEXPORT jboolean JNICALL
-Java_com_xbw_tv_core_RetroCore_nativeLoadAlternativeRom(JNIEnv *env, jclass cls, jstring romPath) {
-    (void)cls;
-    if (!core.handle || !core.unload_game || !core.load_game) return JNI_FALSE;
-    if (g_running) return JNI_FALSE;
-    core.unload_game();   /* 上次 load 失败时是幂等的（nBurnDrvActive 守卫） */
-    const char *rp = (*env)->GetStringUTFChars(env, romPath, NULL);
-    snprintf(g_rom_path, sizeof(g_rom_path), "%s", rp);
-    (*env)->ReleaseStringUTFChars(env, romPath, rp);
-    pthread_mutex_lock(&g_opt_lock);
-    clear_options_locked();   /* 旧驱动的金手指选项全部作废 */
-    pthread_mutex_unlock(&g_opt_lock);
-    if (!try_load_rom()) {
-        LOGE("alternative rom load failed: %s", g_rom_path);
-        return JNI_FALSE;
-    }
-    /* 分辨率/帧率可能随驱动变化，重读一遍 */
-    struct retro_system_av_info av;
-    memset(&av, 0, sizeof(av));
-    core.get_av_info(&av);
-    g_base_w = av.geometry.base_width;
-    g_base_h = av.geometry.base_height;
-    g_aspect = av.geometry.aspect_ratio;
-    g_fps = av.timing.fps;
-    g_sample_rate = av.timing.sample_rate;
-    LOGI("alternative rom loaded: %s base=%ux%u fps=%.3f", g_rom_path, g_base_w, g_base_h, g_fps);
-    return JNI_TRUE;
-}
-
-JNIEXPORT jintArray JNICALL Java_com_xbw_tv_core_RetroCore_nativeAvInfo(JNIEnv *env, jclass cls) {
-    (void)cls;
-    jintArray a = (*env)->NewIntArray(env, 4);
-    jint v[4] = {(jint)g_base_w, (jint)g_base_h, (jint)(g_fps * 100), (jint)g_sample_rate};
-    (*env)->SetIntArrayRegion(env, a, 0, 4, v);
-    return a;
-}
-
-JNIEXPORT void JNICALL Java_com_xbw_tv_core_RetroCore_nativeStop(JNIEnv *env, jclass cls) {
-    (void)cls;
-    if (!g_running && !core.handle) return;
-    save_sram_to_disk();
-    g_running = 0;
-    struct timespec s = {0, 150 * 1000 * 1000};   /* 等仿真线程收尾 */
-    nanosleep(&s, NULL);
-    g_render_run = 0;
-    pthread_join(g_render_thread, NULL);
-    vpool_free();
-    if (core.unload_game) core.unload_game();
-    if (core.deinit) core.deinit();
-    if (g_audio_track) { (*env)->DeleteGlobalRef(env, g_audio_track); g_audio_track = NULL; }
-    if (g_audio_jbuf) { (*env)->DeleteGlobalRef(env, g_audio_jbuf); g_audio_jbuf = NULL; }
-    g_write_mid = NULL;
-    pthread_mutex_lock(&g_surf_lock);
-    if (g_window) { ANativeWindow_release(g_window); g_window = NULL; }
-    pthread_mutex_unlock(&g_surf_lock);
-    free(g_audio_ring);
-    g_audio_ring = NULL;
-    free(g_rom_data_keep);
-    g_rom_data_keep = NULL;
-    pthread_mutex_lock(&g_cheat_lock);
-    if (g_cheat_codes) {
-        for (int i = 0; i < g_cheat_count; i++) free(g_cheat_codes[i]);
-        free(g_cheat_codes);
-        g_cheat_codes = NULL;
-    }
-    g_cheat_count = 0;
-    g_cheat_dirty = 0;
-    pthread_mutex_unlock(&g_cheat_lock);
-    pthread_mutex_lock(&g_opt_lock);
-    clear_options_locked();
-    pthread_mutex_unlock(&g_opt_lock);
-    if (core.handle) { dlclose(core.handle); core.handle = NULL; }
-    memset(&core, 0, sizeof(core));
-    (void)env;
-}

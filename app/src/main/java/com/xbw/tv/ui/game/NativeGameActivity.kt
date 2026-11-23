@@ -36,7 +36,8 @@ import java.io.File
  *  - 手柄按键不再经过"合成 KeyboardEvent → 站点混淆 JS"链路，USB 手柄
  *    任何未映射按键都被本类吞掉，不会掉进系统焦点黑洞。
  *
- * 输入模型：物理 keyCode →（KeySettings.logicalOf）→ GameButton → retro 位图。
+ * 【更新：支持双人】
+ * 输入模型：物理手柄deviceId映射player(0/1)，keyCode →（KeySettings.logicalOf）→ GameButton → retro 位图。
  * 摇杆 AXIS 运动事件也折算成方向位（很多 USB 手柄方向是轴不是十字键）。
  *
  * 帧率铁律：仿真线程绝不能碰 ANativeWindow_lock（会等 SurfaceFlinger 放行，
@@ -81,6 +82,8 @@ class NativeGameActivity : AppCompatActivity() {
             GameButton.L3 to RetroCore.ID_L3,
             GameButton.R3 to RetroCore.ID_R3,
         )
+        // 最大支持2玩家
+        private const val MAX_PLAYER = 2
     }
 
     private lateinit var binding: ActivityNativeGameBinding
@@ -116,10 +119,16 @@ class NativeGameActivity : AppCompatActivity() {
     private var arcadeOptionsLoaded = false
     private val cheatAdapter = CheatAdapter { pos -> toggleCheat(pos) }
 
-    /** 当前按住位图（含摇杆折算位），每次变更推给 native */
-    private var padBits = 0
-    private val heldButtons = HashSet<GameButton>()
-    private var axisBits = 0
+    // ========== 双人输入改造区 ==========
+    /** 设备ID -> 玩家编号映射，新手柄自动分配 0、1 */
+    private val deviceToPlayer = mutableMapOf<Int, Int>()
+    private var nextPlayerIndex = 0
+
+    /** 每个玩家独立按键状态 */
+    private val padBits = IntArray(MAX_PLAYER) { 0 }
+    private val heldButtons = Array(MAX_PLAYER) { HashSet<GameButton>() }
+    private val axisBits = IntArray(MAX_PLAYER) { 0 }
+    // ===================================
 
     private val stateFile: File by lazy {
         File(filesDir, "roms/$gameId/quick.state")
@@ -210,7 +219,7 @@ class NativeGameActivity : AppCompatActivity() {
             coreName = spec.coreName
             binding.loadingBar.visibility = View.GONE
             binding.loadingText.text = if (spec.fromCache) "ROM 已就绪，正在启动 ${spec.coreName} 核心…"
-                else "正在启动 ${spec.coreName} 核心…"
+            else "正在启动 ${spec.coreName} 核心…"
             val ok = withContext(Dispatchers.IO) {
                 var ok = core.loadCore(this@NativeGameActivity, spec.coreName, spec.systemDir, spec.romFile)
                 // 修改版 zip 的驱动名可能不在本版 FBNeo 数据表里 → 逐段兜底基础版
@@ -307,7 +316,7 @@ class NativeGameActivity : AppCompatActivity() {
 
     private fun showToolbar() {
         toolbarVisible = true
-        clearPad()
+        clearAllPad()
         binding.toolbar.visibility = View.VISIBLE
         refreshFavoriteLabel()
         binding.toolbar.post { binding.btnPause.requestFocus() }
@@ -347,7 +356,7 @@ class NativeGameActivity : AppCompatActivity() {
             toast("该平台暂不支持金手指（当前支持 FC / 街机）")
             return
         }
-        clearPad()
+        clearAllPad()
         toolbarVisible = false
         binding.toolbar.visibility = View.GONE
         cheatPanelVisible = true
@@ -521,27 +530,46 @@ class NativeGameActivity : AppCompatActivity() {
 
     private fun toast(t: String) = Nav.toast(this, t)
 
-    // ── 输入：物理键 → GameButton → retro 位图 ─────────────────────────
-    private fun pushBits() {
-        var bits = axisBits
-        for (b in heldButtons) RETRO_BIT[b]?.let { bits = bits or (1 shl it) }
-        if (bits != padBits) {
-            padBits = bits
-            core.setInput(bits)
-            Log.d("NativeInput", "bits=0x%x".format(bits))
+    // ========== 双人输入新函数 ==========
+    /** 获取这个手柄对应的player，新手柄自动分配0/1，超过2个全部归1P */
+    private fun getPlayerId(deviceId: Int): Int {
+        if (deviceToPlayer.containsKey(deviceId)) {
+            return deviceToPlayer[deviceId]!!
+        }
+        if (nextPlayerIndex < MAX_PLAYER) {
+            deviceToPlayer[deviceId] = nextPlayerIndex
+            Log.d("PlayerMap", "新手柄 device=$deviceId → player=$nextPlayerIndex")
+            return nextPlayerIndex++
+        }
+        return 0
+    }
+
+    private fun pushBits(player: Int) {
+        var bits = axisBits[player]
+        for (b in heldButtons[player]) RETRO_BIT[b]?.let { bits = bits or (1 shl it) }
+        if (bits != padBits[player]) {
+            padBits[player] = bits
+            core.setInput(player, bits)
+            Log.d("NativeInput", "player=$player bits=0x%x".format(bits))
         }
     }
 
-    private fun clearPad() {
-        heldButtons.clear()
-        axisBits = 0
-        pushBits()
+    private fun clearAllPad() {
+        for (p in 0 until MAX_PLAYER) {
+            heldButtons[p].clear()
+            axisBits[p] = 0
+            pushBits(p)
+        }
     }
+    // ===================================
 
+    // ── 输入：物理键 → GameButton → retro 位图 ─────────────────────────
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (isFinishing) return super.dispatchKeyEvent(event)
         val isGamepad = event.source and (android.view.InputDevice.SOURCE_GAMEPAD or
                 android.view.InputDevice.SOURCE_JOYSTICK) != 0
+        val devId = event.deviceId
+        val player = getPlayerId(devId)
 
         // ★ 加载失败被困修复：游戏还没跑起来（ROM 下载失败/无核心），
         //   任何退出意图（BACK / 手柄 B / START / MENU）直接 finish，
@@ -659,10 +687,10 @@ class NativeGameActivity : AppCompatActivity() {
         val btn = KeySettings.logicalOf(event.keyCode)
         if (btn != null) {
             when (event.action) {
-                KeyEvent.ACTION_DOWN -> heldButtons.add(btn)
-                KeyEvent.ACTION_UP -> heldButtons.remove(btn)
+                KeyEvent.ACTION_DOWN -> heldButtons[player].add(btn)
+                KeyEvent.ACTION_UP -> heldButtons[player].remove(btn)
             }
-            pushBits()
+            pushBits(player)
             return true
         }
 
@@ -682,6 +710,9 @@ class NativeGameActivity : AppCompatActivity() {
         // 若在此吞成游戏输入，面板里方向键完全失灵（街机金手指"无法聚焦"的根因）
         if (src == 0 || toolbarVisible || cheatPanelVisible) return super.onGenericMotionEvent(event)
 
+        val devId = event.deviceId
+        val player = getPlayerId(devId)
+
         var bits = 0
         val x = event.getAxisValue(MotionEvent.AXIS_X)
         val y = event.getAxisValue(MotionEvent.AXIS_Y)
@@ -692,9 +723,9 @@ class NativeGameActivity : AppCompatActivity() {
         if (x > dead || hx > dead) bits = bits or (1 shl RetroCore.ID_RIGHT)
         if (y < -dead || hy < -dead) bits = bits or (1 shl RetroCore.ID_UP)
         if (y > dead || hy > dead) bits = bits or (1 shl RetroCore.ID_DOWN)
-        if (bits != axisBits) {
-            axisBits = bits
-            pushBits()
+        if (bits != axisBits[player]) {
+            axisBits[player] = bits
+            pushBits(player)
         }
         return true
     }
@@ -702,7 +733,7 @@ class NativeGameActivity : AppCompatActivity() {
     // ── 生命周期 ───────────────────────────────────────────────────────
     override fun onPause() {
         super.onPause()
-        clearPad()
+        clearAllPad()
         if (core.running) {
             paused = true
             core.setPaused(true)
