@@ -109,6 +109,8 @@ jobs:
             - app-debug.apk — 调试版
             - app-release.apk — 正式签名版（版本号 v${{ steps.ver.outputs.version }}）
 
+            仅包含 arm64-v8a 原生库（64 位 ARM TV 盒子）。
+
             App 内「设置 → 立即检查更新」会自动发现本版本；
             下载源在多个 CDN 之间实测选最快的那个。
           files: |

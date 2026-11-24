@@ -4,3 +4,9 @@ plugins {
     id 'com.android.library' version '8.5.2' apply false
     id 'org.jetbrains.kotlin.android' version '1.9.24' apply false
 }
+
+ext {
+    // 目标设备统一为 64 位 ARM TV 盒子：只构建 arm64-v8a，避免打包 32 位 .so 让 APK 体积翻倍。
+    // 临时需要兼容老 32 位盒子时可用 -PappAbis=armeabi-v7a,arm64-v8a 覆盖。
+    appAbis = (project.findProperty('appAbis') ?: 'arm64-v8a').toString().split(',')*.trim() as String[]
+}

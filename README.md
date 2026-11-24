@@ -27,8 +27,11 @@
 # 方式二：命令行
 $env:JAVA_HOME='G:\jdk17'
 & .\gradlew.bat :app:assembleDebug --console=plain
-# 产物：app\build\outputs\apk\debug\app-debug.apk （约 6.3 MB）
+# 产物：app\build\outputs\apk\debug\app-debug.apk
 ```
+
+默认只构建 **arm64-v8a**（面向 64 位 ARM TV 盒子），不再打包 armeabi-v7a 等 32 位库。
+如需临时出兼容包：`.\gradlew.bat :app:assembleRelease -PappAbis=armeabi-v7a,arm64-v8a`。
 
 ### 安装到电视/盒子
 

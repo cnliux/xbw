@@ -178,18 +178,9 @@ target_compile_definitions(fbneo PRIVATE
   INCLUDE_CHD_SUPPORT USE_LIBRETRO_VFS CHDR_SYSTEM_ZLIB
   GIT_VERSION="GIT-xbw" GIT_DATE="")
 
+# 只构建 arm64-v8a，64 位 off_t 全程生效；旧的 32 位 fseeko/ftello 兼容分支已移除。
 target_compile_definitions(fbneo PRIVATE _FILE_OFFSET_BITS=64)
 
-# bionic trap (NDK r27 headers): with _FILE_OFFSET_BITS=64 on a 32-bit ABI at
-# API<24, stdio.h declares fseeko/ftello ONLY for API>=24 (renamed to *64).
-# Our minSdk is 21, so vfs_implementation.c - which unconditionally takes the
-# fseeko/ftello tier of its 64-bit ladder - fails to compile for armeabi-v7a.
-# Back to 32-bit off_t declarations for THIS FILE ONLY: fine for ROM/zip-sized
-# streams (<2GiB); 64-bit ABIs keep the flag untouched.
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set_source_files_properties(${LC}/vfs/vfs_implementation.c PROPERTIES
-    COMPILE_OPTIONS "-U_FILE_OFFSET_BITS")
-endif()
 target_compile_options(fbneo PRIVATE -O2 -w -ffast-math -fexceptions -frtti
   -std=gnu99 -Wno-write-strings)
 # AGP injects -g for debug variants; FBNeo is ~1100 TUs, so debug info would blow the
