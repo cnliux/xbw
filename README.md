@@ -55,7 +55,7 @@ minSdk 21（覆盖 Android 5.0+ 的绝大多数盒子）。debug 包名带 `.deb
 | 金手指（FC 专用，站点 /cheat?id= 实时抓取） | 游戏内工具条→金手指 | `CheatParser` / `CheatAdapter` / `RetroCore.setCheats`（仿真线程经 retro_cheat_reset/set 下发） |
 | 原生工具条（暂停/重置/存档/读档/金手指/收藏/退出） | 游戏页按 SELECT/MENU/MODE | `NativeGameActivity.wireToolbar` |
 | 输入映射（物理键→GameButton→retro 位图） | — | `KeySettings` / `MotionKeyBridge` / `NativeGameActivity` |
-| 按键双层映射 + 手柄直改 | 设置→按键映射 | `KeySettings` / `KeyMappingActivity` |
+| 按键双层映射 + 1P~4P 独立设置 + 手柄直改 | 设置→按键映射 | `KeySettings` / `KeyMappingActivity` |
 | 手柄热插拔 | 设置→手柄状态 | `GamepadManager` |
 | 自动升级（进游戏静默检测 + 设置→立即检查更新；GitHub Release vN 自动挑最快下载源） | 设置→自动升级 | `UpdateChecker` / `UpdatePrompt` / `UpdateSettings` / FileProvider |
 | 第三方游戏源（插件，2026-10） | 大厅动态分类芯片（一个源一个芯片，标题用户自定） | `PluginSource` / `PluginRepository` / `GamelistParser`（xml `path/image/video` 支持相对拼接或绝对 http 直链）/ `DirectoryIndexParser` |
@@ -114,7 +114,7 @@ tools/
 - **全原生引擎**：游戏运行只有一条路 —— libretro 核心（FC=FCEUmm，街机=FBNeo），C 层直出 RGB 帧 + AudioTrack 阻塞写自动限速，实测 Mali-450 老盒子 60fps 稳定（早期 WebView+JS 引擎因老盒子合成栈掉帧已整体移除）。ROM 经 `RomProvider` 从 `file.1990i.com` 直链抓（gromname 规则见 §2.6），缓存后离线秒开。手柄未映射键一律吞掉（修复 USB 手柄杂键触发系统行为的顽疾）。
 - **FC 核心选型结论（2026-10 评估）**：保留 **FCEUmm**，不引入 Nestopia UE。Nestopia 精度更高（NESdev 测试套件过得多），但 FCEUmm 更快、mapper 覆盖更宽（专门为非正版/改版卡带做过扩充），RetroPie 与 libretro 官方 core info 都把 FCEUmm 标为"低资源、移动/嵌入式首选"；Nestopia 在 Pi 级设备上就有掉帧记录，Mali-450 老盒子风险更高，且体积更大（内嵌 5.9MB 数据库）、需要 C++ STL、还没有 Game Genie。Mesen 无 Android libretro 版本。
 - **金手指线程铁律**：`retro_cheat_set` 会改核心内部读处理器（FCEUmm: FCEUI_AddCheat），**只能在仿真线程调用**。UI 线程只往 native 队列塞字符串（`RetroCore.setCheats` → `g_cheat_dirty`），emu 循环每帧检查并整表重放；读档后自动重新下发。街机 FBNeo 的 cheat 是上游空实现，面板对非 FC 核心直接提示「暂不支持」。
-- **输入模型**：物理 keyCode →（KeySettings）→ GameButton → retro 位图；摇杆 AXIS 折算方向位。最多 4 名玩家：设备按接入顺序自动分配 1P→4P，拔掉自动释放；4 人已满时后续设备轮转共享，多个设备可同时控制同一玩家（按键按位合并，互不覆盖）。菜单热键默认 SELECT，另留 MENU / 长按 START / 手柄 MODE(HOME) 呼出工具条。
+- **输入模型**：物理 keyCode →（`KeySettings.logicalOf(player, keyCode)`）→ GameButton → retro 位图；摇杆 AXIS 也按当前玩家映射折算方向位。最多 4 名玩家：设备按接入顺序自动分配 1P→4P，拔掉自动释放；4 人已满时后续设备轮转共享，多个设备可同时控制同一玩家（按键按位合并，互不覆盖）。设置→按键映射顶部可切 1P~4P 独立改键，未改的键继承全局默认，支持「从 1P 复制」与「只清当前玩家」。菜单热键默认 SELECT，另留 MENU / 长按 START / 手柄 MODE(HOME) 呼出工具条。
 - **焦点即生命**：所有可操作元素 focusable + 焦点放大 + 阴影抬升；错误页焦点强制落在重试；工具条弹出焦点先给「暂停」。⚠️ 实测坑：RecyclerView 的 item 增删/移动动画与 TvFocusAnimator 的 `bringChildToFront` 冲突会在动画结束回收时崩溃（"Scrapped or attached views may not be recycled"）——所有游戏卡片/金手指列表一律 `itemAnimator = null`。
 
 ## 已知问题排查

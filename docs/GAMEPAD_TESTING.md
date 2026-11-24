@@ -16,7 +16,7 @@ USB/BT 手柄  ──►  InputDevice 事件   ──►  InputDispatcher 状态
 - **两层映射**：物理 keycode →（第 1 层）逻辑键 `GameButton` →（第 2 层）网页键盘码 `WebKey(code, key, keyCode)`。
   - 第 1 层解决「不同手柄 A/B 反接、肩键布局各异」；
   - 第 2 层解决「同一逻辑键在不同站点模拟器的默认键位不同」。
-- 两层都可在 **设置 → 按键映射** 里用手柄直接改，即时生效。
+- 两层都可在 **设置 → 按键映射** 里用手柄直接改，即时生效；顶部切 **1P/2P/3P/4P**，每位玩家独立覆盖，未改的键继承全局默认。
 
 ## 二、默认映射表
 
@@ -97,7 +97,7 @@ USB/BT 手柄  ──►  InputDevice 事件   ──►  InputDispatcher 状态
 | 8 | 工具条→「暂停」，再进工具条→「开始」 | 画面冻结/恢复 |
 | 9 | 工具条→「重置」 | 游戏回到初始状态 |
 | 10 | 工具条→「存档」 | 站点存档弹窗出现；方向键可浏览；BACK 关闭 |
-| 11 | 设置→按键映射：把 A 改成 `KeyC` | 游戏里 A 键变成 C 功能；重启 App 仍生效 |
+| 11 | 设置→按键映射：切到 2P，把 A 改成 `KeyC` | 只有第 2 个接入的手柄 A 变成 C 功能；1P 不受影响，重启 App 仍生效 |
 | 12 | 设置→菜单呼出键改成 L3 | 手柄 L3 弹菜单 |
 | 13 | 切换直通模式，重复 5 | 游戏正常（该模式依赖站点键位，个别键不同属正常） |
 | 14 | 游戏进行中拔出手柄 | 无崩溃；遥控器可收工具条退出游戏 |
@@ -120,8 +120,8 @@ USB/BT 手柄  ──►  InputDevice 事件   ──►  InputDispatcher 状态
 
 | 项 | WebView 模式 | 原生模式 |
 |---|---|---|
-| 按键路径 | 物理键 → 合成 KeyboardEvent → 站点混淆 JS | 物理键 → `KeySettings.logicalOf` → retro JOYPAD 位图 → 核心 |
-| 方向轴 | 只有 DPAD 键码 | DPAD 键码 **+ 摇杆/HAT 轴**（`onGenericMotionEvent`，死区 0.45）都折算方向 |
+| 按键路径 | 物理键 → 合成 KeyboardEvent → 站点混淆 JS | 物理键 → `KeySettings.logicalOf(player, keyCode)` → retro JOYPAD 位图 → 核心 |
+| 方向轴 | 只有 DPAD 键码 | DPAD 键码 **+ 摇杆/HAT 轴**（`onGenericMotionEvent`，死区 0.45）都按当前玩家映射折算方向 |
 | 未映射手柄键 | 交给系统（可能乱跳焦点） | **一律吞掉**，绝不让 USB 手柄杂键触发系统行为 |
 | 菜单呼出 | 菜单热键 / 长按 START | 同：菜单热键 / MENU / 长按 START 8 次 |
 | 验证标签 | logcat `GameBridge` | logcat `XbwCore`（loaded ok）、`NativeInput`（bits=0x…） |

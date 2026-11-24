@@ -40,7 +40,8 @@ import java.io.File
  *
  * 【更新：支持最多 4 人 + 多设备共玩】
  * 输入模型：deviceId → player(0..3)，按顺序自动占空位，占满后轮转共享；
- * keyCode →（KeySettings.logicalOf）→ GameButton → retro 位图。
+ * keyCode →（KeySettings.logicalOf(player, keyCode)）→ GameButton → retro 位图；
+ * 每位玩家可有独立映射，没单独设置过的键继承全局默认。
  * 同一个玩家可接多个设备：每个设备独立记按键/轴，按位 OR 合并，
  * 一个设备松键/轴回中不会清掉另一个设备按着的键。
  * 摇杆 AXIS 运动事件也折算成方向位（很多 USB 手柄方向是轴不是十字键）。
@@ -603,6 +604,13 @@ class NativeGameActivity : AppCompatActivity() {
         }
     }
 
+    /** 按当前玩家的物理映射解释方向键码；摇杆 AXIS 也复用同一张表 */
+    private fun mappedBit(player: Int, keyCode: Int): Int {
+        val btn = KeySettings.logicalOf(player, keyCode) ?: return 0
+        val bit = RETRO_BIT[btn] ?: return 0
+        return 1 shl bit
+    }
+
     /** 切后台/暂停：清掉所有设备的按住状态，回来不会“卡方向” */
     private fun clearAllPad() {
         deviceButtons.clear()
@@ -735,20 +743,23 @@ class NativeGameActivity : AppCompatActivity() {
             return true
         }
 
-        val btn = KeySettings.logicalOf(event.keyCode)
-        if (btn != null) {
-            // 只有真正映射成游戏按键的事件才分配玩家槽位；BACK/MENU/工具条键
-            // 走的是各自的路由，此前在方法开头就分配会让遥控器白占一个 P 位。
+        // 只有该键在任意玩家映射里有意义时才分配玩家槽位；BACK/MENU/工具条键
+        // 走的是各自的路由，此前在方法开头就分配会让遥控器白占一个 P 位。
+        // 确认后再用设备所属玩家查自己的映射（没单独设置过则继承全局默认）。
+        if (KeySettings.isMappedForAnyPlayer(event.keyCode)) {
             val deviceId = event.deviceId
             val player = getPlayerId(deviceId)
-            val held = deviceButtons.getOrPut(deviceId) { HashSet() }
-            when (event.action) {
-                KeyEvent.ACTION_DOWN -> held.add(btn)
-                KeyEvent.ACTION_UP -> held.remove(btn)
+            val btn = KeySettings.logicalOf(player, event.keyCode)
+            if (btn != null) {
+                val held = deviceButtons.getOrPut(deviceId) { HashSet() }
+                when (event.action) {
+                    KeyEvent.ACTION_DOWN -> held.add(btn)
+                    KeyEvent.ACTION_UP -> held.remove(btn)
+                }
+                if (held.isEmpty()) deviceButtons.remove(deviceId)
+                pushBits(player)
+                return true
             }
-            if (held.isEmpty()) deviceButtons.remove(deviceId)
-            pushBits(player)
-            return true
         }
 
         // ★ USB 手柄键兜底：任何来自手柄/摇杆、未被映射的键码一律吞掉，
@@ -776,10 +787,10 @@ class NativeGameActivity : AppCompatActivity() {
         val hx = event.getAxisValue(MotionEvent.AXIS_HAT_X)
         val hy = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
         val dead = 0.45f
-        if (x < -dead || hx < -dead) bits = bits or (1 shl RetroCore.ID_LEFT)
-        if (x > dead || hx > dead) bits = bits or (1 shl RetroCore.ID_RIGHT)
-        if (y < -dead || hy < -dead) bits = bits or (1 shl RetroCore.ID_UP)
-        if (y > dead || hy > dead) bits = bits or (1 shl RetroCore.ID_DOWN)
+        if (x < -dead || hx < -dead) bits = bits or mappedBit(player, KeyEvent.KEYCODE_DPAD_LEFT)
+        if (x > dead || hx > dead) bits = bits or mappedBit(player, KeyEvent.KEYCODE_DPAD_RIGHT)
+        if (y < -dead || hy < -dead) bits = bits or mappedBit(player, KeyEvent.KEYCODE_DPAD_UP)
+        if (y > dead || hy > dead) bits = bits or mappedBit(player, KeyEvent.KEYCODE_DPAD_DOWN)
         if (bits == 0) deviceAxisBits.remove(devId) else deviceAxisBits[devId] = bits
         pushBits(player)
         return true

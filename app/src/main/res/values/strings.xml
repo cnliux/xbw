@@ -31,7 +31,7 @@
     <string name="settings_menu_key">菜单呼出键</string>
     <string name="settings_clear_cache">清除游戏列表缓存</string>
     <string name="settings_clear_recent">清除最近玩过</string>
-    <string name="settings_reset_map">恢复默认按键映射</string>
+    <string name="settings_reset_map">恢复默认按键映射（全部玩家）</string>
     <string name="settings_diagnose">站点结构诊断</string>
     <string name="settings_about">关于</string>
     <string name="settings_about_body">版本 %1$s\n\n本应用不内置任何游戏数据，所有游戏列表与游戏本体均来自 yikm.net，仅作技术演示；请在授权范围内使用并尊重原站。\n\n特别感谢：\n· yikm.net（小霸王，其乐无穷）—— 游戏列表、ROM 与金手指数据来源，本应用因它而完整\n· libretro / FCEUmm / FBNeo —— 模拟器核心</string>
@@ -65,9 +65,17 @@
     <string name="gamepad_connected_fmt">已连接 %1$d 个手柄：%2$s</string>
 
     <!-- 设置：按键映射 -->
-    <string name="mapping_hint">上下选择逻辑键，左右改网页键。按 A/确认 后 0.3 秒内再按要绑定的物理键（支持 USB 手柄模式和键盘模式，十字轴也能绑）。</string>
+    <string name="mapping_hint">顶部选 1P~4P，每行左右改网页键；按 A/确认 后 0.3 秒内再按要绑定的物理键（支持 USB 手柄模式和键盘模式，十字轴也能绑）。未单独设置的玩家继承全局映射。</string>
+    <string name="mapping_current_player">当前正在设置（顶部左右可切换玩家）</string>
+    <string name="mapping_capture_hint">请按下要绑定给「%1$s %2$s」的键（BACK 取消）</string>
+    <string name="mapping_bound_hint">已绑定：%1$s → %2$s</string>
+    <string name="mapping_copy_from_p1">从 1P 复制全部映射到当前玩家</string>
+    <string name="mapping_reset_player">只清除当前玩家的独立设置（恢复继承）</string>
+    <string name="mapping_copied">已把 %1$s 的映射复制到 %2$s</string>
+    <string name="mapping_reset_done">%1$s 已恢复继承全局映射</string>
+    <string name="mapping_is_p1">当前就是 1P，无需复制</string>
     <string name="toast_cleared">缓存已清除</string>
-    <string name="toast_reset_done">已恢复默认映射</string>
+    <string name="toast_reset_done">已恢复默认映射（全部玩家）</string>
     <string name="toast_cleared_recent">最近玩过已清空</string>
     <string name="mapping_saved_hint">已保存 %1$s → 网页 %2$s</string>
     <string name="hotkey_saved">菜单键已设为 %1$s</string>
