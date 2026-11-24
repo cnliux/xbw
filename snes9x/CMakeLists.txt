@@ -58,4 +58,6 @@ target_compile_options(snes9x PRIVATE -O2 -w)
 target_link_libraries(snes9x PRIVATE z)
 target_link_options(snes9x PRIVATE
   "-Wl,--version-script=${CORE_DIR}/libretro/link.T"
-  "-Wl,--gc-sections")
+  "-Wl,--gc-sections"
+  "-Wl,-z,max-page-size=16384"
+  "-Wl,--strip-debug")

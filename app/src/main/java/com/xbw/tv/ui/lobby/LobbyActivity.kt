@@ -45,6 +45,10 @@ class LobbyActivity : AppCompatActivity() {
     private lateinit var chipAdapter: CategoryChipAdapter
 
     private var pendingFocusPosition: Int? = null
+    /** 首次 onResume 时 onCreate 已 enter 过，别再强制刷新一遍 */
+    private var firstResume = true
+    /** 权限回调里已经 forceRefresh 过，紧跟的 onResume 不再重复刷 */
+    private var skipNextResumeRefresh = false
 
     private companion object {
         const val PERM_REQUEST_USB = 1001
@@ -108,6 +112,7 @@ class LobbyActivity : AppCompatActivity() {
         ) {
             if ((viewModel.currentCategory as? LobbyCategory.BuiltIn)?.category == GameCategory.USB) {
                 pendingFocusPosition = 0
+                skipNextResumeRefresh = true
                 viewModel.enter(LobbyCategory.BuiltIn(GameCategory.USB), forceRefresh = true)
             }
         }
@@ -349,6 +354,14 @@ class LobbyActivity : AppCompatActivity() {
         super.onResume()
         // 从「第三方游戏源」编辑/删除返回时也会走到这里：重新装配芯片（新源出现/旧源消失）
         viewModel.reloadCategories()
+        if (firstResume) {
+            firstResume = false
+            return   // onCreate 刚 enter 过，启动即强刷会重复联网
+        }
+        if (skipNextResumeRefresh) {
+            skipNextResumeRefresh = false
+            return   // 权限回调刚强刷过 U盘，避免紧接着再刷一次
+        }
         if (viewModel.state.value != null &&
             viewModel.state.value !is LobbyViewModel.State.Loading
         ) {

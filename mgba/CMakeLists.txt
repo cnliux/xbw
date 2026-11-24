@@ -31,3 +31,8 @@ set_target_properties(mgba_libretro PROPERTIES
   PREFIX "lib"
   OUTPUT_NAME "mgba"
   POSITION_INDEPENDENT_CODE ON)
+
+# Android 15+ 要求 16KB 页对齐，运行时 dlopen 的核心 .so 必须带此 flag
+target_link_options(mgba_libretro PRIVATE
+  "-Wl,-z,max-page-size=16384"
+  "-Wl,--strip-debug")

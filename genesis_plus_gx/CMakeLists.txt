@@ -63,4 +63,6 @@ target_compile_definitions(genesis_plus_gx PRIVATE
 target_compile_options(genesis_plus_gx PRIVATE -O2 -w -fvisibility=hidden)
 target_link_options(genesis_plus_gx PRIVATE
   "-Wl,--version-script=${CORE_DIR}/libretro/link.T"
-  "-Wl,--gc-sections")
+  "-Wl,--gc-sections"
+  "-Wl,-z,max-page-size=16384"
+  "-Wl,--strip-debug")

@@ -32,6 +32,9 @@ class SearchActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySearchBinding
     private lateinit var adapter: GameCardAdapter
 
+    /** 当前搜索任务：新关键词会取消旧任务，避免慢结果覆盖新结果 */
+    private var searchJob: kotlinx.coroutines.Job? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // 窗口级屏蔽输入法：搜狗 TV 对任何获焦 View 都会主动弹自己的界面，
@@ -182,11 +185,12 @@ class SearchActivity : AppCompatActivity() {
     private fun doSearch() {
         val kw = binding.etKeyword.text.toString().trim()
         if (kw.isEmpty()) return
+        searchJob?.cancel()   // 旧搜索（含它的预热子协程）立即停，防止慢结果覆盖新关键词
         binding.progress.visibility = android.view.View.VISIBLE
         binding.emptyText.visibility = android.view.View.GONE
         binding.statusLine.text = getString(R.string.search_loading)
 
-        lifecycleScope.launch {
+        searchJob = lifecycleScope.launch {
             val repo = XbwApplication.repository(application)
             // 先出结果：官方站 + 本地已缓存的插件 gamelist（不联网，秒回）
             runCatching { repo.searchEx(kw) }
@@ -197,18 +201,27 @@ class SearchActivity : AppCompatActivity() {
             launch(Dispatchers.IO) warm@ {
                 val warmed = runCatching { repo.warmPluginSources(application) }.getOrDefault(false)
                 if (!warmed) return@warm
-                // 用户已经改了关键词就别覆盖当前结果
+                // 用户已经改了关键词 / 任务已取消就别覆盖当前结果
                 val stillSame = withContext(Dispatchers.Main) {
-                    binding.etKeyword.text.toString().trim() == kw
+                    searchJob?.isActive == true && binding.etKeyword.text.toString().trim() == kw
                 }
-                if (stillSame) {
-                    runCatching { repo.searchEx(kw) }
-                        .onSuccess { r ->
-                            if (r.items.isNotEmpty()) withContext(Dispatchers.Main) { render(r, kw) }
+                if (!stillSame) return@warm
+                runCatching { repo.searchEx(kw) }
+                    .onSuccess { r ->
+                        if (r.items.isNotEmpty()) withContext(Dispatchers.Main) {
+                            // 二次搜索可能耗时，渲染前再确认一次关键词没变
+                            if (searchJob?.isActive == true &&
+                                binding.etKeyword.text.toString().trim() == kw
+                            ) render(r, kw)
                         }
-                }
+                    }
             }
         }
+    }
+
+    override fun onDestroy() {
+        searchJob?.cancel()
+        super.onDestroy()
     }
 
     private fun render(r: GameRepository.LoadResult, kw: String) {

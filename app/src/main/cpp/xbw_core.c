@@ -53,7 +53,7 @@ static struct {
     void (*run)(void);
     void (*reset)(void);
     size_t (*serialize_size)(void);
-    bool (*serialize)(void *);
+    bool (*serialize)(void *, size_t);
     bool (*unserialize)(const void *, size_t);
     void *(*get_memory_data)(int);
     size_t (*get_memory_size)(int);
@@ -101,8 +101,18 @@ static int resolve_core_symbols(void) {
 /* ── 全局会话状态 ──────────────────────────────────────────────── */
 static JavaVM *g_jvm;
 static char g_system_dir[1024];
+static char g_core_lib[1024];        /* 记住核心 .so 路径：换 ROM 兜底时要重新 dlopen */
 static char g_rom_path[1024];
 static void *g_rom_data_keep;         /* 内存加载时核心可能长期持有该指针 */
+static int g_core_inited;             /* retro_init 是否已调用：失败回滚时避免误调 deinit */
+static pthread_t g_emu_thread;
+static pthread_t g_render_thread;
+static int g_emu_started;
+static int g_render_started;
+
+/* 跨线程计数器用 acquire/release，避免 volatile 在 AArch64 上的数据竞争 */
+#define ATOMIC_LOAD(x)  __atomic_load_n(&(x), __ATOMIC_ACQUIRE)
+#define ATOMIC_STORE(x, v) __atomic_store_n(&(x), (v), __ATOMIC_RELEASE)
 
 static volatile int g_running;
 static volatile int g_paused;
@@ -169,7 +179,16 @@ static void opt_add_locked(const char *key, const char *desc, const char *def,
         o->key = o->desc = NULL; o->values = NULL;
         return;
     }
-    for (int i = 0; i < n; i++) o->values[i] = strdup(vals[i].value);
+    for (int i = 0; i < n; i++) {
+        o->values[i] = strdup(vals[i].value);
+        if (!o->values[i]) {
+            /* 任一 value 分配失败就整项回滚，避免后续 strlen(NULL) 崩溃 */
+            for (int j = 0; j < i; j++) free(o->values[j]);
+            free(o->values); free(o->key); free(o->desc);
+            o->key = o->desc = NULL; o->values = NULL; o->n_values = 0;
+            return;
+        }
+    }
     o->n_values = n;
     o->current = o->def_idx = 0;
     for (int i = 0; i < n; i++) {
@@ -207,20 +226,28 @@ static jmethodID g_write_mid;
 static jshortArray g_audio_jbuf;          /* GlobalRef 复用拷贝缓冲 */
 
 static void ring_write(const int16_t *src, size_t n) {
+    if (!g_audio_ring) return;
+    size_t head = ATOMIC_LOAD(g_audio_head);
+    const size_t tail = ATOMIC_LOAD(g_audio_tail);
     for (size_t i = 0; i < n; i++) {
-        size_t nh = (g_audio_head + 1) % AUDIO_RING_SAMPLES;
-        if (nh == g_audio_tail) break;    /* 满了丢样本：宁可偶发爆音不死锁 */
-        g_audio_ring[g_audio_head] = src[i];
-        g_audio_head = nh;
+        size_t nh = (head + 1) % AUDIO_RING_SAMPLES;
+        if (nh == tail) break;    /* 满了丢样本：宁可偶发爆音不死锁 */
+        g_audio_ring[head] = src[i];
+        head = nh;
     }
+    ATOMIC_STORE(g_audio_head, head);   /* release：样本写完才让消费者看见 */
 }
 
 static size_t ring_read(int16_t *dst, size_t max) {
+    if (!g_audio_ring) return 0;
     size_t got = 0;
-    while (got < max && g_audio_tail != g_audio_head) {
-        dst[got++] = g_audio_ring[g_audio_tail];
-        g_audio_tail = (g_audio_tail + 1) % AUDIO_RING_SAMPLES;
+    size_t tail = ATOMIC_LOAD(g_audio_tail);
+    const size_t head = ATOMIC_LOAD(g_audio_head);
+    while (got < max && tail != head) {
+        dst[got++] = g_audio_ring[tail];
+        tail = (tail + 1) % AUDIO_RING_SAMPLES;
     }
+    ATOMIC_STORE(g_audio_tail, tail);
     return got;
 }
 
@@ -329,8 +356,8 @@ static void cb_input_poll(void) { /* 位图由 UI 线程持续更新，无需拉
 
 static int16_t cb_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
     (void)index;
-    if (port >= 2) return 0;
-    if (device == RETRO_DEVICE_JOYPAD) return (int16_t)((g_input_bits[port] >> id) & 1);
+    if (port >= 2 || id >= 32) return 0;
+    if (device == RETRO_DEVICE_JOYPAD) return (int16_t)((ATOMIC_LOAD(g_input_bits[port]) >> id) & 1);
     return 0;
 }
 
@@ -361,14 +388,16 @@ static void ensure_window_geometry(ANativeWindow *win, unsigned w, unsigned h) {
 }
 
 static void blit_frame(const void *src, unsigned w, unsigned h, size_t pitch,
-                       ANativeWindow *win) {
+                       unsigned bpp, ANativeWindow *win) {
     ensure_window_geometry(win, w, h);
     ANativeWindow_Buffer buf;
     if (ANativeWindow_lock(win, &buf, NULL) < 0) return;
+    if (!buf.bits) { ANativeWindow_unlockAndPost(win); return; }
 
     const int copy_h = (int)h < buf.height ? (int)h : buf.height;
     const int copy_w = (int)w < buf.width ? (int)w : buf.width;
-    const int xrgb = (g_buf_format == RETRO_PIXEL_FORMAT_XRGB8888);
+    /* 用该帧捕获时记录的 bpp，不能读全局格式（核心可能中途切换像素格式） */
+    const int xrgb = (bpp == 4);
     const int dst_rgb565 = (buf.format == WINDOW_FORMAT_RGB_565);
 
     if (!xrgb && dst_rgb565) {
@@ -418,7 +447,6 @@ static double g_video_ms, g_run_ms, g_audio_ms;
 typedef struct { uint8_t *px; size_t cap; unsigned w, h, bpp; } vslot;
 static vslot g_vpool[VIDEO_SLOTS];
 static volatile int g_vhead, g_vtail, g_vdropped;
-static pthread_t g_render_thread;
 static volatile int g_render_run;
 
 static void vpool_free(void) {
@@ -426,16 +454,16 @@ static void vpool_free(void) {
 }
 
 static void cb_video_refresh(const void *data, unsigned width, unsigned height, size_t pitch) {
-    if (g_reset_request) { g_reset_request = 0; core.reset(); }
     if (!data || !width || !height) return;
     int64_t t0 = now_ns();
 
-    int next = (g_vhead + 1) % VIDEO_SLOTS;
-    if (next == g_vtail) {          /* 渲染线程跟不上：丢掉这一帧，绝不阻塞仿真 */
+    const int head = ATOMIC_LOAD(g_vhead);
+    int next = (head + 1) % VIDEO_SLOTS;
+    if (next == ATOMIC_LOAD(g_vtail)) {   /* 渲染线程跟不上：丢帧，绝不阻塞仿真 */
         g_vdropped++;
         return;
     }
-    vslot *s = &g_vpool[g_vhead];
+    vslot *s = &g_vpool[head];
     /* 核心帧是原始格式（fbneo=RGB565 16bpp，fceumm 同样多为 565），
      * 每行只能拷 width*bpp 字节 —— 固定按 4bpp 拷会读越帧缓冲末尾，
      * x86_64 上直接踩保护页 SIGSEGV（真机 arm 布局宽松才侥幸没炸）。 */
@@ -454,7 +482,7 @@ static void cb_video_refresh(const void *data, unsigned width, unsigned height, 
     s->w = width;
     s->h = height;
     s->bpp = bpp;
-    g_vhead = next;
+    ATOMIC_STORE(g_vhead, next);   /* release：帧数据就绪后才让渲染线程取用 */
     g_video_ms += (double)(now_ns() - t0) / 1e6;
 }
 
@@ -465,26 +493,30 @@ static void *render_thread(void *arg) {
     (void)arg;
     int64_t win = now_ns();
     uint32_t blits = 0, nowin = 0;
-    while (g_render_run) {
-        if (g_vhead == g_vtail) {
+    while (ATOMIC_LOAD(g_render_run)) {
+        const int head = ATOMIC_LOAD(g_vhead);
+        int tail = ATOMIC_LOAD(g_vtail);
+        if (head == tail) {
             struct timespec s = {0, 2 * 1000 * 1000};
             nanosleep(&s, NULL);
             continue;
         }
-        int pick = (g_vhead - 1 + VIDEO_SLOTS) % VIDEO_SLOTS;   /* 最新一帧 */
-        while (g_vtail != pick) {                                /* 积压的全丢 */
-            int nx = (g_vtail + 1) % VIDEO_SLOTS;
-            if (nx == g_vhead) break;
+        int pick = (head - 1 + VIDEO_SLOTS) % VIDEO_SLOTS;   /* 最新一帧 */
+        while (tail != pick) {                                /* 积压的全部丢弃 */
+            int nx = (tail + 1) % VIDEO_SLOTS;
+            if (nx == head) break;
             g_vdropped++;
-            g_vtail = nx;
+            tail = nx;
+            ATOMIC_STORE(g_vtail, tail);
         }
-        g_vtail = (pick + 1) % VIDEO_SLOTS;     /* pick 这帧也算消费掉了 */
         vslot *s = &g_vpool[pick];
         pthread_mutex_lock(&g_surf_lock);
         if (g_window && s->px && s->bpp)
-            { blit_frame(s->px, s->w, s->h, (size_t)s->w * s->bpp, g_window); blits++; }
+            { blit_frame(s->px, s->w, s->h, (size_t)s->w * s->bpp, s->bpp, g_window); blits++; }
         else nowin++;
         pthread_mutex_unlock(&g_surf_lock);
+        /* blit 完成后才释放槽位：否则仿真线程会在 memcpy 期间复用同一块像素 */
+        ATOMIC_STORE(g_vtail, (pick + 1) % VIDEO_SLOTS);
 
         int64_t t = now_ns();
         if (t - win >= 1000000000LL) {
@@ -548,18 +580,29 @@ static void *emu_thread(void *arg) {
     /* 仿真线程必须 Attach：GetEnv 在未附着线程上永远失败，音频环永远排不空 */
     if (!g_jvm || (*g_jvm)->AttachCurrentThread(g_jvm, &env, NULL) != JNI_OK) {
         LOGE("emu_thread AttachCurrentThread failed");
+        ATOMIC_STORE(g_running, 0);   /* 别让 UI 以为还在跑：无帧无音频 */
         return NULL;
     }
     const int64_t frame_ns = (int64_t)(1e9 / (g_fps > 1.0 ? g_fps : 60.0));
     int16_t *scratch = malloc(4096 * sizeof(int16_t));
+    if (!scratch) {
+        LOGE("emu_thread scratch alloc failed");
+        (*g_jvm)->DetachCurrentThread(g_jvm);
+        ATOMIC_STORE(g_running, 0);
+        return NULL;
+    }
     int64_t stat_win = now_ns();
     uint32_t stat_frames = 0;
     uint64_t stat_samples = 0;
 
-    while (g_running) {
+    while (ATOMIC_LOAD(g_running)) {
         /* 金手指在暂停判定之前应用：暂停中开关金手指也要能立刻生效 */
         apply_cheats_if_dirty();
-        if (g_paused) {
+        if (ATOMIC_LOAD(g_reset_request)) {
+            ATOMIC_STORE(g_reset_request, 0);
+            if (core.reset) core.reset();   /* 不能在 video_refresh 回调里重入核心 */
+        }
+        if (ATOMIC_LOAD(g_paused)) {
             struct timespec s = {0, 20 * 1000 * 1000};
             nanosleep(&s, NULL);
             continue;
@@ -610,12 +653,18 @@ static void save_sram_to_disk(void) {
     void *sram = core.get_memory_data(RETRO_MEMORY_SAVE_RAM);
     size_t sz = core.get_memory_size(RETRO_MEMORY_SAVE_RAM);
     if (!sram || !sz) return;
-    char path[1300];
+    char path[1300], tmp[1310];
     sram_file_path(path, sizeof(path));
-    FILE *f = fopen(path, "wb");
-    if (!f) { LOGE("sram open failed %s", path); return; }
-    fwrite(sram, 1, sz, f);
-    fclose(f);
+    snprintf(tmp, sizeof(tmp), "%s.tmp", path);
+    FILE *f = fopen(tmp, "wb");
+    if (!f) { LOGE("sram open failed %s", tmp); return; }
+    size_t wrote = fwrite(sram, 1, sz, f);
+    int closed = fclose(f);
+    if (wrote != sz || closed != 0 || rename(tmp, path) != 0) {
+        LOGE("sram write failed (%zu/%zu), keeping previous file", wrote, sz);
+        remove(tmp);
+        return;
+    }
     LOGI("sram saved %zu bytes", sz);
 }
 
@@ -672,45 +721,101 @@ static bool try_load_rom(void) {
     return core.load_game(&gi);
 }
 
-/* ── JNI 入口 ──────────────────────────────────────────────────── */
-JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
-    g_jvm = vm;
-    (void)reserved;
-    return JNI_VERSION_1_6;
+/* 统一收尾：nativeStop 与 loadCore 失败回滚共用。
+ * 先停线程再拆核心，避免 retro_run / AudioTrack.write 运行时被 dlclose。 */
+static void release_session(JNIEnv *env, bool save_sram) {
+    ATOMIC_STORE(g_running, 0);
+    if (g_emu_started) {
+        pthread_join(g_emu_thread, NULL);
+        g_emu_started = 0;
+    }
+    if (save_sram && g_core_inited) save_sram_to_disk();
+
+    ATOMIC_STORE(g_render_run, 0);
+    if (g_render_started) {
+        pthread_join(g_render_thread, NULL);
+        g_render_started = 0;
+    }
+    vpool_free();
+
+    if (g_core_inited) {
+        if (core.unload_game) core.unload_game();
+        if (core.deinit) core.deinit();
+        g_core_inited = 0;
+    }
+    if (env) {
+        if (g_audio_track) { (*env)->DeleteGlobalRef(env, g_audio_track); g_audio_track = NULL; }
+        if (g_audio_jbuf) { (*env)->DeleteGlobalRef(env, g_audio_jbuf); g_audio_jbuf = NULL; }
+    }
+    g_write_mid = NULL;
+    pthread_mutex_lock(&g_surf_lock);
+    if (g_window) { ANativeWindow_release(g_window); g_window = NULL; }
+    pthread_mutex_unlock(&g_surf_lock);
+
+    free(g_audio_ring);
+    g_audio_ring = NULL;
+    ATOMIC_STORE(g_audio_head, 0);
+    ATOMIC_STORE(g_audio_tail, 0);
+    free(g_rom_data_keep);
+    g_rom_data_keep = NULL;
+    ATOMIC_STORE(g_vhead, 0);
+    ATOMIC_STORE(g_vtail, 0);
+
+    pthread_mutex_lock(&g_cheat_lock);
+    if (g_cheat_codes) {
+        for (int i = 0; i < g_cheat_count; i++) free(g_cheat_codes[i]);
+        free(g_cheat_codes);
+        g_cheat_codes = NULL;
+    }
+    g_cheat_count = 0;
+    ATOMIC_STORE(g_cheat_dirty, 0);
+    pthread_mutex_unlock(&g_cheat_lock);
+
+    pthread_mutex_lock(&g_opt_lock);
+    clear_options_locked();
+    pthread_mutex_unlock(&g_opt_lock);
+
+    if (core.handle) { dlclose(core.handle); core.handle = NULL; }
+    memset(&core, 0, sizeof(core));
 }
 
-JNIEXPORT jboolean JNICALL
-Java_com_xbw_tv_core_RetroCore_nativeLoadCore(JNIEnv *env, jclass cls, jstring coreLib,
-                                              jstring systemDir, jstring romPath) {
-    (void)cls;
-    const char *lib = (*env)->GetStringUTFChars(env, coreLib, NULL);
+/* 从零建立一个完整会话（dlopen → init → load_game）：首次加载与 FBNeo 换 ROM
+ * 兜底共用。失败时 release_session 会把 dlopen/init/audio ring 全部回滚，
+ * 因此兜底必须重新走一遍整套流程，不能依赖上一个失败实例的残留句柄。 */
+static jboolean load_core_session(JNIEnv *env, const char *lib,
+                                  const char *system_dir, const char *rom_path) {
+    if (core.handle) release_session(env, false);   /* 清掉上一次失败留下的半截会话 */
+
     core.handle = dlopen(lib, RTLD_NOW | RTLD_LOCAL);
-    (*env)->ReleaseStringUTFChars(env, coreLib, lib);
     if (!core.handle) {
         LOGE("dlopen failed: %s", dlerror());
         return JNI_FALSE;
     }
-    if (!resolve_core_symbols()) return JNI_FALSE;
+    if (!resolve_core_symbols()) { release_session(env, false); return JNI_FALSE; }
     if (core.api_version() != RETRO_API_VERSION) {
-        LOGE("retro api mismatch: core=%u frontend=%u",
-             core.api_version(), RETRO_API_VERSION);
+        LOGE("retro api mismatch: core=%u frontend=%u", core.api_version(), RETRO_API_VERSION);
+        release_session(env, false);
         return JNI_FALSE;
     }
 
-    const char *sd = (*env)->GetStringUTFChars(env, systemDir, NULL);
-    snprintf(g_system_dir, sizeof(g_system_dir), "%s", sd);
-    (*env)->ReleaseStringUTFChars(env, systemDir, sd);
-    const char *rp = (*env)->GetStringUTFChars(env, romPath, NULL);
-    snprintf(g_rom_path, sizeof(g_rom_path), "%s", rp);
-    (*env)->ReleaseStringUTFChars(env, romPath, rp);
+    /* 兜底重载时传入的就是 g_system_dir 本身，snprintf 自拷贝到同一缓冲区是未定义行为 */
+    if (system_dir != g_system_dir)
+        snprintf(g_system_dir, sizeof(g_system_dir), "%s", system_dir ? system_dir : "");
+    snprintf(g_rom_path, sizeof(g_rom_path), "%s", rom_path ? rom_path : "");
 
     g_audio_ring = malloc(AUDIO_RING_SAMPLES * sizeof(int16_t));
-    g_audio_head = g_audio_tail = 0;
+    if (!g_audio_ring) {
+        LOGE("audio ring alloc failed");
+        release_session(env, false);
+        return JNI_FALSE;
+    }
+    ATOMIC_STORE(g_audio_head, 0);
+    ATOMIC_STORE(g_audio_tail, 0);
     g_buf_format = RETRO_PIXEL_FORMAT_XRGB8888;
-    g_input_bits[0] = 0;
-    g_input_bits[1] = 0;
-    g_paused = 0;
-    g_reset_request = 0;
+    ATOMIC_STORE(g_input_bits[0], 0);
+    ATOMIC_STORE(g_input_bits[1], 0);
+    ATOMIC_STORE(g_paused, 0);
+    ATOMIC_STORE(g_reset_request, 0);
     pthread_mutex_lock(&g_opt_lock);
     clear_options_locked();   /* 新会话：上一局的金手指选项全部作废 */
     pthread_mutex_unlock(&g_opt_lock);
@@ -720,6 +825,7 @@ Java_com_xbw_tv_core_RetroCore_nativeLoadCore(JNIEnv *env, jclass cls, jstring c
      * 先 init 会 blr NULL 直接段错误（实测崩溃栈 retro_init+84）。 */
     core.set_environment(cb_environment);
     core.init();
+    g_core_inited = 1;
     core.set_video_refresh(cb_video_refresh);
     core.set_input_poll(cb_input_poll);
     core.set_input_state(cb_input_state);
@@ -730,6 +836,7 @@ Java_com_xbw_tv_core_RetroCore_nativeLoadCore(JNIEnv *env, jclass cls, jstring c
 
     if (!try_load_rom()) {
         LOGE("retro_load_game failed: %s", g_rom_path);
+        release_session(env, false);
         return JNI_FALSE;
     }
 
@@ -746,6 +853,28 @@ Java_com_xbw_tv_core_RetroCore_nativeLoadCore(JNIEnv *env, jclass cls, jstring c
     return JNI_TRUE;
 }
 
+/* ── JNI 入口 ──────────────────────────────────────────────────── */
+JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+    g_jvm = vm;
+    (void)reserved;
+    return JNI_VERSION_1_6;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_xbw_tv_core_RetroCore_nativeLoadCore(JNIEnv *env, jclass cls, jstring coreLib,
+                                              jstring systemDir, jstring romPath) {
+    (void)cls;
+    const char *lib = (*env)->GetStringUTFChars(env, coreLib, NULL);
+    const char *sd = (*env)->GetStringUTFChars(env, systemDir, NULL);
+    const char *rp = (*env)->GetStringUTFChars(env, romPath, NULL);
+    snprintf(g_core_lib, sizeof(g_core_lib), "%s", lib ? lib : "");
+    jboolean ok = load_core_session(env, g_core_lib, sd, rp);
+    if (lib) (*env)->ReleaseStringUTFChars(env, coreLib, lib);
+    if (sd) (*env)->ReleaseStringUTFChars(env, systemDir, sd);
+    if (rp) (*env)->ReleaseStringUTFChars(env, romPath, rp);
+    return ok;
+}
+
 /* AudioTrack（Java 侧创建，WRITE_BLOCKING 模式）注入给仿真线程排空音频环 */
 JNIEXPORT void JNICALL
 Java_com_xbw_tv_core_RetroCore_nativeSetAudioTrack(JNIEnv *env, jclass cls, jobject track) {
@@ -755,7 +884,12 @@ Java_com_xbw_tv_core_RetroCore_nativeSetAudioTrack(JNIEnv *env, jclass cls, jobj
     if (!track) return;
     g_audio_track = (*env)->NewGlobalRef(env, track);
     jclass c = (*env)->GetObjectClass(env, track);
-    g_write_mid = (*env)->GetMethodID(env, c, "write", "([SIII)I");
+    g_write_mid = g_audio_track && c ? (*env)->GetMethodID(env, c, "write", "([SIII)I") : NULL;
+    if (c) (*env)->DeleteLocalRef(env, c);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionClear(env);
+        g_write_mid = NULL;
+    }
     if (!g_audio_jbuf) {
         jshortArray a = (*env)->NewShortArray(env, 4096);
         g_audio_jbuf = (*env)->NewGlobalRef(env, a);
@@ -784,46 +918,60 @@ JNIEXPORT void JNICALL
 Java_com_xbw_tv_core_RetroCore_nativeSetInput(JNIEnv *env, jclass cls, jint player, jint bits) {
     (void)env; (void)cls;
     if (player < 0 || player >= 2) return;
-    g_input_bits[player] = (int32_t)bits;
+    ATOMIC_STORE(g_input_bits[player], (int32_t)bits);
 }
 
 JNIEXPORT jboolean JNICALL Java_com_xbw_tv_core_RetroCore_nativeStart(JNIEnv *env, jclass cls) {
     (void)env; (void)cls;
-    g_running = 1;
-    g_paused = 0;
-    g_vhead = g_vtail = 0;
+    ATOMIC_STORE(g_paused, 0);
+    ATOMIC_STORE(g_vhead, 0);
+    ATOMIC_STORE(g_vtail, 0);
     g_vdropped = 0;
-    g_render_run = 1;
-    if (pthread_create(&g_render_thread, NULL, render_thread, NULL) != 0) g_render_run = 0;
-    pthread_t th;
-    if (pthread_create(&th, NULL, emu_thread, NULL) != 0) {
-        g_running = 0;
+
+    /* SRAM 必须在仿真线程启动前吃回，否则首帧可能用空存档运行 */
+    load_sram_from_disk();
+
+    ATOMIC_STORE(g_render_run, 1);
+    if (pthread_create(&g_render_thread, NULL, render_thread, NULL) == 0) {
+        g_render_started = 1;
+    } else {
+        LOGE("render thread create failed");
+        ATOMIC_STORE(g_render_run, 0);
+    }
+    ATOMIC_STORE(g_running, 1);
+    if (pthread_create(&g_emu_thread, NULL, emu_thread, NULL) != 0) {
+        LOGE("emu thread create failed");
+        ATOMIC_STORE(g_running, 0);
+        ATOMIC_STORE(g_render_run, 0);
+        if (g_render_started) { pthread_join(g_render_thread, NULL); g_render_started = 0; }
         return JNI_FALSE;
     }
-    pthread_detach(th);
-    load_sram_from_disk();
+    g_emu_started = 1;
     return JNI_TRUE;
 }
 
 JNIEXPORT void JNICALL
 Java_com_xbw_tv_core_RetroCore_nativeSetPaused(JNIEnv *env, jclass cls, jboolean p) {
     (void)env; (void)cls;
-    g_paused = p ? 1 : 0;
+    ATOMIC_STORE(g_paused, p ? 1 : 0);
 }
 
 JNIEXPORT void JNICALL Java_com_xbw_tv_core_RetroCore_nativeReset(JNIEnv *env, jclass cls) {
     (void)env; (void)cls;
-    g_reset_request = 1;
+    ATOMIC_STORE(g_reset_request, 1);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_xbw_tv_core_RetroCore_nativeSaveState(JNIEnv *env, jclass cls) {
     (void)cls;
+    if (!core.serialize_size || !core.serialize) return NULL;
     size_t sz = core.serialize_size();
     if (!sz) return NULL;
     void *buf = malloc(sz);
     if (!buf) return NULL;
     jbyteArray out = NULL;
-    if (core.serialize(buf)) {
+    /* libretro 原型是 retro_serialize(void *data, size_t len)：
+     * 少传 len 时 x1 是脏寄存器，FCEUmm 会直接拒绝，别的核可能越界写。 */
+    if (core.serialize(buf, sz)) {
         out = (*env)->NewByteArray(env, (jsize)sz);
         if (out) (*env)->SetByteArrayRegion(env, out, 0, (jsize)sz, (jbyte *)buf);
     }
@@ -834,8 +982,10 @@ JNIEXPORT jbyteArray JNICALL Java_com_xbw_tv_core_RetroCore_nativeSaveState(JNIE
 JNIEXPORT jboolean JNICALL
 Java_com_xbw_tv_core_RetroCore_nativeLoadState(JNIEnv *env, jclass cls, jbyteArray data) {
     (void)cls;
+    if (!core.unserialize || !data) return JNI_FALSE;
     jsize n = (*env)->GetArrayLength(env, data);
     jbyte *p = (*env)->GetByteArrayElements(env, data, NULL);
+    if (!p) return JNI_FALSE;
     bool ok = core.unserialize(p, (size_t)n);
     (*env)->ReleaseByteArrayElements(env, data, p, JNI_ABORT);
     return ok ? JNI_TRUE : JNI_FALSE;
@@ -886,8 +1036,11 @@ JNIEXPORT jobjectArray JNICALL
 Java_com_xbw_tv_core_RetroCore_nativeGetCoreOptions(JNIEnv *env, jclass cls) {
     (void)cls;
     jclass str_cls = (*env)->FindClass(env, "java/lang/String");
+    if (!str_cls) return NULL;
     pthread_mutex_lock(&g_opt_lock);
     jobjectArray out = (*env)->NewObjectArray(env, g_opt_count, str_cls, NULL);
+    (*env)->DeleteLocalRef(env, str_cls);
+    if (!out) { pthread_mutex_unlock(&g_opt_lock); return NULL; }
     for (int i = 0; i < g_opt_count; i++) {
         core_option *o = &g_opts[i];
         size_t len = strlen(o->key) + strlen(o->desc) + 40;
@@ -928,41 +1081,22 @@ JNIEXPORT void JNICALL Java_com_xbw_tv_core_RetroCore_nativeSetCoreOption(JNIEnv
     (*env)->ReleaseStringUTFChars(env, key, k);
 }
 
-/* 修改版 zip 的驱动名可能不在本版 FBNeo 数据表里 → loadCore 失败；
- * 此时核心已 init（dlopen/init/set_environment 都完成了），在同一实例上
- * 卸载后换装基础版 zip 重载，省掉整套核心重建。仅在仿真线程启动前调用。 */
+/* 修改版 zip 的驱动名可能不在本版 FBNeo 数据表里 → loadCore 失败并已回滚。
+ * 这里用记住的核心路径重新建会话、换装基础版 zip。仅在仿真线程启动前调用。 */
 JNIEXPORT jboolean JNICALL
 Java_com_xbw_tv_core_RetroCore_nativeLoadAlternativeRom(JNIEnv *env, jclass cls, jstring romPath) {
     (void)cls;
-    if (!core.handle || !core.unload_game || !core.load_game) return JNI_FALSE;
-    if (g_running) return JNI_FALSE;
-    core.unload_game();   /* 上次 load 失败时是幂等的（nBurnDrvActive 守卫） */
+    if (!g_core_lib[0] || g_running) return JNI_FALSE;
     const char *rp = (*env)->GetStringUTFChars(env, romPath, NULL);
-    snprintf(g_rom_path, sizeof(g_rom_path), "%s", rp);
-    (*env)->ReleaseStringUTFChars(env, romPath, rp);
-    pthread_mutex_lock(&g_opt_lock);
-    clear_options_locked();   /* 旧驱动的金手指选项全部作废 */
-    pthread_mutex_unlock(&g_opt_lock);
-    if (!try_load_rom()) {
-        LOGE("alternative rom load failed: %s", g_rom_path);
-        return JNI_FALSE;
-    }
-    /* 分辨率/帧率可能随驱动变化，重读一遍 */
-    struct retro_system_av_info av;
-    memset(&av, 0, sizeof(av));
-    core.get_av_info(&av);
-    g_base_w = av.geometry.base_width;
-    g_base_h = av.geometry.base_height;
-    g_aspect = av.geometry.aspect_ratio;
-    g_fps = av.timing.fps;
-    g_sample_rate = av.timing.sample_rate;
-    LOGI("alternative rom loaded: %s base=%ux%u fps=%.3f", g_rom_path, g_base_w, g_base_h, g_fps);
-    return JNI_TRUE;
+    jboolean ok = load_core_session(env, g_core_lib, g_system_dir, rp);
+    if (rp) (*env)->ReleaseStringUTFChars(env, romPath, rp);
+    return ok;
 }
 
 JNIEXPORT jintArray JNICALL Java_com_xbw_tv_core_RetroCore_nativeAvInfo(JNIEnv *env, jclass cls) {
     (void)cls;
     jintArray a = (*env)->NewIntArray(env, 4);
+    if (!a) return NULL;
     jint v[4] = {(jint)g_base_w, (jint)g_base_h, (jint)(g_fps * 100), (jint)g_sample_rate};
     (*env)->SetIntArrayRegion(env, a, 0, 4, v);
     return a;
@@ -970,40 +1104,7 @@ JNIEXPORT jintArray JNICALL Java_com_xbw_tv_core_RetroCore_nativeAvInfo(JNIEnv *
 
 JNIEXPORT void JNICALL Java_com_xbw_tv_core_RetroCore_nativeStop(JNIEnv *env, jclass cls) {
     (void)cls;
-    if (!g_running && !core.handle) return;
-    save_sram_to_disk();
-    g_running = 0;
-    struct timespec s = {0, 150 * 1000 * 1000};   /* 等仿真线程收尾 */
-    nanosleep(&s, NULL);
-    g_render_run = 0;
-    pthread_join(g_render_thread, NULL);
-    vpool_free();
-    if (core.unload_game) core.unload_game();
-    if (core.deinit) core.deinit();
-    if (g_audio_track) { (*env)->DeleteGlobalRef(env, g_audio_track); g_audio_track = NULL; }
-    if (g_audio_jbuf) { (*env)->DeleteGlobalRef(env, g_audio_jbuf); g_audio_jbuf = NULL; }
-    g_write_mid = NULL;
-    pthread_mutex_lock(&g_surf_lock);
-    if (g_window) { ANativeWindow_release(g_window); g_window = NULL; }
-    pthread_mutex_unlock(&g_surf_lock);
-    free(g_audio_ring);
-    g_audio_ring = NULL;
-    free(g_rom_data_keep);
-    g_rom_data_keep = NULL;
-    pthread_mutex_lock(&g_cheat_lock);
-    if (g_cheat_codes) {
-        for (int i = 0; i < g_cheat_count; i++) free(g_cheat_codes[i]);
-        free(g_cheat_codes);
-        g_cheat_codes = NULL;
-    }
-    g_cheat_count = 0;
-    g_cheat_dirty = 0;
-    pthread_mutex_unlock(&g_cheat_lock);
-    pthread_mutex_lock(&g_opt_lock);
-    clear_options_locked();
-    pthread_mutex_unlock(&g_opt_lock);
-    if (core.handle) { dlclose(core.handle); core.handle = NULL; }
-    memset(&core, 0, sizeof(core));
-    (void)env;
+    if (!ATOMIC_LOAD(g_running) && !core.handle) return;
+    release_session(env, true);
 }
 

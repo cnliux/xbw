@@ -93,12 +93,15 @@ target_compile_definitions(fceumm PRIVATE
 target_compile_options(fceumm PRIVATE
   -O2 -fno-strict-aliasing -w
   -fomit-frame-pointer
+  -ffunction-sections -fdata-sections
 )
 
 # link.T：只导出 retro_*（dlopen+dlsym 消费）；16KB 页对齐（Android15+）
 target_link_options(fceumm PRIVATE
   "-Wl,--version-script=${CORE_DIR}/drivers/libretro/link.T"
   "-Wl,-z,max-page-size=16384"
+  "-Wl,--gc-sections"
+  "-Wl,--strip-debug"
 )
 
 target_link_libraries(fceumm PRIVATE m log)

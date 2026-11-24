@@ -16,5 +16,9 @@ target_link_libraries(xbwcore PRIVATE
   dl               # dlopen（bionic 里 libc 自带，声明无害）
 )
 
-target_compile_options(xbwcore PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter)
-target_link_options(xbwcore PRIVATE "-Wl,-z,max-page-size=16384")
+target_compile_options(xbwcore PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter
+  -ffunction-sections -fdata-sections)
+target_link_options(xbwcore PRIVATE
+  "-Wl,-z,max-page-size=16384"
+  "-Wl,--gc-sections"
+  "-Wl,--strip-debug")

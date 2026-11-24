@@ -33,6 +33,7 @@ class GameCardAdapter(
     /** 收藏 id 集合：大厅观察 Repository.favoriteIds 赋值，全量刷新角标 */
     var favoriteIds: Set<String> = emptySet()
         set(value) {
+            if (field == value) return   // 收藏集合没变就别全量 notify（焦点会丢）
             field = value
             notifyDataSetChanged()
         }
@@ -107,7 +108,10 @@ class GameCardAdapter(
     companion object {
         private val DIFF = object : DiffUtil.ItemCallback<GameItem>() {
             override fun areItemsTheSame(a: GameItem, b: GameItem) = a.id == b.id
-            override fun areContentsTheSame(a: GameItem, b: GameItem) = a == b
+            // GameItem.equals 只比 id/playUrl，封面预取回来后 coverUrl 变了却不会重绑，
+            // 卡片一直显示占位图。这里显式比较 UI 真正用到的字段。
+            override fun areContentsTheSame(a: GameItem, b: GameItem) =
+                a.name == b.name && a.coverUrl == b.coverUrl && a.primaryTag == b.primaryTag
         }
     }
 }

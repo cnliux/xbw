@@ -5,6 +5,11 @@ on:
     branches: [master]     # 推 master 自动出包（Release tag = v<自动递增的 patch 版本>）
   workflow_dispatch:       # 也可手动触发（Actions 页 → Build APK → Run workflow）
 
+# 版本从 latest release 递增：并发构建会算出同一个 patch，必须串行
+concurrency:
+  group: xbw-release-version
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -57,7 +62,11 @@ jobs:
           KEY_ALIAS: ${{ secrets.XBW_KEY_ALIAS }}
           KEY_PASS: ${{ secrets.XBW_KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
+          if [ -n "$KEYSTORE_B64" ] || [ -n "$STORE_PASS" ] || [ -n "$KEY_ALIAS" ] || [ -n "$KEY_PASS" ]; then
+            if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASS" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASS" ]; then
+              echo "incomplete release signing secrets; refusing to silently ship a debug-signed APK"
+              exit 1
+            fi
             mkdir -p keystore
             printf '%s' "$KEYSTORE_B64" | base64 -d > keystore/xbw-release.jks
             cat >> local.properties <<EOF
@@ -81,12 +90,16 @@ jobs:
                     -H "Authorization: Bearer ${{ github.token }}" \
                     "https://api.github.com/repos/${{ github.repository }}/releases/latest" \
                     | grep -m1 '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' || true)
+          if [[ -z "$LATEST" ]]; then
+            echo "cannot resolve latest release tag from GitHub API; aborting to avoid publishing a downgraded version"
+            exit 1
+          fi
           if [[ "$LATEST" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
             VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
             echo "previous release: $LATEST -> next: v$VERSION"
           else
-            VERSION="0.0.1"     # 首个正式版；旧式 tag（v13 / build-12）一律视为历史
-            echo "no semver release yet (latest='$LATEST') -> start at v$VERSION"
+            echo "latest release tag '$LATEST' is not semver; refusing to publish v0.0.1 downgrade"
+            exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 

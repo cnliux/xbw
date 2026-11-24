@@ -7,6 +7,6 @@ plugins {
 
 ext {
     // 目标设备统一为 64 位 ARM TV 盒子：只构建 arm64-v8a，避免打包 32 位 .so 让 APK 体积翻倍。
-    // 临时需要兼容老 32 位盒子时可用 -PappAbis=armeabi-v7a,arm64-v8a 覆盖。
-    appAbis = (project.findProperty('appAbis') ?: 'arm64-v8a').toString().split(',')*.trim() as String[]
+    // FBNeo 的 32 位 off_t workaround 已随 32 位支持一起移除，不再提供兼容包覆盖。
+    appAbis = ['arm64-v8a'] as String[]
 }

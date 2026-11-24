@@ -105,6 +105,8 @@ class NativeGameActivity : AppCompatActivity() {
     private var toolbarVisible = false
     private var paused = false
     private var stopped = false
+    /** 加载流水线：onDestroy 必须等它结束后再 stop，避免 nativeStop 与 loadCore/start 并发 */
+    private var loadJob: kotlinx.coroutines.Job? = null
     /** ROM/核心加载失败：loading 层保持可见，此时 BACK/手柄任意退出键直接 finish（不弹确认框，避免被困） */
     private var loadFailed = false
 
@@ -181,7 +183,7 @@ class NativeGameActivity : AppCompatActivity() {
 
     // ── 启动流水线：ROM 下载(缓存) → 核心加载 → 音频 → 仿真线程 ──────────
     private fun loadAndRun() {
-        lifecycleScope.launch {
+        loadJob = lifecycleScope.launch {
             binding.loadingText.text = "正在准备 ROM…"
             val result = withContext(Dispatchers.IO) {
                 // ROM 下载进度 → 主线程刷进度条（IO 线程回调，节流 ~100ms/次）
@@ -221,6 +223,7 @@ class NativeGameActivity : AppCompatActivity() {
             binding.loadingText.text = if (spec.fromCache) "ROM 已就绪，正在启动 ${spec.coreName} 核心…"
             else "正在启动 ${spec.coreName} 核心…"
             val ok = withContext(Dispatchers.IO) {
+                if (stopped) return@withContext false
                 var ok = core.loadCore(this@NativeGameActivity, spec.coreName, spec.systemDir, spec.romFile)
                 // 修改版 zip 的驱动名可能不在本版 FBNeo 数据表里 → 逐段兜底基础版
                 if (!ok && spec.fallbacks.isNotEmpty()) {
@@ -230,10 +233,11 @@ class NativeGameActivity : AppCompatActivity() {
                         if (ok) break
                     }
                 }
-                if (!ok) return@withContext false
+                if (!ok || stopped) return@withContext false
                 val av = core.avInfo()   // [w, h, fps*100, rate]
                 core.startAudio(if (av[3] > 0) av[3] else 44100)
                 core.setSurface(binding.gameSurface.holder.surface)
+                if (stopped) return@withContext false
                 core.start()
             }
             if (stopped) return@launch
@@ -568,8 +572,6 @@ class NativeGameActivity : AppCompatActivity() {
         if (isFinishing) return super.dispatchKeyEvent(event)
         val isGamepad = event.source and (android.view.InputDevice.SOURCE_GAMEPAD or
                 android.view.InputDevice.SOURCE_JOYSTICK) != 0
-        val devId = event.deviceId
-        val player = getPlayerId(devId)
 
         // ★ 加载失败被困修复：游戏还没跑起来（ROM 下载失败/无核心），
         //   任何退出意图（BACK / 手柄 B / START / MENU）直接 finish，
@@ -686,6 +688,9 @@ class NativeGameActivity : AppCompatActivity() {
 
         val btn = KeySettings.logicalOf(event.keyCode)
         if (btn != null) {
+            // 只有真正映射成游戏按键的事件才分配玩家槽位；BACK/MENU/工具条键
+            // 走的是各自的路由，此前在方法开头就分配会让遥控器白占一个 P 位。
+            val player = getPlayerId(event.deviceId)
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> heldButtons[player].add(btn)
                 KeyEvent.ACTION_UP -> heldButtons[player].remove(btn)
@@ -741,12 +746,27 @@ class NativeGameActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // onPause 里暂停了核心，回到游戏（如锁屏/切后台返回）要自动恢复，
+        // 否则仿真线程一直 sleep 且工具条按钮显示"继续"，用户得手动点一次。
+        if (paused && core.running && !stopped) {
+            paused = false
+            core.setPaused(false)
+            binding.btnPause.text = "暂停"
+        }
+    }
+
     override fun onDestroy() {
         stopped = true
         handler.removeCallbacksAndMessages(null)
-        // 后台线程里拆核心：nativeStop 内部先落 SRAM，再 dlclose
-        val c = core
-        Thread { c.stop() }.start()
+        // 关键：等加载流水线（含 IO 里的 loadCore/start）彻底结束后再 stop，
+        // 否则 nativeStop 的 dlclose 会和正在跑的 retro_run / load_game 并发 → UAF 崩溃。
+        val job = loadJob
+        Thread {
+            runCatching { kotlinx.coroutines.runBlocking { job?.join() } }
+            core.stop()   // nativeStop 内部先落 SRAM，再 join 线程、dlclose
+        }.start()
         super.onDestroy()
     }
 }

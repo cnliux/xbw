@@ -18,6 +18,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.io.File
 import java.net.URLEncoder
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 第三方源的注册表 + 加载器。
@@ -51,16 +52,21 @@ object PluginRepository {
     private val mutex = Mutex()
     /** 并发容器：搜索会在**不持 [mutex]** 的情况下快照读取（加载协程持锁联网期间也要能读），
      *  普通 HashMap 并发读写会破坏内部结构。 */
-    private val memCache = java.util.concurrent.ConcurrentHashMap<String, List<GameItem>>()
-    private val cookieJars = HashMap<String, MutableMap<String, String>>()
+    private val memCache = ConcurrentHashMap<String, List<GameItem>>()
+
+    /** cookie 会话 jar：外层并发容器，内层也用并发容器 —— 同一源的探活/封面预取/下载
+     *  可能在多个协程里同时往 jar 写 __test，普通 HashMap 会丢值甚至破坏桶结构。 */
+    private val cookieJars = ConcurrentHashMap<String, MutableMap<String, String>>()
+    private fun jarFor(id: String): MutableMap<String, String> =
+        cookieJars.computeIfAbsent(id) { ConcurrentHashMap() }
 
     /** 目录引导源解析出的真实字节目录（src.id → 绝对目录 URL，带尾部 `/`） */
-    private val resolvedDirs = HashMap<String, String>()
+    private val resolvedDirs = ConcurrentHashMap<String, String>()
 
     /** PHP 目录浏览源 gamelist.xml 所在的站点目录（src.id → **原始编码**的
      *  `path=` 参数值，如 "nes"、"nes%2F01%B6%AF%D7%F7"，根目录是 ""）。
      *  保留原始字节不解码，拼 ROM 下载按钮 URL 时原样回填。 */
-    private val resolvedXmlDir = HashMap<String, String>()
+    private val resolvedXmlDir = ConcurrentHashMap<String, String>()
 
     // ---------- 源的管理 ----------
 
@@ -172,7 +178,7 @@ object PluginRepository {
      * 出名字+封面、下载 base 用真实字节目录；没有就按文件行直接出条目。
      */
     private suspend fun loadDir(context: Context, src: PluginSource): List<GameItem> {
-        val jar = cookieJars.getOrPut(src.id) { HashMap() }
+        val jar = jarFor(src.id)
         val root = src.effectiveListUrl.trimEnd('/') + "/"
         val rootHtml = AesChallenge.fetch(root, jar)
         val rootEntries = DirectoryIndexParser.parse(rootHtml, root)
@@ -442,7 +448,7 @@ object PluginRepository {
      * 解完存在会话级 jar 里，同一个源的所有资源请求复用。
      */
     suspend fun cookieFor(src: PluginSource): String? {
-        val jar = cookieJars.getOrPut(src.id) { HashMap() }
+        val jar = jarFor(src.id)
         jar[AesChallenge.COOKIE]?.let { return it }
         runCatching {
             AesChallenge.fetch(src.effectiveListUrl, jar)
@@ -488,7 +494,7 @@ object PluginRepository {
             val solved = if (AesChallenge.isChallenge(html)) AesChallenge.solve(html) else null
             destForAttempt.delete()
             if (solved != null) {
-                cookieJars.getOrPut(src.id) { HashMap() }[AesChallenge.COOKIE] = solved
+                jarFor(src.id)[AesChallenge.COOKIE] = solved
                 HttpFetcher.downloadToFile(
                     url, dest,
                     headers = mapOf("Cookie" to "${AesChallenge.COOKIE}=$solved")
@@ -539,7 +545,7 @@ object PluginRepository {
         }.groupBy { it.third }
         for ((src, group) in grouped) {
             val srcId = src.id
-            val jar = cookieJars.getOrPut(srcId) { HashMap() }
+            val jar = jarFor(srcId)
             if (jar[AesChallenge.COOKIE] == null) runCatching {
                 AesChallenge.fetch(src.effectiveListUrl, jar)
             }.onFailure { Log.w(TAG, "cover cookie solve failed $srcId: ${it.message}") }
@@ -614,7 +620,7 @@ object PluginRepository {
             }
             Log.w(TAG, "github raw race all failed ${src.id}, fall back")
         }
-        val jar = cookieJars.getOrPut(src.id) { HashMap() }
+        val jar = jarFor(src.id)
         var body = AesChallenge.fetch(src.effectiveListUrl, jar)
         // 免费主机有时对裸请求先回一页"JS 广告跳转"（无 toNumbers、无正文）。
         // 浏览器走的是 ?i=1 这条路，我们也补上 i=1 再抓一次（挑战由 fetch 内部解）。

@@ -21,6 +21,7 @@ import com.xbw.tv.ui.common.Nav
 import com.xbw.tv.data.plugin.PluginRepository
 import com.xbw.tv.ui.diagnose.DiagnoseActivity
 import android.content.Intent
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 /**
@@ -95,7 +96,10 @@ class SettingsActivity : AppCompatActivity() {
                 .show()
         }
 
-        gamepads.state
+        // 手柄热插拔时 StateFlow 会变，订阅后角标实时刷新（之前只写了 gamepads.state，没 collect）
+        lifecycleScope.launch {
+            gamepads.state.collect { refreshGamepad() }
+        }
         refreshStatic()
         refreshGamepad()
         refreshCounters()

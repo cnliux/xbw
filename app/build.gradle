@@ -117,7 +117,10 @@ android {
     }
 
     packagingOptions {
-        resources.excludes += ['META-INF/*.version', 'META-INF/*.kotlin_module', 'DebugProbesKt.bin']
+        resources.excludes += [
+                'META-INF/*.version', 'META-INF/*.kotlin_module', 'DebugProbesKt.bin',
+                'META-INF/LICENSE*', 'META-INF/NOTICE*', 'META-INF/DEPENDENCIES'
+        ]
     }
 }
 

@@ -250,6 +250,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         } catch (e: Exception) {
             Log.w(TAG, "rom download failed $url", e)
             raw.delete()
+            cheatJob?.cancel()   // 失败返回：别让金手指预取在后台空跑
             return RomResult.Failed("ROM 下载失败（$url）")
         }
 
@@ -258,15 +259,18 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             zip -> normalizeFbneoZip(dir, raw)
             is7zFile(raw) -> unwrap7z(dir, raw) ?: run {
                 raw.delete()
+                cheatJob?.cancel()
                 return RomResult.Failed("7z 解包失败（ROM 壳损坏或格式不支持）")
             }
             else -> unwrapZip(dir, raw) ?: run {
                 raw.delete()
+                cheatJob?.cancel()
                 return RomResult.Failed("ZIP 解包失败（ROM 壳损坏或格式不支持）")
             }
         }
         if (rom.length() <= 16) {
             rom.delete()
+            cheatJob?.cancel()
             return RomResult.Failed("ROM 内容为空（下载到了 HTML 错误页？）")
         }
 
@@ -402,6 +406,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         }
         if (!ok) {
             raw.delete()
+            cheatJob?.cancel()
             return RomResult.Failed("ROM 下载失败（$lastError）")
         }
 
@@ -410,15 +415,18 @@ const val NO_ROM_PLATFORM = "网页版游戏"
             zip -> normalizeFbneoZip(dir, raw)
             is7zFile(raw) -> unwrap7z(dir, raw) ?: run {
                 raw.delete()
+                cheatJob?.cancel()
                 return RomResult.Failed("7z 解包失败（ROM 壳损坏或格式不支持）")
             }
             else -> unwrapZip(dir, raw) ?: run {
                 raw.delete()
+                cheatJob?.cancel()
                 return RomResult.Failed("ZIP 解包失败（ROM 壳损坏或格式不支持）")
             }
         }
         if (rom.length() <= 16) {
             rom.delete()
+            cheatJob?.cancel()
             return RomResult.Failed("ROM 内容为空（下载到了 HTML 错误页？）")
         }
 
@@ -450,6 +458,7 @@ const val NO_ROM_PLATFORM = "网页版游戏"
         localFile: File,
         platformKey: String?
     ): RomResult {
+        evictIfNeeded(context, gameId)
         if (!localFile.exists() || localFile.length() <= 16) {
             return RomResult.Failed("U盘 ROM 文件不可用（未挂载或文件已删除）")
         }

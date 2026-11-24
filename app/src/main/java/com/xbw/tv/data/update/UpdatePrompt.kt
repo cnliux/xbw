@@ -16,6 +16,9 @@ object UpdatePrompt {
 
     private const val TAG = "UpdatePrompt"
 
+    /** 静默检查去重：快速重进游戏/配置变更会让多个 Activity 同时进来，只允许一个在飞 */
+    private val autoChecking = java.util.concurrent.atomic.AtomicBoolean(false)
+
     /** 设置页：主动检查，一定给结果反馈（检查中 / 已是最新 / 检查失败 / 下载） */
     fun checkNow(activity: androidx.activity.ComponentActivity) {
         val toast = Toast.makeText(activity, R.string.update_checking, Toast.LENGTH_SHORT)
@@ -52,17 +55,23 @@ object UpdatePrompt {
         if (!UpdateSettings.isAutoCheck(activity)) return
         val last = UpdateSettings.lastCheckAt(activity)
         if (last > 0 && System.currentTimeMillis() - last < UpdateSettings.CHECK_INTERVAL_MS) return
+        // 标记在发起前：上一次还在等网络时，第二个 Activity 不会再发一次检查/弹两个窗
+        if (!autoChecking.compareAndSet(false, true)) return
         activity.lifecycleScope.launch {
-            val info = try {
-                UpdateChecker.check()
-            } catch (e: Exception) {
-                Log.w(TAG, "auto check failed", e)
-                null
+            try {
+                val info = try {
+                    UpdateChecker.check()
+                } catch (e: Exception) {
+                    Log.w(TAG, "auto check failed", e)
+                    null
+                }
+                UpdateSettings.markChecked(activity)
+                if (info == null) return@launch
+                if (UpdateSettings.dismissedTag(activity) == info.tag) return@launch
+                showUpdateDialog(activity, info, markDismissed = true)
+            } finally {
+                autoChecking.set(false)
             }
-            UpdateSettings.markChecked(activity)
-            if (info == null) return@launch
-            if (UpdateSettings.dismissedTag(activity) == info.tag) return@launch
-            showUpdateDialog(activity, info, markDismissed = true)
         }
     }
 
