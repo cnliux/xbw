@@ -23,5 +23,6 @@
     <color name="xbw_hint_bg">#990B0E13</color>
     <color name="xbw_tag_bg">#263246</color>
 
-    <color name="ic_launcher_background">#FF5A5F</color>
+    <!-- 与 logo.jpg 的深色底一致，自适应图标前景缩放后四周不会露出突兀色块 -->
+    <color name="ic_launcher_background">#FF010207</color>
 </resources>
