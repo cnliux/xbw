@@ -11,7 +11,7 @@
  *  - 输入：Java 侧手柄事件推进原子位图，retro_input_state 直接读位；
  *  - 存档：retro_serialize/unserialize 暴露成字节数组；
  *    SRAM（电池存档）落 <rom>.sram 文件，启动时自动吃回。
- * 【修改】支持双玩家 port0 / port1 手柄输入
+ * 【修改】支持最多 4 玩家 port0..3；FC 自动开四分数码器，SNES 开 4 人分线器。
  */
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
@@ -118,8 +118,10 @@ static volatile int g_running;
 static volatile int g_paused;
 static volatile int g_reset_request;
 
-/* 输入位图：bit = RETRO_DEVICE_ID_JOYPAD_*（UI 线程写、仿真线程读），支持2玩家 */
-static volatile int32_t g_input_bits[2] = {0,0};
+/* 输入位图：bit = RETRO_DEVICE_ID_JOYPAD_*（UI 线程写、仿真线程读），最多 4 玩家。
+ * 注意：bit 12/13 是 L2/R2，14/15 才是 L3/R3（见 libretro.h）。 */
+#define MAX_PLAYERS 4
+static volatile int32_t g_input_bits[MAX_PLAYERS] = {0};
 
 /* 金手指队列：UI 线程整表替换、仿真线程应用。
  * ⚠️ retro_cheat_set 会改核心内部的读处理器（FCEUmm: FCEUI_AddCheat），
@@ -293,6 +295,14 @@ static bool cb_environment(unsigned cmd, void *data) {
             *v = 2;   /* 答 2 核心（retro_common）才发 v2 结构体，金手指选项才会来 */
             return true;
         }
+        case RETRO_ENVIRONMENT_GET_INPUT_BITMASKS:
+            /* 核心可用 JOYPAD_MASK 一次取 16 位；data 允许为 NULL（只探测能力） */
+            return true;
+        case RETRO_ENVIRONMENT_GET_INPUT_MAX_USERS: {
+            unsigned *n = (unsigned *)data;
+            if (n) *n = MAX_PLAYERS;
+            return true;
+        }
         case RETRO_ENVIRONMENT_SET_VARIABLE: {
             struct retro_variable *var = (struct retro_variable *)data;
             if (!var || !var->key || !var->value) return false;
@@ -356,9 +366,32 @@ static void cb_input_poll(void) { /* 位图由 UI 线程持续更新，无需拉
 
 static int16_t cb_input_state(unsigned port, unsigned device, unsigned index, unsigned id) {
     (void)index;
-    if (port >= 2 || id >= 32) return 0;
-    if (device == RETRO_DEVICE_JOYPAD) return (int16_t)((ATOMIC_LOAD(g_input_bits[port]) >> id) & 1);
-    return 0;
+    if (port >= MAX_PLAYERS) return 0;
+    if (device != RETRO_DEVICE_JOYPAD) return 0;
+    int32_t bits = (int32_t)ATOMIC_LOAD(g_input_bits[port]);
+    if (id == RETRO_DEVICE_ID_JOYPAD_MASK) return (int16_t)bits;
+    /* JOYPAD 只有 0..15 有效；L2/R2=12/13，L3/R3=14/15（不是 32） */
+    if (id >= 16) return 0;
+    return (int16_t)((bits >> id) & 1);
+}
+
+/* 不同核心的“第 3/4 人”接法不一样，统一在这里处理：
+ *  - FCEUmm：port2/3 必须送 GAMEPAD 子类才会启用 FourScore（核心里比较的是子类 513）；
+ *  - SNES9x：port0 送分线器（核心里自定义常量 257 = 子类 0），其余端口留空，
+ *    核心内部再把 port0..3 映射回我们的 g_input_bits[0..3]；
+ *  - FBNeo/其他：port0..3 全是普通 JOYPAD，够 4 人用；不支持的核心会自己忽略多余端口。
+ */
+static unsigned default_controller_device(unsigned port) {
+    if (strstr(g_core_lib, "snes9x"))
+        return port == 0 ? RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 0) : RETRO_DEVICE_NONE;
+    if (strstr(g_core_lib, "fceumm") && port >= 2 && port < 4)
+        return RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1);
+    return RETRO_DEVICE_JOYPAD;
+}
+
+static void set_default_controllers(void) {
+    for (unsigned port = 0; port < MAX_PLAYERS; port++)
+        core.set_controller_port_device(port, default_controller_device(port));
 }
 
 static void cb_audio_sample(int16_t left, int16_t right) {
@@ -812,8 +845,8 @@ static jboolean load_core_session(JNIEnv *env, const char *lib,
     ATOMIC_STORE(g_audio_head, 0);
     ATOMIC_STORE(g_audio_tail, 0);
     g_buf_format = RETRO_PIXEL_FORMAT_XRGB8888;
-    ATOMIC_STORE(g_input_bits[0], 0);
-    ATOMIC_STORE(g_input_bits[1], 0);
+    for (unsigned p = 0; p < MAX_PLAYERS; p++)
+        ATOMIC_STORE(g_input_bits[p], 0);
     ATOMIC_STORE(g_paused, 0);
     ATOMIC_STORE(g_reset_request, 0);
     pthread_mutex_lock(&g_opt_lock);
@@ -831,8 +864,7 @@ static jboolean load_core_session(JNIEnv *env, const char *lib,
     core.set_input_state(cb_input_state);
     core.set_audio_sample(cb_audio_sample);
     core.set_audio_sample_batch(cb_audio_sample_batch);
-    core.set_controller_port_device(0, RETRO_DEVICE_JOYPAD);
-    core.set_controller_port_device(1, RETRO_DEVICE_JOYPAD);
+    set_default_controllers();
 
     if (!try_load_rom()) {
         LOGE("retro_load_game failed: %s", g_rom_path);
@@ -917,7 +949,7 @@ Java_com_xbw_tv_core_RetroCore_nativeSetSurface(JNIEnv *env, jclass cls, jobject
 JNIEXPORT void JNICALL
 Java_com_xbw_tv_core_RetroCore_nativeSetInput(JNIEnv *env, jclass cls, jint player, jint bits) {
     (void)env; (void)cls;
-    if (player < 0 || player >= 2) return;
+    if (player < 0 || player >= MAX_PLAYERS) return;
     ATOMIC_STORE(g_input_bits[player], (int32_t)bits);
 }
 

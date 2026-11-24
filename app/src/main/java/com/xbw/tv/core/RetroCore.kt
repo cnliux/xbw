@@ -42,8 +42,10 @@ class RetroCore {
         const val ID_X = 9
         const val ID_L = 10
         const val ID_R = 11
-        const val ID_L3 = 12
-        const val ID_R3 = 13
+        const val ID_L2 = 12
+        const val ID_R2 = 13
+        const val ID_L3 = 14
+        const val ID_R3 = 15
     }
 
     private external fun nativeLoadCore(coreLib: String, systemDir: String, romPath: String): Boolean

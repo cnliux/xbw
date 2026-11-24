@@ -101,7 +101,7 @@
         android:background="#99000000"
         android:paddingHorizontal="14dp"
         android:paddingVertical="6dp"
-        android:text="菜单键（Select/SELECT 或 MENU）呼出工具条"
+        android:text="最多 4 人：手柄依次接入自动分配 1P→4P｜Select/MENU 呼出工具条"
         android:textColor="#AAFFFFFF"
         android:textSize="13sp" />
 

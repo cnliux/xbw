@@ -1,6 +1,8 @@
 package com.xbw.tv.ui.game
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.hardware.input.InputManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -36,8 +38,11 @@ import java.io.File
  *  - 手柄按键不再经过"合成 KeyboardEvent → 站点混淆 JS"链路，USB 手柄
  *    任何未映射按键都被本类吞掉，不会掉进系统焦点黑洞。
  *
- * 【更新：支持双人】
- * 输入模型：物理手柄deviceId映射player(0/1)，keyCode →（KeySettings.logicalOf）→ GameButton → retro 位图。
+ * 【更新：支持最多 4 人 + 多设备共玩】
+ * 输入模型：deviceId → player(0..3)，按顺序自动占空位，占满后轮转共享；
+ * keyCode →（KeySettings.logicalOf）→ GameButton → retro 位图。
+ * 同一个玩家可接多个设备：每个设备独立记按键/轴，按位 OR 合并，
+ * 一个设备松键/轴回中不会清掉另一个设备按着的键。
  * 摇杆 AXIS 运动事件也折算成方向位（很多 USB 手柄方向是轴不是十字键）。
  *
  * 帧率铁律：仿真线程绝不能碰 ANativeWindow_lock（会等 SurfaceFlinger 放行，
@@ -82,8 +87,8 @@ class NativeGameActivity : AppCompatActivity() {
             GameButton.L3 to RetroCore.ID_L3,
             GameButton.R3 to RetroCore.ID_R3,
         )
-        // 最大支持2玩家
-        private const val MAX_PLAYER = 2
+        /** 最多 4 名玩家（libretro 前端上限；核心自身能力更少时由核心忽略多余端口） */
+        private const val MAX_PLAYER = 4
     }
 
     private lateinit var binding: ActivityNativeGameBinding
@@ -121,15 +126,28 @@ class NativeGameActivity : AppCompatActivity() {
     private var arcadeOptionsLoaded = false
     private val cheatAdapter = CheatAdapter { pos -> toggleCheat(pos) }
 
-    // ========== 双人输入改造区 ==========
-    /** 设备ID -> 玩家编号映射，新手柄自动分配 0、1 */
+    // ========== 多人多设备输入区 ==========
+    /** 设备ID -> 玩家编号：先按顺序占 0..3 空位，占满后轮转共享 */
     private val deviceToPlayer = mutableMapOf<Int, Int>()
-    private var nextPlayerIndex = 0
+    /** 4 个玩家都已有设备时，新设备从该玩家开始轮转（允许多个设备共控同一玩家） */
+    private var nextSharedPlayer = 0
 
-    /** 每个玩家独立按键状态 */
+    /** 每个设备独立按键/轴状态：合并到玩家位图时按位 OR，互不覆盖 */
+    private val deviceButtons = mutableMapOf<Int, HashSet<GameButton>>()
+    private val deviceAxisBits = mutableMapOf<Int, Int>()
+
+    /** 每个玩家最终下发给 native 的位图（仅用于去重） */
     private val padBits = IntArray(MAX_PLAYER) { 0 }
-    private val heldButtons = Array(MAX_PLAYER) { HashSet<GameButton>() }
-    private val axisBits = IntArray(MAX_PLAYER) { 0 }
+
+    /** 设备插拔监听：拔掉设备立即释放玩家槽位，避免新设备被占满后只能共享 */
+    private val inputManager: InputManager? by lazy {
+        getSystemService(Context.INPUT_SERVICE) as? InputManager
+    }
+    private val inputDeviceListener = object : InputManager.InputDeviceListener {
+        override fun onInputDeviceAdded(deviceId: Int) { /* 首次输入时再分配，避免虚拟设备白占槽 */ }
+        override fun onInputDeviceRemoved(deviceId: Int) = releaseDevice(deviceId)
+        override fun onInputDeviceChanged(deviceId: Int) { /* 键位重配不影响玩家映射 */ }
+    }
     // ===================================
 
     private val stateFile: File by lazy {
@@ -141,6 +159,11 @@ class NativeGameActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityNativeGameBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        try {
+            inputManager?.registerInputDeviceListener(inputDeviceListener, handler)
+        } catch (ignore: Exception) {
+            // 某些裁剪 ROM 没有 INPUT_SERVICE，忽略；输入事件仍会按 deviceId 自动分配
+        }
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         gameId = intent.getStringExtra(EXTRA_ID).orEmpty()
@@ -534,23 +557,45 @@ class NativeGameActivity : AppCompatActivity() {
 
     private fun toast(t: String) = Nav.toast(this, t)
 
-    // ========== 双人输入新函数 ==========
-    /** 获取这个手柄对应的player，新手柄自动分配0/1，超过2个全部归1P */
+    // ========== 多人多设备输入函数 ==========
+    /**
+     * 设备 → 玩家：先按顺序占最小空位（0→1→2→3），4 人满了就轮转共享。
+     * 这样新手柄天然是下一个玩家，第 5 个以后的设备也能和现有玩家一起玩。
+     */
     private fun getPlayerId(deviceId: Int): Int {
-        if (deviceToPlayer.containsKey(deviceId)) {
-            return deviceToPlayer[deviceId]!!
+        deviceToPlayer[deviceId]?.let { return it }
+        val used = deviceToPlayer.values.toSet()
+        val freePlayer = (0 until MAX_PLAYER).firstOrNull { it !in used }
+        val player = freePlayer ?: run {
+            val shared = nextSharedPlayer
+            nextSharedPlayer = (nextSharedPlayer + 1) % MAX_PLAYER
+            shared
         }
-        if (nextPlayerIndex < MAX_PLAYER) {
-            deviceToPlayer[deviceId] = nextPlayerIndex
-            Log.d("PlayerMap", "新手柄 device=$deviceId → player=$nextPlayerIndex")
-            return nextPlayerIndex++
-        }
-        return 0
+        deviceToPlayer[deviceId] = player
+        Log.d("PlayerMap", "新设备 device=$deviceId → player=$player" +
+            (if (freePlayer == null) "（共享）" else ""))
+        return player
     }
 
+    /** 设备拔掉：清掉该设备的按键/轴，并释放它占用的玩家槽位 */
+    private fun releaseDevice(deviceId: Int) {
+        val player = deviceToPlayer.remove(deviceId) ?: return
+        deviceButtons.remove(deviceId)
+        deviceAxisBits.remove(deviceId)
+        Log.d("PlayerMap", "设备移除 device=$deviceId，释放 player=$player")
+        pushBits(player)   // 重新聚合仍连在这个玩家上的其他设备
+    }
+
+    /** 把该玩家名下所有设备的按键/轴按位 OR 后下发；一个设备松键不会清掉另一个 */
     private fun pushBits(player: Int) {
-        var bits = axisBits[player]
-        for (b in heldButtons[player]) RETRO_BIT[b]?.let { bits = bits or (1 shl it) }
+        var bits = 0
+        for ((deviceId, assignedPlayer) in deviceToPlayer) {
+            if (assignedPlayer != player) continue
+            deviceAxisBits[deviceId]?.let { bits = bits or it }
+            deviceButtons[deviceId]?.let { held ->
+                for (b in held) RETRO_BIT[b]?.let { bit -> bits = bits or (1 shl bit) }
+            }
+        }
         if (bits != padBits[player]) {
             padBits[player] = bits
             core.setInput(player, bits)
@@ -558,11 +603,15 @@ class NativeGameActivity : AppCompatActivity() {
         }
     }
 
+    /** 切后台/暂停：清掉所有设备的按住状态，回来不会“卡方向” */
     private fun clearAllPad() {
+        deviceButtons.clear()
+        deviceAxisBits.clear()
         for (p in 0 until MAX_PLAYER) {
-            heldButtons[p].clear()
-            axisBits[p] = 0
-            pushBits(p)
+            if (padBits[p] != 0) {
+                padBits[p] = 0
+                core.setInput(p, 0)
+            }
         }
     }
     // ===================================
@@ -690,11 +739,14 @@ class NativeGameActivity : AppCompatActivity() {
         if (btn != null) {
             // 只有真正映射成游戏按键的事件才分配玩家槽位；BACK/MENU/工具条键
             // 走的是各自的路由，此前在方法开头就分配会让遥控器白占一个 P 位。
-            val player = getPlayerId(event.deviceId)
+            val deviceId = event.deviceId
+            val player = getPlayerId(deviceId)
+            val held = deviceButtons.getOrPut(deviceId) { HashSet() }
             when (event.action) {
-                KeyEvent.ACTION_DOWN -> heldButtons[player].add(btn)
-                KeyEvent.ACTION_UP -> heldButtons[player].remove(btn)
+                KeyEvent.ACTION_DOWN -> held.add(btn)
+                KeyEvent.ACTION_UP -> held.remove(btn)
             }
+            if (held.isEmpty()) deviceButtons.remove(deviceId)
             pushBits(player)
             return true
         }
@@ -728,10 +780,8 @@ class NativeGameActivity : AppCompatActivity() {
         if (x > dead || hx > dead) bits = bits or (1 shl RetroCore.ID_RIGHT)
         if (y < -dead || hy < -dead) bits = bits or (1 shl RetroCore.ID_UP)
         if (y > dead || hy > dead) bits = bits or (1 shl RetroCore.ID_DOWN)
-        if (bits != axisBits[player]) {
-            axisBits[player] = bits
-            pushBits(player)
-        }
+        if (bits == 0) deviceAxisBits.remove(devId) else deviceAxisBits[devId] = bits
+        pushBits(player)
         return true
     }
 
@@ -759,6 +809,10 @@ class NativeGameActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         stopped = true
+        try {
+            inputManager?.unregisterInputDeviceListener(inputDeviceListener)
+        } catch (ignore: Exception) {
+        }
         handler.removeCallbacksAndMessages(null)
         // 关键：等加载流水线（含 IO 里的 loadCore/start）彻底结束后再 stop，
         // 否则 nativeStop 的 dlclose 会和正在跑的 retro_run / load_game 并发 → UAF 崩溃。
